@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"golang.org/x/term"
@@ -96,8 +97,13 @@ const (
 	keyErase // Backspace inside an input
 )
 
+// escWait is how long a lone Esc waits for the rest of an arrow key's
+// sequence. Over SSH on a slow or distant link the Esc byte often arrives
+// on its own; taken as Esc, ↑ and ↓ went back a screen instead of moving.
+const escWait = 200 * time.Millisecond
+
 // readKey decodes one keypress. A lone Esc is told apart from an arrow
-// sequence by whether more bytes arrived with it.
+// sequence by whether more bytes arrive with it, or right after it.
 func (t *tui) readKey() (key, rune) {
 	b, err := t.r.ReadByte()
 	if err != nil {
@@ -111,7 +117,7 @@ func (t *tui) readKey() (key, rune) {
 	case 127, 8:
 		return keyErase, 0
 	case 27:
-		if t.r.Buffered() == 0 {
+		if t.r.Buffered() == 0 && !inputWithin(t.fd, escWait) {
 			return keyBack, 0
 		}
 		b2, _ := t.r.ReadByte()
