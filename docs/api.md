@@ -78,7 +78,7 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" "$BASE/api/forwards" \
 | `proto` | `tcp`، `udp` یا `both` |
 | `to` | پورت مقصد روی سرور خارج (۰ = همان پورت) |
 | `mode` | `nat` (پیش‌فرض)، `transparent`، `proxy`، `relay` |
-| `backups` | تانل‌های پشتیبان به ترتیب، مثلاً `["t2","t3"]` |
+| `backups` | تانل‌های پشتیبان به ترتیب، مثلاً `["t2","t3"]`. پشتیبانِ تانل اتصالی (TCP/TLS + mux) برای فوروارد nat، transparent یا proxy هم مجاز است: روی آن فقط TCP و به‌صورت رله می‌رود (حداکثر ۲۰۰۰ پورت، سرور مقصد با نسخه‌ی جدید) |
 
 پورت تصادفی آزاد: `GET /api/ports/random?proto=tcp` ← `{"port": 41234}`.
 

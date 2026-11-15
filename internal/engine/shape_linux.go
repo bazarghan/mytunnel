@@ -18,8 +18,15 @@ var shapeHandle = netlink.MakeHandle(0x7a7a, 0)
 // library can't read CAKE's settings back.
 var (
 	queuedMu sync.Mutex
-	queued   = map[string]int{}
+	queued   = map[string]smart{}
 )
+
+// smart is a smart queue set on an interface: its rate and the root
+// qdisc it put there ("cake", or "tbf" with fq_codel under it).
+type smart struct {
+	mbit int
+	root string
+}
 
 // shape caps what an interface sends (mbit = 0: no cap) and, with queue > 0,
 // runs a smart queue at that rate (Mbit/s): CAKE, or fq_codel under a token
@@ -52,14 +59,17 @@ func shape(name string, mbit, queue int) error {
 	last, had := queued[name]
 	queuedMu.Unlock()
 	if queue > 0 {
-		if cur != nil && had && last == queue && cur.Type() != "tbf" {
+		// The fallback's root is a tbf too: what was put there tells it
+		// from a plain limit, so neither is replaced on every reconcile.
+		if cur != nil && had && last.mbit == queue && cur.Type() == last.root {
 			return nil
 		}
-		if err := smartQueue(name, queue); err != nil {
+		root, err := smartQueue(name, queue)
+		if err != nil {
 			return err
 		}
 		queuedMu.Lock()
-		queued[name] = queue
+		queued[name] = smart{queue, root}
 		queuedMu.Unlock()
 		return nil
 	}
@@ -92,17 +102,17 @@ func shape(name string, mbit, queue int) error {
 
 // smartQueue puts CAKE on the interface at mbit, or fq_codel under a token
 // bucket where the kernel has no CAKE (the library can't build either).
-func smartQueue(name string, mbit int) error {
+func smartQueue(name string, mbit int) (string, error) {
 	handle := "7a7a:"
 	rate := strconv.Itoa(mbit) + "mbit"
 	if err := tc("qdisc", "replace", "dev", name, "root", "handle", handle, "cake", "bandwidth", rate); err == nil {
-		return nil
+		return "cake", nil
 	}
 	burst := strconv.Itoa(max(mbit*125_000/100, 32<<10))
 	if err := tc("qdisc", "replace", "dev", name, "root", "handle", handle, "tbf", "rate", rate, "burst", burst, "latency", "20ms"); err != nil {
-		return err
+		return "", err
 	}
-	return tc("qdisc", "replace", "dev", name, "parent", "7a7a:1", "fq_codel")
+	return "tbf", tc("qdisc", "replace", "dev", name, "parent", "7a7a:1", "fq_codel")
 }
 
 func tc(args ...string) error {

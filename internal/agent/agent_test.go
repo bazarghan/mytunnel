@@ -155,4 +155,21 @@ func TestOnlyMasterControlsPeer(t *testing.T) {
 	if _, err := c.Apply(ctx, ApplyRequest{Revision: 3}); err == nil {
 		t.Error("stale revision accepted")
 	}
+
+	// A push names where the master is now (its public IP changed); the
+	// peer's firewall trusts that address from then on.
+	for _, c2 := range []struct{ master, want string }{
+		{"203.0.113.5:41234", "203.0.113.5:41234"},
+		{"", "203.0.113.5:41234"},     // older masters send none
+		{"junk", "203.0.113.5:41234"}, // nor anything that isn't ip:port
+		{"[2001:db8::5]:7710", "[2001:db8::5]:7710"},
+	} {
+		if _, err := c.Apply(ctx, ApplyRequest{Revision: 8, Master: c2.master}); err != nil {
+			t.Fatal(err)
+		}
+		st, _ := config.Load()
+		if got := st.Managed.Master.Address; got != c2.want {
+			t.Errorf("push with master %q: peer has %q, want %q", c2.master, got, c2.want)
+		}
+	}
 }

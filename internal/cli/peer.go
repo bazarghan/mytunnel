@@ -20,9 +20,11 @@ func nodeCmd() *cobra.Command {
 		Short: "Show or set this node's name and public address",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if name != "" || address != "" {
-				if err := manage.SetNode(name, address); err != nil {
+				ch, err := manage.SetNode(name, address)
+				if err != nil {
 					return err
 				}
+				printChange(ch)
 			}
 			if cmd.Flags().Changed("label") {
 				if err := manage.SetSelfLabel(label); err != nil {

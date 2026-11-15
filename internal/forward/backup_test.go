@@ -88,3 +88,71 @@ func TestForPeerFollowsBackup(t *testing.T) {
 		t.Fatalf("edge should get the forward its backup runs to")
 	}
 }
+
+// streamBackupState is backupState with t2 a connection tunnel.
+func streamBackupState(mode, proto string) *config.State {
+	st := backupState(mode)
+	st.Tunnels[1].Kind, st.Tunnels[1].Net4, st.Tunnels[1].Port = config.KindStreamTCP, "", 9443
+	st.Forwards[0].Proto = proto
+	return st
+}
+
+// A nat, transparent or proxy forward that moved to a connection tunnel
+// relays its TCP over the sessions, and its far end takes those
+// connections on the connection tunnel only.
+func TestFallbackToConnectionTunnelRelays(t *testing.T) {
+	for _, c := range []struct {
+		mode    string
+		version int
+	}{{"", 0}, {config.ForwardTransparent, 0}, {config.ForwardProxy, 2}} {
+		hub := streamBackupState(c.mode, "both")
+		ts, fs := hub.Effective()
+		ps := failover.Paths{failover.Key(fs[0]): {Active: "t2"}}
+		rs, errs := Build(hub, failover.Route(fs, ts, ps), []Link{{Name: "nt-t1", Tunnel: "t1"}})
+		if len(errs) > 0 || len(rs.Rules) != 0 || len(rs.Relays) != 1 {
+			t.Fatalf("%q: %v, %d rules, %+v", c.mode, errs, len(rs.Rules), rs.Relays)
+		}
+		r := rs.Relays[0]
+		if r.Proto != "tcp" || r.Port != 443 || r.Target.String() != "127.0.0.1:443" || r.Version != c.version || r.Via.Session != "t2" {
+			t.Errorf("%q: relay %+v", c.mode, r)
+		}
+		// Back on t1 it is the kernel's again.
+		rs, errs = Build(hub, failover.Route(fs, ts, failover.Paths{}), []Link{{Name: "nt-t1", Tunnel: "t1"}})
+		// (A proxy forward's relay on t1 goes to the inner address, TCP and UDP.)
+		kernel := len(rs.Rules) == 1 && len(rs.Relays) == 0
+		if c.mode == config.ForwardProxy {
+			kernel = len(rs.Relays) == 2 && rs.Relays[0].Via.Session == "" && rs.Relays[0].Target.Addr().String() == "10.77.0.2"
+		}
+		if len(errs) > 0 || !kernel {
+			t.Fatalf("%q primary: %v %+v %+v", c.mode, errs, rs.Rules, rs.Relays)
+		}
+
+		ets, efs := hub.ForPeer("edge")
+		if len(efs) != 1 {
+			t.Fatalf("%q: forward not sent to the far end", c.mode)
+		}
+		edge := &config.State{Self: "edge", Managed: &config.Managed{Self: "edge", Tunnels: ets, Forwards: efs}}
+		_, own := edge.Effective()
+		rs, _ = Build(edge, own, []Link{{Name: "nt-t1", Tunnel: "t1"}})
+		if len(rs.Exits) != 1 || rs.Exits[0].Tunnel != "t2" || !rs.Exits[0].Session || rs.Exits[0].Ports[0] != 443 {
+			t.Errorf("%q: exits %+v", c.mode, rs.Exits)
+		}
+	}
+}
+
+// UDP has no way over a connection tunnel.
+func TestFallbackToConnectionTunnelSkipsUDP(t *testing.T) {
+	hub := streamBackupState("", "udp")
+	ts, fs := hub.Effective()
+	ps := failover.Paths{failover.Key(fs[0]): {Active: "t2"}}
+	rs, errs := Build(hub, failover.Route(fs, ts, ps), nil)
+	if len(errs) != 1 || len(rs.Relays) != 0 || len(rs.Rules) != 0 {
+		t.Fatalf("%v %+v %+v", errs, rs.Rules, rs.Relays)
+	}
+	ets, efs := hub.ForPeer("edge")
+	edge := &config.State{Self: "edge", Managed: &config.Managed{Self: "edge", Tunnels: ets, Forwards: efs}}
+	_, own := edge.Effective()
+	if rs, _ := Build(edge, own, nil); len(rs.Exits) != 0 {
+		t.Errorf("exits %+v", rs.Exits)
+	}
+}

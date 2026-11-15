@@ -39,7 +39,7 @@ func Push(ctx context.Context, id *identity.Identity, st *config.State, peer str
 	// While a safe change waits for confirmation, the peer holds on to what
 	// it ran before and puts it back unless the change is confirmed.
 	hold, secs := safe.HoldFor(time.Now())
-	resp, err := c.Apply(ctx, agent.ApplyRequest{Revision: st.Revision, Tunnels: ts, Forwards: fs, Hold: hold, HoldSeconds: secs})
+	resp, err := c.Apply(ctx, agent.ApplyRequest{Revision: st.Revision, Tunnels: ts, Forwards: fs, Hold: hold, HoldSeconds: secs, Master: agentAddress(st)})
 	if err != nil {
 		return resp, err
 	}
@@ -53,6 +53,16 @@ func Push(ctx context.Context, id *identity.Identity, st *config.State, peer str
 		return nil
 	})
 	return resp, nil
+}
+
+// agentAddress is where peers reach this node's agent: its public address
+// and agent port ("" while the address is unknown).
+func agentAddress(st *config.State) string {
+	a, err := netip.ParseAddr(st.Address)
+	if err != nil {
+		return ""
+	}
+	return net.JoinHostPort(a.Unmap().String(), strconv.Itoa(st.ListenAgentPort()))
 }
 
 // PushAll pushes to every peer, returning per-peer errors.
@@ -217,6 +227,7 @@ func Refresh(ctx context.Context, id *identity.Identity, st *config.State, peer 
 			p.ObfsAES = s.ObfsAES
 			p.StreamTunnels = s.StreamTunnels
 			p.StreamTests = s.StreamTests
+			p.StreamFallback = s.StreamFallback
 			p.RolledBack = s.RolledBack
 		}
 		return nil

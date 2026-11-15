@@ -189,7 +189,7 @@ func (l *Live) Restore(data []byte) (RestoreResult, error) {
 		_, cert := b.Files["panel-domain.crt"]
 		restorePanel(st, cur, cert)
 		if old, now := st.Address, cur.Address; old != "" && now != "" && old != now {
-			moveAddress(st, old, now)
+			st.MoveAddress(now)
 			res.Moved = true
 		}
 		st.Revision++
@@ -238,18 +238,4 @@ func restorePanel(st, cur *config.State, cert bool) {
 		p.Domain, p.Cert = "", ""
 	}
 	st.Panel = &p
-}
-
-// moveAddress puts this server's new public IP wherever the backup had the
-// old one: its own address and its side of every tunnel it owns.
-func moveAddress(st *config.State, old, now string) {
-	st.Address = now
-	for i := range st.Tunnels {
-		for j := range st.Tunnels[i].Sides {
-			sd := &st.Tunnels[i].Sides[j]
-			if sd.Node == st.Self && sd.Endpoint == old {
-				sd.Endpoint = now
-			}
-		}
-	}
 }

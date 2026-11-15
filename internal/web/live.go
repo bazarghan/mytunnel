@@ -111,7 +111,8 @@ func (l *Live) Overview() (Overview, error) {
 	ov := Overview{
 		Node: NodeInfo{
 			Name: st.Self, Label: st.Label, Address: st.Address, Address6: engine.PublicIPv6(), AESNI: sysinfo.AESNI(), Version: version.Version, Arch: version.Arch(),
-			Key: identity.Fingerprint(l.ID.PublicString()),
+			Key:      identity.Fingerprint(l.ID.PublicString()),
+			Detected: manage.OtherAddress(st), Follows: st.AddressLocal,
 		},
 		Revision: st.Revision,
 		Modes:    manage.Modes(),
@@ -151,6 +152,7 @@ func (l *Live) Overview() (Overview, error) {
 		sums = l.Store.Summaries(time.Now())
 		if s, ok := sums[traffic.NIC]; ok {
 			ov.Node.NIC, ov.Node.NICToday, ov.Node.NICMonth = engine.PublicIface(), s.Today, s.Month
+			ov.Node.NICSpeed, ov.Node.NICDriver = engine.IfaceSpeed(ov.Node.NIC)
 		}
 	}
 	var hs map[string]health.State
@@ -546,7 +548,9 @@ func (l *Live) PortHistory(key string) (PortHistory, error) {
 	return PortHistory{Key: key, Summary: sum, Days: days}, nil
 }
 
-func (l *Live) SetNode(name, address string) error { return manage.SetNode(name, address) }
+func (l *Live) SetNode(name, address string) (manage.Change, error) {
+	return manage.SetNode(name, address)
+}
 
 func (l *Live) SetLabel(kind, name, label string) (manage.Change, error) {
 	switch kind {

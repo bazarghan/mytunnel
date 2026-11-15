@@ -69,7 +69,7 @@ func (stub) Boost() error                                        { return nil }
 func (stub) Backup() ([]byte, error)                             { return nil, nil }
 func (stub) SetUser(string) error                                { return nil }
 func (stub) RemoveForward(string, string) (manage.Change, error) { return manage.Change{}, nil }
-func (stub) SetNode(string, string) error                        { return nil }
+func (stub) SetNode(string, string) (manage.Change, error)       { return manage.Change{}, nil }
 func (stub) TestTunnel(context.Context, string, web.SpeedOptions, func(string), func(string, float64)) ([]bench.Result, error) {
 	return nil, nil
 }

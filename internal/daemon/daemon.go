@@ -110,6 +110,7 @@ func Run(ctx context.Context) error {
 
 	startPanel(id, store, history, tracker, hooks, poke)
 	go watchPeers(ctx, id)
+	go watchAddress(ctx)
 	go watchGuard(ctx)
 	go watchNet(ctx, poke)
 	webhook.Watch()

@@ -46,7 +46,7 @@ type Backend interface {
 	// PortClients is who uses a port: addresses with connections open now
 	// and those of the last day (see package clients).
 	PortClients(key string) (clients.Report, error)
-	SetNode(name, address string) error
+	SetNode(name, address string) (manage.Change, error)
 	// SetLabel changes a display name: of a "tunnel", a "server" (peer) or
 	// "self" (this server; name is ignored). IDs stay as they are.
 	SetLabel(kind, name, label string) (manage.Change, error)
@@ -167,10 +167,16 @@ type Overview struct {
 }
 
 type NodeInfo struct {
-	Name     string     `json:"name"`
-	Label    string     `json:"label,omitempty"`
-	Address  string     `json:"address"`
-	Address6 string     `json:"address6,omitempty"`
+	Name     string `json:"name"`
+	Label    string `json:"label,omitempty"`
+	Address  string `json:"address"`
+	Address6 string `json:"address6,omitempty"`
+	// Detected is the public IP the server's traffic leaves from when it
+	// isn't Address (see manage.OtherAddress); Follows: the daemon moves
+	// Address and the tunnels to a new IP by itself (it is on this
+	// server's interface).
+	Detected string     `json:"detected,omitempty"`
+	Follows  bool       `json:"follows,omitempty"`
 	AESNI    bool       `json:"aes_ni"`
 	Version  string     `json:"version"`
 	Arch     string     `json:"arch"`
@@ -183,9 +189,13 @@ type NodeInfo struct {
 	BBR      bool       `json:"bbr"`
 	// NIC is the public interface: what the datacenter counts. Rx is the
 	// incoming traffic, usually the billed direction.
-	NIC      string       `json:"nic,omitempty"`
-	NICToday traffic.Pair `json:"nic_today"`
-	NICMonth traffic.Pair `json:"nic_month"`
+	NIC string `json:"nic,omitempty"`
+	// NICSpeed is the card's port speed in Mbit/s (0 = the driver doesn't
+	// say, as virtual cards often don't); NICDriver names the driver.
+	NICSpeed  int          `json:"nic_speed,omitempty"`
+	NICDriver string       `json:"nic_driver,omitempty"`
+	NICToday  traffic.Pair `json:"nic_today"`
+	NICMonth  traffic.Pair `json:"nic_month"`
 	// Pressure is where the CPU went in the daemon's last round: packet
 	// work, packets dropped for lack of CPU, and the busiest programs.
 	Pressure *metrics.Pressure `json:"pressure,omitempty"`

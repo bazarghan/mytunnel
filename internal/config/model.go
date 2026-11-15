@@ -24,6 +24,11 @@ type State struct {
 	Revision uint64 `json:"revision"` // bumped on every local change
 	ULA48    string `json:"ula48,omitempty"`
 	Address  string `json:"address,omitempty"` // this node's public IP, used in setup links
+	// AddressLocal: Address was on one of this server's own interfaces when
+	// last checked. Only then does the daemon move to a new public IP by
+	// itself once Address is gone from them (see manage.FollowAddress); an
+	// address behind NAT, or one the user set to something else, stays.
+	AddressLocal bool `json:"address_local,omitempty"`
 	// AgentPort is where this node's agent listens, picked at random once
 	// (0 on nodes from before, which listen on 7710; see agentport.go).
 	// AgentLegacy: the node was paired on 7710 first and listens there too.
@@ -252,6 +257,10 @@ type Peer struct {
 	// StreamTests: the peer's version takes speed tests over connection
 	// tunnels and runs temporary ones for checks and comparisons.
 	StreamTests bool `json:"stream_tests,omitempty"`
+	// StreamFallback: the peer's version takes the relay connections of
+	// nat, transparent and proxy forwards that moved to a connection
+	// tunnel as their backup (see Forward.RelaysOn).
+	StreamFallback bool `json:"stream_fallback,omitempty"`
 	// RolledBack is the last version an upgrade of the peer went back from
 	// (it didn't answer in time); automatic upgrades skip it.
 	RolledBack      string    `json:"rolled_back,omitempty"`
@@ -639,6 +648,40 @@ func (f Forward) ModeOf() string {
 	return f.Mode
 }
 
+// RelaysOn reports whether f, a nat, transparent or proxy forward, runs as
+// a relay while it is on t: a connection tunnel has no inner address to
+// DNAT to, so a forward that moved to one as its backup carries each TCP
+// connection on a stream of the tunnel's sessions instead (UDP waits for a
+// tunnel with an interface). See AsRelay.
+func (f Forward) RelaysOn(t Tunnel) bool {
+	m := f.ModeOf()
+	return t.IsStream() && (m == ForwardNAT || m == ForwardTransparent || m == ForwardProxy)
+}
+
+// AsRelay is f as the relay forward it runs as on a connection tunnel: TCP
+// only, with the PROXY header of a proxy forward (a nat or transparent one
+// sends none, so the service sees the far node's loopback, or its public
+// address when Public).
+func (f Forward) AsRelay() Forward {
+	r := f
+	r.Mode, r.Proto, r.ProxyVersion = ForwardRelay, "tcp", 0
+	if f.ModeOf() == ForwardProxy {
+		r.ProxyVersion = f.ProxyVersion
+		if r.ProxyVersion == 0 {
+			r.ProxyVersion = 2
+		}
+	}
+	return r
+}
+
+// RelayOnStream reports whether f's far node must accept relay connections
+// for it over t: a relay or socks forward, or one that relays on t when it
+// moves there (TCP only).
+func (f Forward) RelayOnStream(t Tunnel) bool {
+	m := f.ModeOf()
+	return m == ForwardRelay || m == ForwardSocks || (f.RelaysOn(t) && f.Proto != "udp")
+}
+
 // ValidForwardMode checks a mode and PROXY protocol version for proto.
 func ValidForwardMode(mode string, version int, proto string) error {
 	switch mode {
@@ -715,7 +758,7 @@ func (s *State) ForPeer(peer string) ([]Tunnel, []Forward) {
 		// its connections (a socks one too).
 		if f.Node == peer {
 			fs = append(fs, f)
-		} else if (f.ModeOf() == ForwardTransparent || f.ModeOf() == ForwardRelay || f.ModeOf() == ForwardSocks) && slices.ContainsFunc(f.Paths(), func(n string) bool { return touches[n] }) {
+		} else if (f.ModeOf() == ForwardTransparent || f.ModeOf() == ForwardRelay || f.ModeOf() == ForwardSocks || s.fallsBackToStream(f)) && slices.ContainsFunc(f.Paths(), func(n string) bool { return touches[n] }) {
 			// A sold port's plan is for the node it listens on alone.
 			f.Plan = nil
 			fs = append(fs, f)
@@ -725,6 +768,17 @@ func (s *State) ForPeer(peer string) ([]Tunnel, []Forward) {
 		fs = append(fs, f)
 	}
 	return ts, fs
+}
+
+// fallsBackToStream reports whether f relays on one of its backups (see
+// Forward.RelaysOn): its far node accepts those connections.
+func (s *State) fallsBackToStream(f Forward) bool {
+	for _, n := range f.Backups() {
+		if t, ok := s.Tunnel(n); ok && f.RelayOnStream(*t) && f.RelaysOn(*t) {
+			return true
+		}
+	}
+	return false
 }
 
 // PeersOf lists the peers a tunnel touches (the side that isn't Self).

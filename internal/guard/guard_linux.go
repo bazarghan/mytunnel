@@ -20,9 +20,12 @@ import (
 // Sockets lists the ports programs listen on (TCP listen, unconnected UDP),
 // reachable from outside, with the program's name.
 func Sockets() []Socket {
-	owners := socketOwners()
-	seen := map[string]bool{}
-	var out []Socket
+	type open struct {
+		proto string
+		s     ProcSocket
+	}
+	var socks []open
+	inodes := map[uint64]bool{}
 	for _, t := range []struct{ file, proto string }{{"tcp", "tcp"}, {"tcp6", "tcp"}, {"udp", "udp"}, {"udp6", "udp"}} {
 		b, err := os.ReadFile(filepath.Join("/proc/net", t.file))
 		if err != nil {
@@ -36,22 +39,38 @@ func Sockets() []Socket {
 			if s.State != want || !Reachable(s.Local.Addr()) || s.Local.Port() == 0 {
 				continue
 			}
-			sk := Socket{Proto: t.proto, Port: s.Local.Port(), Process: owners[s.Inode]}
-			if seen[sk.Key()] {
-				continue
-			}
-			seen[sk.Key()] = true
-			out = append(out, sk)
+			socks = append(socks, open{t.proto, s})
+			inodes[s.Inode] = true
 		}
+	}
+	// Only the listening sockets' owners are looked up: a busy server has
+	// tens of thousands of connections, whose owners nobody needs.
+	owners := socketOwners(inodes)
+	seen := map[string]bool{}
+	var out []Socket
+	for _, o := range socks {
+		sk := Socket{Proto: o.proto, Port: o.s.Local.Port(), Process: owners[o.s.Inode]}
+		if seen[sk.Key()] {
+			continue
+		}
+		seen[sk.Key()] = true
+		out = append(out, sk)
 	}
 	return out
 }
 
-// socketOwners maps socket inodes to the name of the process holding them.
-func socketOwners() map[uint64]string {
+// socketOwners maps the socket inodes in want to the name of the process
+// holding them, and stops looking once each has one.
+func socketOwners(want map[uint64]bool) map[uint64]string {
 	out := map[uint64]string{}
+	if len(want) == 0 {
+		return out
+	}
 	procs, _ := os.ReadDir("/proc")
 	for _, p := range procs {
+		if len(out) == len(want) {
+			break
+		}
 		pid, err := strconv.Atoi(p.Name())
 		if err != nil {
 			continue
@@ -70,7 +89,7 @@ func socketOwners() map[uint64]string {
 			if err != nil || !strings.HasPrefix(link, "socket:[") {
 				continue
 			}
-			if ino, err := strconv.ParseUint(strings.TrimSuffix(strings.TrimPrefix(link, "socket:["), "]"), 10, 64); err == nil {
+			if ino, err := strconv.ParseUint(strings.TrimSuffix(strings.TrimPrefix(link, "socket:["), "]"), 10, 64); err == nil && want[ino] {
 				if _, ok := out[ino]; !ok {
 					out[ino] = name
 				}
@@ -86,30 +105,62 @@ var sshdPort = regexp.MustCompile(`(?m)^port (\d+)$`)
 // and is configured for, the local port of every open SSH session, and 22.
 func SSHPorts() []uint16 {
 	ports := map[uint16]bool{22: true}
-	owners := socketOwners()
+	var socks []ProcSocket
+	inodes := map[uint64]bool{}
 	for _, file := range []string{"tcp", "tcp6"} {
 		b, err := os.ReadFile(filepath.Join("/proc/net", file))
 		if err != nil {
 			continue
 		}
 		for _, s := range ParseProcNet(string(b)) {
-			if owners[s.Inode] == "sshd" && (s.State == StateListen || s.State == StateEstablished) {
-				ports[s.Local.Port()] = true
+			// An SSH session's local port is a listening port's (or a
+			// port forwarded to one), so the sessions' sockets need no
+			// owner lookup of their own unless no listener tells.
+			if s.State == StateListen || (s.State == StateEstablished && s.Local.Port() < 32768) {
+				socks = append(socks, s)
+				inodes[s.Inode] = true
 			}
 		}
 	}
-	if out, err := exec.Command("sshd", "-T").Output(); err == nil {
-		for _, m := range sshdPort.FindAllSubmatch(out, -1) {
-			if n, err := strconv.Atoi(string(m[1])); err == nil && n > 0 && n < 65536 {
-				ports[uint16(n)] = true
-			}
+	owners := socketOwners(inodes)
+	for _, s := range socks {
+		if owners[s.Inode] == "sshd" {
+			ports[s.Local.Port()] = true
 		}
+	}
+	for _, p := range sshdConfigPorts() {
+		ports[p] = true
 	}
 	var list []uint16
 	for p := range ports {
 		list = append(list, p)
 	}
 	return list
+}
+
+var (
+	sshdMu    sync.Mutex
+	sshdAt    time.Time
+	sshdPorts []uint16
+)
+
+// sshdConfigPorts are the ports sshd is configured for. sshd -T reads and
+// checks the whole configuration, so its answer is kept for a minute.
+func sshdConfigPorts() []uint16 {
+	sshdMu.Lock()
+	defer sshdMu.Unlock()
+	if !sshdAt.IsZero() && time.Since(sshdAt) < time.Minute {
+		return sshdPorts
+	}
+	sshdAt, sshdPorts = time.Now(), nil
+	if out, err := exec.Command("sshd", "-T").Output(); err == nil {
+		for _, m := range sshdPort.FindAllSubmatch(out, -1) {
+			if n, err := strconv.Atoi(string(m[1])); err == nil && n > 0 && n < 65536 {
+				sshdPorts = append(sshdPorts, uint16(n))
+			}
+		}
+	}
+	return sshdPorts
 }
 
 // PublicIfaces are the interfaces the guard filters by default: the one

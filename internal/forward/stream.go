@@ -242,14 +242,16 @@ func relayExits(st *config.State, byName map[string]config.Tunnel) []relay.Exit 
 	fs := st.AllForwards()
 	var out []relay.Exit
 	for _, f := range fs {
-		if (f.ModeOf() != config.ForwardRelay && f.ModeOf() != config.ForwardSocks) || st.IsSelf(f.Node) {
+		if st.IsSelf(f.Node) {
 			continue
 		}
 		// The far side may move the forward to a backup at any time, so the
-		// exits of all its tunnels are open.
+		// exits of all its tunnels are open: every tunnel of a relay or
+		// socks forward, and the connection tunnels another one relays on
+		// as its backup.
 		for _, name := range f.Paths() {
 			t, ok := byName[name]
-			if !ok || t.Disabled || t.Secret == "" || t.Sides[1-sideOf(st, t)].Node != f.Node {
+			if !ok || !f.RelayOnStream(t) || t.Disabled || t.Secret == "" || t.Sides[1-sideOf(st, t)].Node != f.Node {
 				continue
 			}
 			e := relay.Exit{Tunnel: t.KeyName(), Secret: t.Secret, Side: sideOf(st, t), From: farAddrs(st, t, byName),

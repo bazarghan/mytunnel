@@ -995,7 +995,16 @@
         <circle cx="100" cy="128" r="3" fill="#fff"/><line x1="97" y1="130" x2="62" y2="150" stroke="#fff" stroke-opacity=".6"/>
         <text x="14" y="164" direction="ltr">↑ ${esc(fmtRate(r.tx))}</text><text class="cap" x="14" y="178" direction="ltr">ارسال</text>
       </svg>`)}
-      <div class="nic-body"><div><span>کارت شبکه</span><b>${nic}</b></div><div class="today"><span>امروز</span><b>${fmtBytes(today)}</b></div></div>`;
+      <div class="nic-body"><div><span>کارت شبکه</span><b>${nic}</b>${nicPort(ov.node)}</div><div class="today"><span>امروز</span><b>${fmtBytes(today)}</b></div></div>`;
+  }
+  // The port the card is plugged into: 1 Gbit/s, 10 Gbit/s; a virtual card
+  // usually doesn't say.
+  function nicPort(n) {
+    if (n.nic_speed) {
+      const v = n.nic_speed >= 1000 ? `${+(n.nic_speed / 1000).toFixed(1)} Gbit/s` : `${n.nic_speed} Mbit/s`;
+      return html`<span class="port" title="سرعت پورت شبکه‌ی سرور، به گزارش درایور${n.nic_driver ? ` (${n.nic_driver})` : ""}">پورت <bdi class="ltr">${v}</bdi></span>`;
+    }
+    return n.nic && n.nic_driver ? html`<span class="port" title="کارت شبکه‌ی مجازی معمولاً سرعت پورت را گزارش نمی‌کند">پورت نامشخص · <bdi class="ltr">${n.nic_driver}</bdi></span>` : "";
   }
 
   // Ping: a die with traces; the average over working tunnels in its centre.
@@ -1456,6 +1465,7 @@
         const [what, ports] = (x.detail || "").split(/ (.+)/);
         if (what === "plan") return ["", html`فروش پورت <span class="ltr">${ports}</span> تغییر کرد`];
         if (what === "renew") return ["ok", html`پورت <span class="ltr">${ports}</span> تمدید شد`];
+        if (what === "address") { const [a, b] = (ports || "").split(" "); return ["warn", html`IP عمومی این سرور ${a ? html`از <span class="ltr">${a}</span> ` : ""}به <span class="ltr">${b}</span> رسید؛ تانل به IP جدید رفت و برای سرور مقابل فرستاده شد`]; }
         return ["", { settings: "تنظیمات تغییر کرد", limits: "سقف سرعت، حجم ماهانه یا صف هوشمند تغییر کرد", label: "نام نمایشی عوض شد", aes: "سرور مقابل ارتقا یافت؛ رمز NeoObfs خودکار به AES-GCM (سریع‌تر) رفت" }[x.detail] || "تغییر کرد"];
       }
       case "on": return ["ok", "روشن شد"];
@@ -1947,15 +1957,25 @@
         <button type="button" class="btn sm ghost icon" data-act="bk-move" data-path="${path}" data-i="${i}" data-dir="-1" ${i ? "" : "disabled"} aria-label="بالاتر" title="بالاتر">${I.up(14)}</button>
         <button type="button" class="btn sm ghost icon" data-act="bk-move" data-path="${path}" data-i="${i}" data-dir="1" ${i < list.length - 1 ? "" : "disabled"} aria-label="پایین‌تر" title="پایین‌تر">${I.down(14)}</button>
         <button type="button" class="btn sm ghost icon danger" data-act="bk-del" data-path="${path}" data-i="${i}" aria-label="برداشتن" title="برداشتن">${I.x(14)}</button></li>`)}</ol>` : ""}
+      ${streamBackupNote(obj, list)}
       ${free.length ? html`<select id="${path}-bk" class="input" data-act="bk-add" data-path="${path}"><option value="">${list.length ? "افزودن پشتیبان بعدی…" : "بدون پشتیبان؛ افزودن…"}</option>${free.map((x) => html`<option value="${x.name}">${tname(x)} (${kindTitle(x)})</option>`)}</select>` : ""}
       ${list.length ? html`<label class="switch" style="margin-top:8px"><input type="checkbox" data-act="st-check" data-path="${path}.best" ${obj.best ? "checked" : ""}>بهترین مسیر، نه فقط مسیر سالم</label>
         <span class="help">پورت روی تانلی می‌رود که افت و پینگ بهتری دارد: وقتی تانل دیگری ۵ دقیقه پشت سر هم به‌وضوح بهتر بود، اتصال‌های تازه به آن می‌روند و اتصال‌های باز روی مسیر قبلی می‌مانند و قطع نمی‌شوند (حداکثر هر ۳۰ دقیقه یک بار). تست سرعت شبانه هم بین مسیرهای هم‌اندازه تصمیم می‌گیرد. اگر تانلی قطع شود، مثل همیشه فوراً از آن رد می‌شود.</span>` : ""}</div>`;
+  }
+  // A nat, transparent or proxy forward that moves to a connection tunnel
+  // runs there as a TCP relay (the tunnel has no interface to DNAT to).
+  const relaysOnStream = (mode, name) => { const t = tunnel(name); return !!(t && t.stream) && ["", "nat", "transparent", "proxy"].includes(mode || ""); };
+  function streamBackupNote(obj, list) {
+    const on = list.filter((n) => relaysOnStream(obj.mode, n));
+    if (!on.length) return "";
+    const m = obj.mode || "nat";
+    return html`<span class="help">روی ${on.map(tlabel).join("، ")} (تانل اتصالی) این پورت به‌صورت رله‌ی TCP می‌رود: هر اتصال جدا روی جلسه‌های تانل، و سرور مقصد آن را به ${obj.to_public || obj.toPublic ? "IP پابلیک" : "127.0.0.1"} خودش می‌رساند${m === "proxy" ? "، با همان PROXY header" : m === "transparent" ? "؛ IP واقعی کاربر روی این مسیر نمی‌رسد" : ""}. UDP روی این مسیر نمی‌رود و تا برگشت به تانلی با اینترفیس صبر می‌کند.</span>`;
   }
   // Which of its tunnels a forward with a backup runs on now.
   const fwdPath = (f) => !f.backup ? "" : f.best
     ? html`<span class="tag" title="بهترین مسیر بین: ${[f.tunnel].concat(f.backups || []).map(tlabel).join("، ")}"><i class="dot ok"></i> بهترین مسیر · روی ${tlabel(f.active)}${f.since ? " · " + ago(f.since) : ""}</span>`
     : f.active !== f.tunnel
-    ? html`<span class="tag warn" title="تانل اصلی ${tlabel(f.tunnel)} ترافیک رد نمی‌کند">${I.alert ? I.alert(12) : ""} روی پشتیبان ${tlabel(f.active)}${f.since ? " · " + ago(f.since) : ""}</span>`
+    ? html`<span class="tag warn" title="تانل اصلی ${tlabel(f.tunnel)} ترافیک رد نمی‌کند">${I.alert ? I.alert(12) : ""} روی پشتیبان ${tlabel(f.active)}${relaysOnStream(f.mode, f.active) ? " · رله TCP" : ""}${f.since ? " · " + ago(f.since) : ""}</span>`
     : html`<span class="tag" title="پشتیبان‌ها به ترتیب: ${(f.backups || []).map(tlabel).join("، ")}"><i class="dot ok"></i> مسیر اصلی · پشتیبان ${(f.backups || []).map(tlabel).join("، ")}</span>`;
   // A forward's recent moves between its tunnels, newest first.
   function switchHistory(f) {
@@ -2379,7 +2399,8 @@
     return html`<div class="panel"><header><h2>این سرور</h2></header><div class="in"><form data-form="node" class="stack">
       <div class="grid2"><div class="field"><label for="s-label">نام نمایشی</label><input id="s-label" class="input" name="label" dir="auto" maxlength="40" value="${ov.node.label || ""}" placeholder="${ov.node.name}"><span class="help">نامی که در پنل و منوها دیده می‌شود؛ هر زبانی، هر وقت. تانل‌ها را تغییر نمی‌دهد.</span></div>
       <div class="field"><label for="s-name">شناسه‌ی سرور</label><input id="s-name" class="input ltr" name="name" value="${ov.node.name}"><span class="help">در دستورهای اتصال و برای سرورهای دیگر. حروف کوچک انگلیسی، عدد و خط تیره؛ تا وقتی تانل دارد عوض نمی‌شود.</span></div>
-      <div class="field"><label for="s-ip">IP عمومی</label><input id="s-ip" class="input ltr" name="address" value="${ov.node.address}"><span class="help">سرورهای مقصد با این IP به این سرور وصل می‌شوند.</span></div></div>
+      <div class="field"><label for="s-ip">IP عمومی</label><input id="s-ip" class="input ltr" name="address" value="${ov.node.address}"><span class="help">سرورهای مقصد با این IP به این سرور وصل می‌شوند. با ذخیره‌ی IP تازه، تانل‌ها همین‌جا و روی همه‌ی سرورهای مقصد به IP جدید می‌روند.${ov.node.follows ? " اگر IP کارت شبکه‌ی سرور عوض شود، خودش ظرف حدود یک دقیقه IP جدید را پیدا و اعمال می‌کند." : ""}</span></div></div>
+      ${ov.node.detected ? html`<div class="note warn">ترافیک این سرور از IP <b class="ltr">${ov.node.detected}</b> بیرون می‌رود، نه از IP ذخیره‌شده. اگر IP سرور عوض شده، همین را ذخیره کنید. <button type="button" class="btn sm" data-act="node-ip" data-ip="${ov.node.detected}">استفاده از این IP</button></div>` : ""}
       <div class="form-foot"><button class="btn primary" type="submit">ذخیره</button></div></form></div></div>`;
   }
 
@@ -2996,6 +3017,7 @@
           <button type="button" class="choice ${w.protect === "none" ? "on" : ""}" data-act="wiz-protect" data-value="none"><b>بدون رمزنگاری</b><span>سریع‌ترین. برای ترافیکی که خودش رمز شده (TLS، Xray) کافی است.</span></button>
           <button type="button" class="choice ${w.protect === "ipsec" ? "on" : ""}" data-act="wiz-protect" data-value="ipsec"><b>${I.lock(15)} IPsec در کرنل</b><span>AES-GCM با سرعت کرنل؛ ۳۸ بایت سربار. ترافیک بین دو سرور خوانا نیست.</span></button>
           <button type="button" class="choice ${w.protect === "obfs" ? "on" : ""}" data-act="wiz-protect" data-value="obfs"><b>${I.mask(15)} NeoObfs</b><span>رمز با XChaCha20 داخل UDP؛ کندتر از کرنل چون در فضای کاربر اجرا می‌شود.</span></button>
+          ${mode.layer === 2 ? html`<button type="button" class="choice ${w.protect === "wg" ? "on" : ""}" data-act="wiz-protect" data-value="wg"><b>${I.lock(15)} روی WireGuard</b><span>تانل لایه ۲ داخل WireGuard می‌رود: رمزنگاری با سرعت کرنل داخل UDP، برای مسیری که ESP یا GRE را می‌اندازد.</span></button>` : ""}
           <button type="button" class="choice ${w.protect === "auto" ? "on" : ""}" data-act="wiz-protect" data-value="auto"><b>${I.sync(15)} خودکار</b><span>بدون رمز شروع می‌شود؛ اگر ترافیک رد نشد، از ساده به پیشرفته یکی‌یکی امتحان می‌کند و هر کدام ${autoWaitMin()} دقیقه فرصت دارد.</span></button>
         </div>
         ${w.protect === "auto" ? html`<span class="help">ترتیب: بدون رمز، AES-128، AES-256، ChaCha20، NeoObfs. هر بار تانل روی هر دو سرور ری‌استارت می‌شود. اگر پورت‌ها پشتیبانِ سالم داشته باشند، فوری به آن می‌روند و این تانل فقط بررسی می‌شود تا سالم شود.</span>` : ""}
@@ -3041,7 +3063,7 @@
   function wizFinish(w) {
     const ov = S.ov, pi = PROTO[w.mode] || {};
     const mode = ov.modes.find((m) => m.name === w.mode) || {};
-    const prot = { none: "بدون رمزنگاری", ipsec: mode.tcp ? cipherTitle(w.encrypt) : `IPsec ${cipherTitle(w.encrypt)}`, obfs: "NeoObfs", auto: "خودکار" }[wizProt(w, mode)];
+    const prot = { none: "بدون رمزنگاری", ipsec: mode.tcp ? cipherTitle(w.encrypt) : `IPsec ${cipherTitle(w.encrypt)}`, obfs: "NeoObfs", wg: "روی WireGuard", auto: "خودکار" }[wizProt(w, mode)];
     return html`${checkBanner(w)}
       <dl class="summary">
         <div><dt>مقصد</dt><dd>${w.dest === "peer" ? w.peer : w.dest === "new" ? w.newName : html`<span class="ltr">${w.remote}</span>`}</dd></div>
@@ -3117,7 +3139,7 @@
       mode: w.mode, name: w.name.trim(), port: +w.port || 0, forward: w.fwd.trim(), forward_to: +w.fwdTo || 0, proto: fwdProto(wizFmode(w), w.proto),
       forward_mode: wizFmode(w), proxy_version: fwdVersion(wizFmode(w), w), forward_public: w.dest !== "remote" && toPublicOf(wizFmode(w), w),
       queue_mbit: w.gaming ? gameQueue(w) : 0,
-      obfs: prot === "obfs", encrypt: prot === "ipsec" ? w.encrypt : prot === "auto" ? "auto" : "",
+      obfs: prot === "obfs", wireguard: prot === "wg", encrypt: prot === "ipsec" ? w.encrypt : prot === "auto" ? "auto" : "",
     });
     if (w.pool === "manual") Object.assign(req, { pool4: (w.pool4 || "").trim(), pool6: (w.pool6 || "").trim() });
     else req.pool = w.pool || "";
@@ -3422,7 +3444,9 @@
       if (form === "login") { await api("POST", "login", { user: d.user, password: d.password }); S.authed = true; await refresh(); refreshTraffic().then(draw); return; }
       if (form === "node") {
         if ((d.label || "").trim() !== (S.ov.node.label || "")) await api("POST", "labels", { kind: "self", label: d.label });
-        await api("POST", "settings/node", { name: d.name.trim(), address: d.address.trim() }); await refresh(); toast("ذخیره شد");
+        const moved = d.address.trim() !== (S.ov.node.address || "");
+        const ch = await api("POST", "settings/node", { name: d.name.trim(), address: d.address.trim() }); await refresh();
+        reportChange(ch, moved && (ch.peers || []).length ? "IP جدید ذخیره شد و تانل‌ها به آن رفتند" : "ذخیره شد");
       }
       if (form === "label") {
         const m = S.modal, ch = await api("POST", "labels", { kind: m.kind, name: m.name, label: d.label });
@@ -3685,6 +3709,7 @@
       try { const ch = await api("POST", "forwards/remove", { tunnel: el.dataset.tunnel, ports: el.dataset.ports }); closeModal(); await refresh(); reportChange(ch, "فوروارد حذف شد"); }
       catch (e) { toast(e.message, "bad"); }
     },
+    "node-ip"(el) { const i = document.getElementById("s-ip"); if (i) { i.value = el.dataset.ip; i.focus(); } },
     async "random-port"(el) {
       try {
         const r = await api("GET", `ports/random?proto=${el.dataset.proto}`);

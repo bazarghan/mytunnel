@@ -19,9 +19,10 @@ type RegisterRequest struct {
 	Revision  uint64 `json:"revision"` // configuration the peer already runs
 	// What the peer's version can do, as its Status says (older versions
 	// leave these out): known from pairing on, not a minute later.
-	ObfsAES       bool `json:"obfs_aes,omitempty"`
-	StreamTunnels bool `json:"stream_tunnels,omitempty"`
-	StreamTests   bool `json:"stream_tests,omitempty"`
+	ObfsAES        bool `json:"obfs_aes,omitempty"`
+	StreamTunnels  bool `json:"stream_tunnels,omitempty"`
+	StreamTests    bool `json:"stream_tests,omitempty"`
+	StreamFallback bool `json:"stream_fallback,omitempty"`
 }
 
 type ApplyRequest struct {
@@ -33,6 +34,10 @@ type ApplyRequest struct {
 	// peer puts back what it ran before. Older peers ignore it.
 	Hold        string `json:"hold,omitempty"`
 	HoldSeconds int    `json:"hold_s,omitempty"`
+	// Master is the master's agent as "ip:port", for when its public IP
+	// changed: the peer trusts that address in its firewall and registers
+	// there. Older peers ignore it.
+	Master string `json:"master,omitempty"`
 }
 
 // SafeConfirmRequest keeps the safe change ID on the peer.
@@ -73,6 +78,9 @@ type Status struct {
 	// StreamTests: this version takes speed tests over connection tunnels
 	// and runs temporary ones for the checks and comparisons.
 	StreamTests bool `json:"stream_tests,omitempty"`
+	// StreamFallback: this version relays nat, transparent and proxy
+	// forwards over a connection tunnel they moved to as their backup.
+	StreamFallback bool `json:"stream_fallback,omitempty"`
 	// RolledBack is the last version an upgrade went back from, because
 	// it didn't answer its main server in time (see package upgrade).
 	RolledBack string `json:"rolled_back,omitempty"`

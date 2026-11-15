@@ -44,6 +44,9 @@ func pingRound(ctx context.Context, addr string) (sent, got int, rtt time.Durati
 	if err != nil {
 		return roundSize, 0, 0
 	}
+	if sent, got, rtt, ok := icmpRound(cctx, a.Unmap()); ok {
+		return sent, got, rtt
+	}
 	args := []string{"-c", strconv.Itoa(roundSize), "-i", "0.2", "-W", "1", "-n", "-q"}
 	if a.Is6() {
 		args = append([]string{"-6"}, args...)

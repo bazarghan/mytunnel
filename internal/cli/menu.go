@@ -379,6 +379,11 @@ func (s *session) createTunnel(peer string) {
 			choices[1] = item{"Encrypt", "AES-GCM on the TCP stream, keys from the tunnel secret", false}
 			def = min(def, 1)
 		}
+		wgAt := -2
+		if mode.Layer == 2 {
+			choices = append(choices, item{"Over WireGuard", "Ethernet inside WireGuard: kernel encryption in UDP, where ESP or GRE is dropped", false})
+			wgAt = len(choices) - 1
+		}
 		choices = append(choices, item{"Automatic", "starts plain; while traffic doesn't pass, tries each encryption in turn", false})
 		autoAt := len(choices) - 1
 		if d.Encrypt == config.EncryptAuto && !d.Obfs {
@@ -391,6 +396,9 @@ func (s *session) createTunnel(peer string) {
 		case autoAt:
 			req.Encrypt = config.EncryptAuto
 			done = append(done, "protection   automatic")
+		case wgAt:
+			req.WireGuard = true
+			done = append(done, "protection   over WireGuard")
 		case 1:
 			req.Encrypt = d.Encrypt
 			if req.Encrypt == "" || req.Encrypt == config.EncryptAuto {
@@ -451,6 +459,8 @@ func (s *session) createTunnel(peer string) {
 	switch {
 	case req.Obfs:
 		portQ = "UDP port for NeoObfs (empty = a free port)"
+	case req.WireGuard:
+		portQ = "UDP port for WireGuard (empty = a free port)"
 	case mode.UDP:
 		portQ = "UDP port (empty = the standard or a free port)"
 	case mode.TCP:
@@ -1110,10 +1120,12 @@ func (s *session) system() {
 				continue
 			}
 			s.page("Server name and public IP", func() error {
-				if err := manage.SetNode(name, ip); err != nil {
+				ch, err := manage.SetNode(name, ip)
+				if err != nil {
 					return err
 				}
 				success("saved")
+				printChange(ch)
 				return nil
 			})
 		case 1:

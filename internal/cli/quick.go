@@ -51,6 +51,7 @@ func quickCmd() *cobra.Command {
 	f.BoolVar(&req.ForwardPublic, "forward-public", false, "deliver the forward at the peer's public address instead of its address inside the tunnel (see: neotunnel forward add --help)")
 	f.IntVar(&req.ProxyVersion, "proxy-version", 0, "PROXY protocol version for --forward-mode proxy: 2 (default) or 1; with relay: 0 (none, default), 1 or 2")
 	f.BoolVar(&req.Obfs, "obfs", false, "run the tunnel over NeoObfs (encrypted UDP that looks like noise; give --port)")
+	f.BoolVar(&req.WireGuard, "wireguard", false, "run an Ethernet (layer 2) tunnel over WireGuard: kernel encryption inside UDP")
 	settingsFlags(f, &req.Settings)
 	poolFlags(f, &req.PoolChoice)
 	return cmd

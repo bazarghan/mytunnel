@@ -170,7 +170,7 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 			p.AgentPort = req.AgentPort
 		}
 		p.Version, p.Arch, p.LastSeen = req.Version, req.Arch, time.Now()
-		p.ObfsAES, p.StreamTunnels, p.StreamTests = req.ObfsAES, req.StreamTunnels, req.StreamTests
+		p.ObfsAES, p.StreamTunnels, p.StreamTests, p.StreamFallback = req.ObfsAES, req.StreamTunnels, req.StreamTests, req.StreamFallback
 		return nil
 	})
 	if err != nil {
@@ -245,7 +245,7 @@ func agentBusy(st *config.State) []string {
 // LocalStatus reports this node's tunnels and counters.
 func LocalStatus(st *config.State, started time.Time) Status {
 	aes := sysinfo.AESNI()
-	out := Status{Name: st.Self, Version: version.Version, Arch: version.Arch(), Address6: engine.PublicIPv6(), AESNI: &aes, ObfsAES: true, StreamTunnels: true, StreamTests: true, AgentPort: st.ListenAgentPort(), RolledBack: upgrade.LastFailed().Version}
+	out := Status{Name: st.Self, Version: version.Version, Arch: version.Arch(), Address6: engine.PublicIPv6(), AESNI: &aes, ObfsAES: true, StreamTunnels: true, StreamTests: true, StreamFallback: true, AgentPort: st.ListenAgentPort(), RolledBack: upgrade.LastFailed().Version}
 	if st.Managed != nil {
 		out.Revision = st.Managed.Revision
 	}
@@ -283,6 +283,9 @@ func (s *Server) apply(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		m.Revision, m.Tunnels, m.Forwards = req.Revision, req.Tunnels, req.Forwards
+		if ap, err := netip.ParseAddrPort(req.Master); err == nil && ap.Addr().IsValid() && ap.Port() != 0 {
+			m.Master.Address = ap.String()
+		}
 		return nil
 	})
 	if err != nil {

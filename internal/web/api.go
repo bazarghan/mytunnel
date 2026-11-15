@@ -570,7 +570,8 @@ func (s *Server) routes(m *http.ServeMux) {
 			fail(w, http.StatusBadRequest, "bad request")
 			return
 		}
-		reply(w, map[string]bool{"ok": true}, b.SetNode(req.Name, req.Address))
+		ch, err := b.SetNode(req.Name, req.Address)
+		reply(w, ch, err)
 	}))
 	m.HandleFunc("POST /api/settings/defaults", s.authed(func(w http.ResponseWriter, r *http.Request) {
 		var req config.Defaults

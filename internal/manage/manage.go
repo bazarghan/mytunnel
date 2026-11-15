@@ -175,33 +175,6 @@ func DefaultNodeName() string {
 	return n
 }
 
-// SetNode changes this node's name and/or public address.
-func SetNode(name, address string) error {
-	if name != "" {
-		if err := ValidNodeName(name); err != nil {
-			return err
-		}
-	}
-	if address != "" {
-		if _, err := netip.ParseAddr(address); err != nil {
-			return fmt.Errorf("address must be an IP: %w", err)
-		}
-	}
-	_, err := config.Update(func(s *config.State) error {
-		if name != "" && name != s.Self {
-			if len(s.Tunnels) > 0 {
-				return fmt.Errorf("remove tunnels before renaming this node")
-			}
-			s.Self = name
-		}
-		if address != "" {
-			s.Address = address
-		}
-		return nil
-	})
-	return err
-}
-
 // AddPeer registers a server this node will manage.
 func AddPeer(name, address string) error {
 	if err := ValidNodeName(name); err != nil {
@@ -364,11 +337,39 @@ func (r *ForwardRequest) check(st *config.State) error {
 		if err := checkBackup(st, *t, r.Backups[i]); err != nil {
 			return err
 		}
-		if b, _ := st.Tunnel(r.Backups[i]); b.IsStream() && r.Mode != config.ForwardRelay && r.Mode != config.ForwardSocks {
-			return fmt.Errorf("backup %s is a connection tunnel: it carries relay and proxy forwards only", r.Backups[i])
+		if b, _ := st.Tunnel(r.Backups[i]); b.IsStream() {
+			if err := checkStreamBackup(st, *r, *b); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+// checkStreamBackup checks connection tunnel b as a backup of the forward
+// r: a nat, transparent or proxy forward relays its TCP on b while it is
+// there (see config.Forward.RelaysOn), which needs a far server that takes
+// those connections and ports clear of b's own.
+func checkStreamBackup(st *config.State, r ForwardRequest, b config.Tunnel) error {
+	switch r.Mode {
+	case config.ForwardRelay, config.ForwardSocks:
+		return nil
+	case "", config.ForwardNAT, config.ForwardTransparent, config.ForwardProxy:
+	default:
+		return fmt.Errorf("backup %s is a connection tunnel: it can't carry %s forwards", b.Name, r.Mode)
+	}
+	if r.Proto == "udp" {
+		return fmt.Errorf("backup %s is a connection tunnel, which carries TCP only: it can't back up a UDP forward", b.Name)
+	}
+	if n := len(forward.Expand(r.Ports)); n > forward.MaxRelayPorts {
+		return fmt.Errorf("backup %s is a connection tunnel: on it the forward runs as a relay, which listens on up to %d ports (this one has %d)", b.Name, forward.MaxRelayPorts, n)
+	}
+	if far := farOf(st, b); far != "" {
+		if p, ok := st.Peer(far); ok && p.Paired() && !p.StreamFallback {
+			return fmt.Errorf("%s runs an older NeoTunnel that takes only relay forwards over a connection tunnel; update it first, or use relay mode", far)
+		}
+	}
+	return checkOwnPorts(st, r, b)
 }
 
 // checkOwnPorts keeps a forward off the ports NeoTunnel itself listens on

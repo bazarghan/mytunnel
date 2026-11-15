@@ -162,6 +162,10 @@ type TunnelRequest struct {
 	Port uint16 `json:"port,omitempty"`
 	// Obfs runs the tunnel over a NeoObfs layer (encrypted, obfuscated UDP).
 	Obfs bool `json:"obfs,omitempty"`
+	// WireGuard runs an Ethernet (layer 2) tunnel over a WireGuard layer:
+	// encrypted at the kernel's speed and carried in UDP, for a path that
+	// drops IPsec's ESP (protocol 50) or GRE.
+	WireGuard bool `json:"wireguard,omitempty"`
 	// Underlay "ipv6" runs the tunnel between the two servers' IPv6
 	// addresses (Local6 here, Remote6 there) instead of IPv4: GRE, IPIP and
 	// SIT become their IPv6 forms, UDP kinds simply use IPv6.
@@ -302,10 +306,12 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	}
 	if req.Remote != "" {
 		switch {
-		case mode.Peer || req.Obfs:
+		case mode.Peer || req.Obfs || req.WireGuard:
 			what := mode.Title
 			if req.Obfs {
 				what = "NeoObfs"
+			} else if req.WireGuard {
+				what = "a WireGuard layer"
 			}
 			return "", nil, fmt.Errorf("%s needs NeoTunnel on the far end; choose a managed server", what)
 		case req.Encrypt != "":
@@ -321,6 +327,15 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	if req.Obfs && mode.TCP {
 		return "", nil, fmt.Errorf("NeoObfs is UDP; it can't run under a TCP tunnel")
 	}
+	if req.WireGuard {
+		switch {
+		case req.Obfs:
+			return "", nil, fmt.Errorf("choose one layer: NeoObfs or WireGuard")
+		case mode.Layer != 2:
+			return "", nil, fmt.Errorf("a WireGuard layer is for Ethernet (layer 2) tunnels; for IP traffic use WireGuard itself")
+		}
+		req.Encrypt = "" // WireGuard encrypts; IPsec on top only costs speed
+	}
 	if mode.Stream {
 		if req.Peer == "" {
 			return "", nil, fmt.Errorf("%s needs NeoTunnel on the far end; choose a managed server", mode.Title)
@@ -335,7 +350,7 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	if req.Obfs && mode.Crypt {
 		req.Obfs = false // already encrypted; a second layer only costs speed
 	}
-	auto := req.Encrypt == config.EncryptAuto && !mode.Crypt && !req.Obfs
+	auto := req.Encrypt == config.EncryptAuto && !mode.Crypt && !req.Obfs && !req.WireGuard
 	if req.Encrypt == config.EncryptAuto {
 		req.Encrypt = "" // the first step of automatic encryption
 	}
@@ -351,6 +366,9 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	}
 	if req.Obfs {
 		kinds = append([]config.Kind{config.KindObfs}, kinds...)
+	}
+	if req.WireGuard {
+		kinds = append([]config.Kind{config.KindWireGuard}, kinds...)
 	}
 	if len(kinds) > 1 && len(name) > 8 {
 		return "", nil, fmt.Errorf("name %q is too long for a stacked tunnel (max 8 characters)", name)
@@ -369,6 +387,8 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 		case i == len(kinds)-1:
 		case k == config.KindObfs:
 			n = name + "-o"
+		case k == config.KindWireGuard:
+			n = name + "-w"
 		default:
 			n = name + "-6" // carrier
 		}

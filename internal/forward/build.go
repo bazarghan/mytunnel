@@ -52,6 +52,15 @@ func Build(st *config.State, fs []config.Forward, links []Link) (Ruleset, []erro
 			}
 		}
 		t, ok := byName[f.Tunnel]
+		if ok && f.RelaysOn(t) {
+			// Moved to a connection tunnel as its backup: no interface to
+			// DNAT to, so its TCP goes as a relay over the sessions.
+			if f.Proto == "udp" {
+				errs = append(errs, fmt.Errorf("forward %s: UDP can't run over connection tunnel %s; it waits for a tunnel with an interface", f.Ports, f.Tunnel))
+				continue
+			}
+			f = f.AsRelay()
+		}
 		if ok && f.ModeOf() == config.ForwardRelay {
 			// Relay forwards don't use the tunnel's interface.
 			specs, err := streamRelays(st, f, t, byName)
