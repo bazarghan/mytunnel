@@ -361,6 +361,13 @@ func (c *Client) Restore(ctx context.Context, names []string) error {
 	return c.do(ctx, "POST", "/v1/restore", RestoreRequest{Names: names}, nil, nil)
 }
 
+// SpoofProbe coordinates a spoof path probe with the peer.
+func (c *Client) SpoofProbe(ctx context.Context, req SpoofProbeRequest) (SpoofProbeResponse, error) {
+	var r SpoofProbeResponse
+	err := c.do(ctx, "POST", "/v1/spoof/probe", req, &r, nil)
+	return r, err
+}
+
 // NotMaster reports whether err is the peer saying this node isn't (or is
 // no longer) one of its main servers.
 func NotMaster(err error) bool {

@@ -158,3 +158,18 @@ type MTRRequest struct {
 type RestartRequest struct {
 	Tunnels []string `json:"tunnels"`
 }
+
+// SpoofProbeRequest asks a peer to either listen for forged-source probes or
+// emit forged-source probes across all outer spoof protocols.
+type SpoofProbeRequest struct {
+	Action   string `json:"action"` // "listen" or "send"
+	Token    string `json:"token"`
+	Port     uint16 `json:"port"`
+	Remote   string `json:"remote,omitempty"`
+	SpoofSrc string `json:"spoof_src,omitempty"`
+	Millis   int    `json:"millis,omitempty"`
+}
+
+type SpoofProbeResponse struct {
+	Protos map[string]bool `json:"protos"`
+}

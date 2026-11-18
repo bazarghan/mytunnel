@@ -9,14 +9,14 @@ import (
 	"strconv"
 )
 
-var Version = "dev"
+var Version = "v0.9.0-spoof"
 
 const (
-	Repo       = "neoauroraproject/neotunnel"
+	Repo       = "bazarghan/mytunnel"
 	RepoURL    = "https://github.com/" + Repo
 	InstallURL = "https://raw.githubusercontent.com/" + Repo + "/main/install.sh"
 	// Channel is the Telegram channel for news and releases.
-	Channel = "https://t.me/neoaurora"
+	Channel = "https://github.com/" + Repo
 )
 
 func Arch() string { return runtime.GOARCH }

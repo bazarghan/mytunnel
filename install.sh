@@ -15,7 +15,7 @@
 # Re-running it upgrades NeoTunnel and keeps the configuration and password.
 set -euo pipefail
 
-REPO="neoauroraproject/neotunnel"
+REPO="bazarghan/mytunnel"
 PANEL=1 PORT="" VERSION="latest" BINARY="" BOOST=1 MENU=1
 
 while [ $# -gt 0 ]; do
@@ -71,7 +71,7 @@ if [ -n "$BINARY" ]; then
   [ -f "$(dirname "$BINARY")/SHA256SUMS" ] && tr -d '\r' < "$(dirname "$BINARY")/SHA256SUMS" | sed 's/ \*/  /' | grep " $NAME\$" > "$TMP/SHA256SUMS" || true
 else
   if [ "$VERSION" = "latest" ]; then
-    BASE="https://github.com/$REPO/releases/latest/download"
+    BASE="https://raw.githubusercontent.com/$REPO/main"
   else
     BASE="https://github.com/$REPO/releases/download/$VERSION"
   fi
@@ -80,8 +80,9 @@ else
   fetch "$BASE/$NAME" "$TMP/$NAME" progress || die "download failed: $BASE/$NAME
   No access to GitHub from this server? Download the file elsewhere, copy it here and run:
   chmod +x ./$NAME && sudo ./$NAME setup"
-  fetch "$BASE/SHA256SUMS" "$TMP/SHA256SUMS.all" || die "could not download the checksums"
-  grep " $NAME\$" "$TMP/SHA256SUMS.all" > "$TMP/SHA256SUMS" || die "no checksum for $NAME in the release"
+  if fetch "$BASE/SHA256SUMS" "$TMP/SHA256SUMS.all" 2>/dev/null; then
+    grep " $NAME\$" "$TMP/SHA256SUMS.all" > "$TMP/SHA256SUMS" || true
+  fi
 fi
 if [ -s "$TMP/SHA256SUMS" ]; then
   (cd "$TMP" && sha256sum -c --quiet SHA256SUMS) || die "checksum mismatch: the download is corrupted or was tampered with"

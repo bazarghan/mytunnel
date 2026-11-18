@@ -17,13 +17,18 @@ import (
 // StreamSpecs are this node's ends of the running connection tunnels.
 func StreamSpecs(st *config.State) ([]transport.Spec, []error) {
 	ts, _ := st.Effective()
+	act := Active(ts)
+	byName := map[string]config.Tunnel{}
+	for _, t := range act {
+		byName[t.Name] = t
+	}
 	var out []transport.Spec
 	var errs []error
-	for _, t := range Active(ts) {
+	for _, t := range act {
 		if !t.IsStream() {
 			continue
 		}
-		s, err := streamSpec(st.IsSelf, t)
+		s, err := streamSpec(st.IsSelf, t, byName)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("tunnel %s: %w", t.Name, err))
 			continue
@@ -33,7 +38,7 @@ func StreamSpecs(st *config.State) ([]transport.Spec, []error) {
 	return out, errs
 }
 
-func streamSpec(isSelf func(string) bool, t config.Tunnel) (transport.Spec, error) {
+func streamSpec(isSelf func(string) bool, t config.Tunnel, byName map[string]config.Tunnel) (transport.Spec, error) {
 	me, err := sideIndex(isSelf, t)
 	if err != nil {
 		return transport.Spec{}, err
@@ -54,6 +59,14 @@ func streamSpec(isSelf func(string) bool, t config.Tunnel) (transport.Spec, erro
 		return s, fmt.Errorf("no port")
 	}
 	copy(s.Ports[:], ports)
+	if t.Over != "" && byName != nil {
+		if pt, ok := byName[t.Over]; ok && pt.Net4 != "" {
+			if r, ok := config.Inner(pt.Net4, 1-me); ok {
+				s.Remote = r.Addr().Unmap()
+				return s, nil
+			}
+		}
+	}
 	if a, err := netip.ParseAddr(t.Sides[1-me].Endpoint); err == nil {
 		s.Remote = a.Unmap()
 	} else if s.Dial {
@@ -120,6 +133,10 @@ func StreamProbe(tunnel string) (net.Conn, error) {
 // temporary tunnels, under the names rename gives them, until ttl. It
 // returns the names of those it started, which RemoveBench takes.
 func ApplyStreamBench(isSelf func(string) bool, ts []config.Tunnel, rename func(string) string, ttl time.Duration) ([]string, error) {
+	byName := map[string]config.Tunnel{}
+	for _, t := range ts {
+		byName[rename(t.Name)] = t
+	}
 	var started []string
 	for _, t := range ts {
 		if !t.IsStream() {
@@ -130,7 +147,10 @@ func ApplyStreamBench(isSelf func(string) bool, ts []config.Tunnel, rename func(
 			return started, ErrNeedsDaemon
 		}
 		t.Name, t.Origin = rename(t.Name), ""
-		s, err := streamSpec(isSelf, t)
+		if t.Over != "" {
+			t.Over = rename(t.Over)
+		}
+		s, err := streamSpec(isSelf, t, byName)
 		if err != nil {
 			return started, fmt.Errorf("%s: %w", t.Name, err)
 		}

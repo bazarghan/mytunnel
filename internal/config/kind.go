@@ -18,6 +18,7 @@ const (
 	KindL2TPv3    Kind = "l2tpv3"    // L2 pseudowire over IP (proto 115) or UDP
 	KindWireGuard Kind = "wireguard" // L3, encrypted, over UDP (kernel)
 	KindObfs      Kind = "obfs"      // L3, encrypted and obfuscated UDP (user space)
+	KindSpoof     Kind = "spoof"     // L3, forged-source-IP carrier over UDP/TCP/GRE/IPIP/SIT/ICMP (user space)
 	KindTCP       Kind = "tcp"       // L3 over a TCP connection (user space), optionally encrypted
 	KindEoIP      Kind = "eoip"      // L2, MikroTik EoIP / EoIPv6 (user space)
 	// Connection tunnels carry each user connection on its own stream over
@@ -75,6 +76,7 @@ var kinds = []KindInfo{
 	{Kind: KindWireGuard, Title: "WireGuard", Layer: 3, UnderAny: true, Carry4: true, Carry6: true, Overhead: 60, UDP: true, Encrypted: true, NeedsPeer: false},
 	{Kind: KindEoIP, Title: "EoIP / EoIPv6 (MikroTik Ethernet over IP)", Layer: 2, UnderAny: true, Carry4: true, Carry6: true, Overhead: 42, IPProto: 47, PortEncap: true, Userspace: true},
 	{Kind: KindObfs, Title: "NeoObfs (encrypted, obfuscated UDP)", Layer: 3, UnderAny: true, Carry4: true, Carry6: true, Overhead: ObfsOverhead, UDP: true, Encrypted: true, Userspace: true, NeedsPeer: true},
+	{Kind: KindSpoof, Title: "Spoof (forged source IP tunnel)", Layer: 3, Carry4: true, Carry6: true, Overhead: SpoofOverhead, UDP: true, Encrypted: true, Userspace: true, NeedsPeer: true},
 	{Kind: KindTCP, Title: "TCP (packets over a TCP connection)", Layer: 3, UnderAny: true, Carry4: true, Carry6: true, Overhead: TCPOverhead, TCP: true, Userspace: true, NeedsPeer: true},
 	{Kind: KindStreamTCP, Title: "TCP + mux (connection tunnel)", UnderAny: true, TCP: true, Userspace: true, NeedsPeer: true, Stream: true},
 	{Kind: KindStreamTLS, Title: "TLS + mux (connection tunnel)", UnderAny: true, TCP: true, Encrypted: true, Userspace: true, NeedsPeer: true, Stream: true},
@@ -83,6 +85,28 @@ var kinds = []KindInfo{
 // ObfsOverhead is NeoObfs' per-packet cost over IPv4 without padding:
 // IP 20 + UDP 8 + nonce 24 + tag 16 + header 14.
 const ObfsOverhead = 82
+
+// SpoofOverhead is Spoof's default per-packet cost over IPv4 UDP with AEAD:
+// IP 20 + UDP 8 + nonce 24 + tag 16 + header 14.
+const SpoofOverhead = 82
+
+// SpoofOverheadFor returns the encapsulation cost of a Spoof tunnel for the
+// chosen outer protocol ("udp", "tcp", "gre", "ipip", "sit", "icmp") and
+// whether it runs in authenticated-only mode (noCrypt).
+func SpoofOverheadFor(proto string, noCrypt bool) int {
+	l4 := 8
+	switch proto {
+	case "tcp":
+		l4 = 20
+	case "ipip", "sit":
+		l4 = 0
+	}
+	frame := 54
+	if noCrypt {
+		frame = 22
+	}
+	return 20 + l4 + frame
+}
 
 // TCPOverhead is the TCP transport's cost per packet over IPv4: IP 20 +
 // TCP 32 (with timestamps) + length 2, shared by the packets of a segment;

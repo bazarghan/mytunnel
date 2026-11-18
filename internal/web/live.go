@@ -30,6 +30,7 @@ import (
 	"neotunnel/internal/mikrotik"
 	"neotunnel/internal/pmtu"
 	"neotunnel/internal/safe"
+	"neotunnel/internal/spoof"
 	"neotunnel/internal/sysctl"
 	"neotunnel/internal/sysinfo"
 	"neotunnel/internal/traffic"
@@ -206,6 +207,9 @@ func tunnelViews(st *config.State, sums map[string]traffic.Summary, hs map[strin
 			if bt.Kind == config.KindObfs {
 				v.Obfs = true
 			}
+			if bt.Kind == config.KindSpoof {
+				v.Spoof = true
+			}
 			if bt.Over == "" {
 				// The public address of the server at the bottom of the stack.
 				v.FarIP = bt.Sides[1-me].Endpoint
@@ -214,7 +218,7 @@ func tunnelViews(st *config.State, sums map[string]traffic.Summary, hs map[strin
 					v.Encrypt = bt.Encrypt
 				case bt.Kind == config.KindWireGuard:
 					v.Encrypt = "wireguard"
-				case bt.Kind == config.KindObfs:
+				case bt.Kind == config.KindObfs, bt.Kind == config.KindSpoof && !bt.SpoofNoCrypt:
 					v.Encrypt = "xchacha20-poly1305"
 					if bt.ObfsAES {
 						v.Encrypt = "aes-gcm-128"
@@ -532,6 +536,10 @@ func (l *Live) MTR(ctx context.Context, name string, rounds int) (manage.MTRRepo
 	return manage.MTR(ctx, l.ID, name, rounds)
 }
 
+func (l *Live) TestSpoof(ctx context.Context, peer, spoofSrc string) (spoof.ProbeReport, error) {
+	return manage.TestSpoof(ctx, l.ID, peer, spoofSrc)
+}
+
 func (l *Live) PortClients(key string) (clients.Report, error) {
 	st, err := config.Load()
 	if err != nil {
@@ -809,6 +817,15 @@ func stackOverhead(ts []config.Tunnel, stack []string, under6, avgPad bool) int 
 		t, _ := tunnelByName(ts, n)
 		ki, err := config.LookupKind(t.Kind)
 		if err != nil {
+			continue
+		}
+		if t.Kind == config.KindSpoof {
+			o += config.SpoofOverheadFor(t.SpoofProto, t.SpoofNoCrypt)
+			if avgPad {
+				o += t.Padding / 2
+			} else {
+				o += t.Padding
+			}
 			continue
 		}
 		o += ki.OverheadFor(under6 && t.Over == "", t.Port != 0 && t.Over == "")

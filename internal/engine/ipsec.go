@@ -61,6 +61,27 @@ func carriers(specs []LinkSpec) []forward.Protect {
 		}
 	}
 	for _, s := range specs {
+		if s.Kind == config.KindSpoof {
+			spProto := 17
+			switch s.SpoofProto {
+			case "tcp":
+				spProto = 6
+			case "gre":
+				spProto = 47
+			case "ipip":
+				spProto = 4
+			case "sit":
+				spProto = 41
+			case "icmp":
+				spProto = 1
+			}
+			port := s.Port
+			if spProto != 17 && spProto != 6 {
+				port = 0
+			}
+			add(forward.Protect{Remote: s.Remote, Proto: spProto, Port: port, Spoof: true})
+			continue
+		}
 		p, port := outerProto(s)
 		if p == 17 && port == 0 {
 			port = map[config.Kind]uint16{config.KindVXLAN: 4789, config.KindGENEVE: 6081}[s.Kind]

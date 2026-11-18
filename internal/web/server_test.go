@@ -15,6 +15,7 @@ import (
 	"neotunnel/internal/manage"
 	"neotunnel/internal/metrics"
 	"neotunnel/internal/safe"
+	"neotunnel/internal/spoof"
 	"neotunnel/internal/traffic"
 	"neotunnel/internal/web"
 )
@@ -53,6 +54,9 @@ func (stub) PortHistory(string) (web.PortHistory, error)                { return
 func (stub) PortClients(string) (clients.Report, error)                 { return clients.Report{}, nil }
 func (stub) MTR(context.Context, string, int) (manage.MTRReport, error) {
 	return manage.MTRReport{}, nil
+}
+func (stub) TestSpoof(context.Context, string, string) (spoof.ProbeReport, error) {
+	return spoof.ProbeReport{}, nil
 }
 
 func (stub) Check(context.Context, manage.TunnelRequest, bool, *web.SpeedOptions) ([]bench.Result, error) {

@@ -58,15 +58,19 @@ type LinkSpec struct {
 
 	// Side is this node's side of the tunnel (0 or 1); keys are derived
 	// per direction from Secret, which never leaves the node in a spec.
-	Side      int    `json:"side"`
-	Secret    string `json:"-"`
-	Encrypt   string `json:"encrypt,omitempty"` // IPsec cipher on the outer packets
-	Cipher    string `json:"cipher,omitempty"`  // user-space stream cipher (TCP)
-	Padding   int    `json:"padding,omitempty"`
-	ObfsAES   bool   `json:"obfs_aes,omitempty"`
-	Keepalive int    `json:"keepalive,omitempty"`
-	PeerKey   string `json:"peer_key,omitempty"`
-	Userspace bool   `json:"userspace,omitempty"`
+	Side         int    `json:"side"`
+	Secret       string `json:"-"`
+	Encrypt      string `json:"encrypt,omitempty"` // IPsec cipher on the outer packets
+	Cipher       string `json:"cipher,omitempty"`  // user-space stream cipher (TCP)
+	Padding      int    `json:"padding,omitempty"`
+	ObfsAES      bool   `json:"obfs_aes,omitempty"`
+	SpoofProto   string `json:"spoof_proto,omitempty"`
+	SpoofMode    string `json:"spoof_mode,omitempty"`
+	SpoofSrc     string `json:"spoof_src,omitempty"`
+	SpoofNoCrypt bool   `json:"spoof_nocrypt,omitempty"`
+	Keepalive    int    `json:"keepalive,omitempty"`
+	PeerKey      string `json:"peer_key,omitempty"`
+	Userspace    bool   `json:"userspace,omitempty"`
 	// RateMbit shapes what this side sends (0 = no limit). It is applied
 	// in place, so it is not part of Hash.
 	RateMbit int `json:"rate_mbit,omitempty"`
@@ -93,6 +97,9 @@ func (l LinkSpec) Hash() string {
 	var keys string
 	if l.Kind == config.KindWireGuard {
 		d := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%d|%d", l.Secret, l.PeerKey, l.Side, l.Keepalive)))
+		keys = hex.EncodeToString(d[:6])
+	} else if l.Kind == config.KindSpoof {
+		d := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|%s|%v|%v|%d|%d", l.Secret, l.SpoofProto, l.SpoofMode, l.SpoofSrc, l.SpoofNoCrypt, l.ObfsAES, l.Padding, l.Keepalive)))
 		keys = hex.EncodeToString(d[:6])
 	}
 	b, _ := json.Marshal(struct {
@@ -373,26 +380,30 @@ func renderOne(isSelf func(string) bool, t config.Tunnel, byName map[string]conf
 	}
 
 	s := &LinkSpec{
-		Name:      Ifname(t.Name),
-		Tunnel:    t.Name,
-		KeyName:   t.KeyName(),
-		Kind:      t.Kind,
-		Local:     local,
-		Remote:    remote,
-		TTL:       t.TTL,
-		NoDF:      t.NoDF,
-		IgnoreDF:  t.IgnoreDF && t.NoDF && config.IgnoreDFKinds(t.Kind),
-		DSCP:      t.DSCP,
-		MTU:       t.MTU,
-		Side:      me,
-		Secret:    t.Secret,
-		Padding:   t.Padding,
-		ObfsAES:   t.ObfsAES,
-		Keepalive: t.Keepalive,
-		PeerKey:   t.PeerKey,
-		Userspace: ki.Userspace,
-		RateMbit:  t.RateMbit,
-		QueueMbit: t.QueueMbit,
+		Name:         Ifname(t.Name),
+		Tunnel:       t.Name,
+		KeyName:      t.KeyName(),
+		Kind:         t.Kind,
+		Local:        local,
+		Remote:       remote,
+		TTL:          t.TTL,
+		NoDF:         t.NoDF,
+		IgnoreDF:     t.IgnoreDF && t.NoDF && config.IgnoreDFKinds(t.Kind),
+		DSCP:         t.DSCP,
+		MTU:          t.MTU,
+		Side:         me,
+		Secret:       t.Secret,
+		Padding:      t.Padding,
+		ObfsAES:      t.ObfsAES,
+		SpoofProto:   t.SpoofProto,
+		SpoofMode:    t.SpoofMode,
+		SpoofSrc:     t.SpoofSrc,
+		SpoofNoCrypt: t.SpoofNoCrypt,
+		Keepalive:    t.Keepalive,
+		PeerKey:      t.PeerKey,
+		Userspace:    ki.Userspace,
+		RateMbit:     t.RateMbit,
+		QueueMbit:    t.QueueMbit,
 	}
 	if parent != nil {
 		s.Parent = parent.Name
@@ -419,6 +430,9 @@ func renderOne(isSelf func(string) bool, t config.Tunnel, byName map[string]conf
 	}
 	if t.Kind == config.KindObfs {
 		overhead += t.Padding
+	}
+	if t.Kind == config.KindSpoof {
+		overhead = config.SpoofOverheadFor(t.SpoofProto, t.SpoofNoCrypt) + t.Padding
 	}
 	if t.Kind == config.KindTCP && t.Encrypt != "" {
 		// The TCP transport seals its own frames; no IPsec underneath.
@@ -467,6 +481,15 @@ func renderOne(isSelf func(string) bool, t config.Tunnel, byName map[string]conf
 			return nil, fmt.Errorf("NeoObfs needs a UDP port")
 		}
 		s.Port = t.Port
+	case config.KindSpoof:
+		s.Port = t.Port
+		if s.Port == 0 && (t.SpoofProto == "" || t.SpoofProto == "udp" || t.SpoofProto == "tcp" || t.SpoofProto == "icmp") {
+			s.Port = 32443
+		}
+		s.Key = t.Key
+		if s.Key == 0 {
+			s.Key = uint32(s.Port)<<16 | 0x4d4b
+		}
 	case config.KindTCP:
 		if t.Port == 0 {
 			return nil, fmt.Errorf("a TCP tunnel needs a TCP port")

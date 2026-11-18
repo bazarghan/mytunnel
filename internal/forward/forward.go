@@ -156,11 +156,12 @@ type Return struct {
 	Mark  uint32
 }
 
-// Protect matches the outer packets of an encrypted tunnel.
+// Protect matches the outer packets of an encrypted or spoofed tunnel.
 type Protect struct {
 	Remote netip.Addr
 	Proto  int    // outer IP protocol
-	Port   uint16 // UDP destination port, for UDP-based tunnels
+	Port   uint16 // UDP/TCP destination port
+	Spoof  bool   // forged source IP: match any saddr on prerouting, and for TCP drop outgoing RST
 }
 
 // transparentMark tags connections forwarded transparently on this node so

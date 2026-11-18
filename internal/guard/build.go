@@ -92,6 +92,43 @@ func Build(st *config.State) (Input, Status) {
 		always[Socket{Proto: "tcp", Port: in.Panel}.Key()] = true
 	}
 	in.Ports = Classify(g, Forwards(st), Sockets(), always)
+	ts, _ := st.Effective()
+	rawSeen := map[int]bool{}
+	for _, t := range ts {
+		if t.Kind != config.KindSpoof || t.Disabled {
+			continue
+		}
+		port := t.Port
+		if port == 0 {
+			port = 32443
+		}
+		switch t.SpoofProto {
+		case "", "udp":
+			in.Ports = append(in.Ports, Port{Proto: "udp", Port: port, Scope: config.ScopeAll, Process: "spoof:" + t.Name})
+		case "tcp":
+			in.Ports = append(in.Ports, Port{Proto: "tcp", Port: port, Scope: config.ScopeAll, Process: "spoof:" + t.Name})
+		case "gre":
+			if !rawSeen[47] {
+				rawSeen[47] = true
+				in.RawProtos = append(in.RawProtos, 47)
+			}
+		case "ipip":
+			if !rawSeen[4] {
+				rawSeen[4] = true
+				in.RawProtos = append(in.RawProtos, 4)
+			}
+		case "sit":
+			if !rawSeen[41] {
+				rawSeen[41] = true
+				in.RawProtos = append(in.RawProtos, 41)
+			}
+		case "icmp":
+			if !rawSeen[1] {
+				rawSeen[1] = true
+				in.RawProtos = append(in.RawProtos, 1)
+			}
+		}
+	}
 	ifaces := g.Ifaces
 	if len(ifaces) == 0 {
 		ifaces = PublicIfaces(st.Address)

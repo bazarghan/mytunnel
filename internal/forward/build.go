@@ -536,6 +536,29 @@ func CarrierScript(cs []Protect) string {
 			if c.Remote.Is6() {
 				fam = "ip6"
 			}
+			if c.Spoof {
+				if ch[0] == "from_far" {
+					switch {
+					case c.Proto == 17 && c.Port != 0:
+						fmt.Fprintf(&b, "    meta nfproto %s udp dport %d notrack\n", fam, c.Port)
+					case c.Proto == 6 && c.Port != 0:
+						fmt.Fprintf(&b, "    meta nfproto %s tcp dport %d notrack\n", fam, c.Port)
+					case c.Proto != 0:
+						fmt.Fprintf(&b, "    meta nfproto %s meta l4proto %d notrack\n", fam, c.Proto)
+					}
+				} else {
+					switch {
+					case c.Proto == 17 && c.Port != 0:
+						fmt.Fprintf(&b, "    %s daddr %s udp dport %d notrack\n", fam, c.Remote, c.Port)
+					case c.Proto == 6 && c.Port != 0:
+						fmt.Fprintf(&b, "    %s daddr %s tcp dport %d notrack\n", fam, c.Remote, c.Port)
+						fmt.Fprintf(&b, "    meta nfproto %s tcp sport %d tcp flags & rst == rst drop\n", fam, c.Port)
+					case c.Proto != 0:
+						fmt.Fprintf(&b, "    %s daddr %s meta l4proto %d notrack\n", fam, c.Remote, c.Proto)
+					}
+				}
+				continue
+			}
 			if c.Port != 0 {
 				fmt.Fprintf(&b, "    %s %s %s udp dport %d notrack\n", fam, ch[2], c.Remote, c.Port)
 			} else {

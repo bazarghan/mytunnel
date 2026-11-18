@@ -164,6 +164,7 @@
     sit: { t: "SIT", d: "فقط IPv6 روی IPv4. پایه‌ی 6to4؛ تنها وقتی مفید است که فقط IPv6 لازم باشد.", layer: 3, carry: "IPv6", over: 20, crypt: "ندارد (IPsec اختیاری)", mt: "بله، 6to4", best: "شبکه‌ی IPv6 بین دو سرور" },
     wireguard: { t: "WireGuard", d: "تانل رمزنگاری‌شده در خود کرنل (ChaCha20-Poly1305). کلیدها از رمز مشترک تانل ساخته می‌شوند؛ پشت NAT هم کار می‌کند.", layer: 3, carry: "IPv4 و IPv6", over: 60, crypt: "دارد، در کرنل", mt: "بله، RouterOS 7", best: "رمزنگاری سریع، اتصال به میکروتیک", udp: true },
     obfs: { t: "NeoObfs", d: "لایه‌ی رمزنگاری و مبهم‌سازی NeoTunnel: هر بسته داخل UDP با XChaCha20-Poly1305 رمز می‌شود و هیچ بایت ثابتی ندارد، پس شبیه نویز تصادفی است. اندازه‌ی بسته‌ها هم با padding تغییر می‌کند.", layer: 3, carry: "IPv4 و IPv6", over: 82, crypt: "دارد، XChaCha20", mt: "خیر؛ دو طرف NeoTunnel", best: "مسیرهایی که پروتکل‌ها را شناسایی و فیلتر می‌کنند", udp: true },
+    spoof: { t: "Spoof (مبدأ جعلی)", d: "ارسال بسته‌ها با آدرس IP مبدأ جعلی (IP Spoofing) روی هر یک از ۶ حامل UDP، FakeTCP، GRE، IPIP، 6to4/SIT یا ICMP، همراه با رمزنگاری و احراز هویت کلید مشترک. همچنین می‌توانید در مرحله‌ی بعد، Spoof را به‌عنوان لایه‌ی زیرین روی هر پروتکل دیگری (6to4، GRE، WireGuard، VXLAN، TCP+mux و...) روشن کنید.", layer: 3, carry: "IPv4 و IPv6", over: 82, crypt: "دارد، AES-GCM / XChaCha20", mt: "خیر؛ دو طرف NeoTunnel", best: "عبور از فیلترینگ شدید با جعل IP مبدأ روی همه‌ی پروتکل‌ها", udp: true },
     tcp: { t: "TCP", d: "بسته‌های IP پشت سر هم داخل یک اتصال TCP پایدار بین دو سرور می‌روند (در فضای کاربر، با TCP_NODELAY و اتصال دوباره‌ی خودکار). هر دو سر روی پورت گوش می‌دهند، پس اگر TCP فقط در یک جهت باز باشد هم وصل می‌شود. رمزنگاری اختیاری است و کلیدها از رمز مشترک تانل ساخته می‌شوند. هشدار: TCP داخل TCP در مسیرِ با افت بسته خیلی کند می‌شود، چون هر بسته‌ی گم‌شده کل جریان را نگه می‌دارد؛ فقط وقتی سراغش بروید که نه UDP رد می‌شود و نه پروتکل 41 و 47.", layer: 3, carry: "IPv4 و IPv6", over: 54, crypt: "اختیاری، AES-GCM یا ChaCha20 روی جریان", mt: "خیر؛ دو طرف NeoTunnel", best: "آخرین راه: وقتی فقط TCP بین دو سرور رد می‌شود", tcp: true },
     gretap: { t: "GRETAP", d: "لایه ۲ (Ethernet) روی GRE؛ دو سر مثل یک سوییچ مشترک رفتار می‌کنند.", layer: 2, carry: "Ethernet", over: 42, crypt: "ندارد (IPsec اختیاری)", mt: "شبیه EoIP، ولی با آن سازگار نیست", best: "بریج کردن دو شبکه" },
     vxlan: { t: "VXLAN", d: "لایه ۲ روی UDP؛ استاندارد شبکه‌های مجازی دیتاسنتر.", layer: 2, carry: "Ethernet", over: 50, crypt: "ندارد (IPsec اختیاری)", mt: "بله، RouterOS 7", best: "لایه ۲ روی مسیری که فقط UDP رد می‌شود", udp: true },
@@ -231,7 +232,7 @@
     ["direct", "مسیر مستقیم"], ["6to4", "6to4"], ["6to4-udp", "6to4 روی UDP"], ["6to4-gre", "6to4 + GRE6"],
     ["ipip", "IPIP"], ["gre", "GRE"], ["gretap", "GRETAP"], ["vxlan", "VXLAN"], ["geneve", "GENEVE"],
     ["wireguard", "WireGuard"], ["l2tpv3", "L2TPv3"], ["l2tpv3-udp", "L2TPv3 روی UDP"], ["tcp", "TCP"],
-    ["tcpmux", "TCP + mux"], ["tlsmux", "TLS + mux"],
+    ["tcpmux", "TCP + mux"], ["tlsmux", "TLS + mux"], ["spoof", "Spoof (مبدأ جعلی)"],
   ];
   // A connection tunnel's direction, by its own name: Direct (this server
   // connects out, the far one listens) or Reverse (the far one connects in,
@@ -1864,8 +1865,11 @@
         ${noPort ? "" : html`<div class="field"><label>پورت ${kind === "tcp" ? "TCP" : "UDP"}${editing ? "" : " (اختیاری)"}</label><div class="pf"><input class="input ltr" type="number" min="1" max="65535" data-bind="${path}.port" value="${st.port || ""}" placeholder="${["obfs", "wireguard", "tcp"].includes(kind) ? "خودکار" : "پروتکل خام"}"><button type="button" class="btn sm" data-act="random-port" data-path="${path}.port" data-proto="${kind === "tcp" ? "tcp" : "udp"}" title="یک پورت آزاد تصادفی بین ۲۰۰۰۰ و ۶۰۰۰۰">${I.dice(14)} تصادفی</button></div>
           <span class="help">${PROTO[kind] && (PROTO[kind].udp || PROTO[kind].tcp) || kind === "obfs" || kind === "wireguard" ? "پورتی که دو سر روی آن گوش می‌دهند." : "خالی = پروتکل خام (سریع‌ترین). با پورت، تانل داخل UDP می‌رود؛ وقتی مسیر پروتکل 41 یا 47 را می‌بندد."}</span></div>`}
         <div class="field"><label>TTL</label><input class="input ltr" type="number" min="1" max="255" data-bind="${path}.ttl" value="${st.ttl || ""}" placeholder="255"><span class="help">TTL بسته‌های بیرونی.</span></div>
-        ${kind === "obfs" ? html`<div class="field"><label>Padding (بایت)</label><input class="input ltr" type="number" min="0" max="255" data-bind="${path}.padding" value="${st.padding || ""}" placeholder="0"><span class="help">تا این تعداد بایت تصادفی به هر بسته اضافه می‌شود تا اندازه‌ها چیزی را لو ندهند. هزینه‌اش همین مقدار از MTU است.</span></div>` : ""}
-        ${["obfs", "wireguard", "eoip"].includes(kind) ? html`<div class="field"><label>Keepalive (ثانیه)</label><input class="input ltr" type="number" min="-1" max="3600" data-bind="${path}.keepalive" value="${st.keepalive || ""}" placeholder="25"><span class="help">نگه‌داشتن مسیر NAT باز؛ ‎-1 یعنی خاموش.</span></div>` : ""}
+        ${["obfs", "spoof"].includes(kind) ? html`<div class="field"><label>Padding (بایت)</label><input class="input ltr" type="number" min="0" max="255" data-bind="${path}.padding" value="${st.padding || ""}" placeholder="0"><span class="help">تا این تعداد بایت تصادفی به هر بسته اضافه می‌شود تا اندازه‌ها چیزی را لو ندهند. هزینه‌اش همین مقدار از MTU است.</span></div>` : ""}
+        ${["obfs", "spoof", "wireguard", "eoip"].includes(kind) ? html`<div class="field"><label>Keepalive (ثانیه)</label><input class="input ltr" type="number" min="-1" max="3600" data-bind="${path}.keepalive" value="${st.keepalive || ""}" placeholder="25"><span class="help">نگه‌داشتن مسیر NAT باز؛ ‎-1 یعنی خاموش.</span></div>` : ""}
+        ${kind === "spoof" ? html`<div class="field"><label>پروتکل حامل Spoof</label><select class="input" data-bind="${path}.spoof_proto">${[["udp", "UDP (پیشنهادی)"], ["tcp", "FakeTCP / TCP خام"], ["gre", "GRE (پروتکل 47)"], ["ipip", "IPIP (پروتکل 4)"], ["sit", "6to4 / SIT (پروتکل 41)"], ["icmp", "ICMP (پینگ)"]].map(([v, l]) => html`<option value="${v}" ${(st.spoof_proto || "udp") === v ? "selected" : ""}>${l}</option>`)}</select></div>
+        <div class="field"><label>جهت Spoof</label><select class="input" data-bind="${path}.spoof_mode">${[["both", "دوطرفه (هر دو سرور با IP جعلی)"], ["out", "فقط ارسال این سرور با IP جعلی"], ["in", "فقط ارسال سرور مقابل با IP جعلی"]].map(([v, l]) => html`<option value="${v}" ${(st.spoof_mode || "both") === v ? "selected" : ""}>${l}</option>`)}</select></div>
+        <div class="field full"><label>آدرس IP مبدأ جعلی (Spoof Source)</label><input class="input ltr" data-bind="${path}.spoof_src" value="${st.spoof_src || ""}" placeholder="auto | iran | rotate | 185.143.233.10"><span class="help">مقادیر مجاز: <b class="ltr">auto</b> (IP عمومی ثابت)، <b class="ltr">iran</b> (رنج IP ایران)، <b class="ltr">rotate</b> (تغییر مداوم IP)، یا یک آدرس IPv4 دلخواه.</span></div>` : ""}
         ${kind === "tcp" ? html`<div class="field"><label>Keepalive (ثانیه)</label><input class="input ltr" type="number" min="-1" max="3600" data-bind="${path}.keepalive" value="${st.keepalive || ""}" placeholder="15"><span class="help">اتصالی که سه برابر این مدت ساکت بماند قطع و دوباره برقرار می‌شود؛ ‎-1 یعنی فقط keepalive خود TCP.</span></div>` : ""}
         ${kind === "wireguard" ? html`<div class="field full"><label>کلید عمومی طرف مقابل</label><input class="input ltr" data-bind="${path}.peer_key" value="${st.peer_key || ""}" placeholder="فقط وقتی آن طرف NeoTunnel ندارد"><span class="help">برای میکروتیک یا هر WireGuard دیگر؛ بین دو سرور NeoTunnel کلیدها خودکار ساخته می‌شوند.</span></div>` : ""}
         ${top === "eoip" ? html`<div class="field"><label>شناسه‌ی تانل (Tunnel ID)</label><input class="input ltr" type="number" min="0" max="65535" data-bind="${path}.tunnel_id" value="${st.tunnel_id ?? ""}" placeholder="خودکار"><span class="help">همان tunnel-id میکروتیک؛ دو سر باید یکی باشند. ۰ تا ۶۵۵۳۵، و روی EoIPv6 بدون پورت ۰ تا ۴۰۹۵. خالی = از نام تانل ساخته می‌شود.</span></div>` : ""}
@@ -1882,6 +1886,9 @@
     if (st.mtuMode === "probe") out.mtu_probe = true;
     // Connection tunnels: who listens, the TLS server name, sessions.
     Object.assign(out, { reverse: !!st.reverse, sni: (st.sni || "").trim(), conns: +st.conns || 0 });
+    if (st.spoof_proto) out.spoof_proto = st.spoof_proto;
+    if (st.spoof_mode) out.spoof_mode = st.spoof_mode;
+    if (st.spoof_src !== undefined) out.spoof_src = String(st.spoof_src || "").trim();
     const id = st.tunnel_id ?? "";
     if (String(id).trim() !== "") {
       const n = Number(id);
@@ -3005,8 +3012,47 @@
       <div class="field"><label for="w-name">نام تانل (اختیاری)</label><input id="w-name" class="input ltr" data-bind="wiz.name" value="${w.name}" placeholder="${S.ov.next_name || "t1"}" maxlength="8" style="max-width:220px"><span class="help">خالی بگذارید تا <b class="ltr">${S.ov.next_name || "t1"}</b> انتخاب شود.</span></div>`;
   }
 
+  function wizSpoofBox(w) {
+    if (w.dest === "remote" || w.underlay === "ipv6") return "";
+    const on = w.mode === "spoof" || !!w.spoof;
+    const sp = w.spoof_proto || "udp", sm = w.spoof_mode || "both", ss = w.spoof_src || "auto";
+    const rep = w.spoofRep;
+    return html`<div class="field" style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:8px">
+      <div class="row" style="align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="lbl" style="margin:0">${I.mask(15)} حمل با تانل Spoof (مبدأ جعلی — روی همه‌ی پروتکل‌ها)</span>
+        <span class="grow"></span>
+        ${w.mode === "spoof" ? html`<span class="tag lock">فعال (پروتکل Spoof)</span>`
+          : html`<div class="seg" role="radiogroup">
+              <button type="button" class="${!on ? "on" : ""}" data-act="set" data-path="wiz.spoof" data-value="">خاموش</button>
+              <button type="button" class="${on ? "on" : ""}" data-act="set" data-path="wiz.spoof" data-value="1">روشن (زیرِ ${PROTO[w.mode] ? PROTO[w.mode].t : w.mode})</button>
+            </div>`}
+      </div>
+      <span class="help">با روشن کردن این گزینه، ترافیکِ تانل انتخابی شما داخل بسته‌هایی با <b>IP مبدأ جعلی (Spoofed Source IP)</b> قرار می‌گیرد تا فایروال و فیلترینگ مسیر نتواند ارتباط بین دو سرور را تشخیص دهد.</span>
+      ${on ? html`<div class="grid2" style="margin-top:10px">
+        <div class="field"><label>پروتکل حامل Spoof روی سیم</label>
+          <select class="input" data-bind="wiz.spoof_proto">${[["udp", "UDP (پیشنهادی · سریع‌ترین)"], ["tcp", "FakeTCP / TCP خام (بدون دست‌دهی)"], ["gre", "GRE (پروتکل 47 با مبدأ جعلی)"], ["ipip", "IPIP (پروتکل 4 با مبدأ جعلی)"], ["sit", "6to4 / SIT (پروتکل 41 با مبدأ جعلی)"], ["icmp", "ICMP (پینگ با مبدأ جعلی)"]].map(([v, l]) => html`<option value="${v}" ${sp === v ? "selected" : ""}>${l}</option>`)}</select>
+        </div>
+        <div class="field"><label>جهت Spoof</label>
+          <select class="input" data-bind="wiz.spoof_mode">${[["both", "دوطرفه (هر دو سرور با IP جعلی)"], ["out", "فقط ارسال این سرور با IP جعلی"], ["in", "فقط ارسال سرور مقابل با IP جعلی"]].map(([v, l]) => html`<option value="${v}" ${sm === v ? "selected" : ""}>${l}</option>`)}</select>
+        </div>
+        <div class="field full"><label>نحوه‌ی تولید IP مبدأ جعلی</label>
+          <div class="seg">${[["auto", "خودکار (IP عمومی ثابت)"], ["iran", "رنج IP ایران"], ["rotate", "چرخشی (تغییر مداوم IP)"]].map(([v, l]) => html`<button type="button" class="${ss === v ? "on" : ""}" data-act="set" data-path="wiz.spoof_src" data-value="${v}">${l}</button>`)}</div>
+          <input class="input ltr" style="margin-top:6px;max-width:340px" data-bind="wiz.spoof_src" value="${ss}" placeholder="auto | iran | rotate | 185.143.233.10">
+          <span class="help">می‌توانید یکی از حالت‌های بالا را بزنید یا یک IP دلخواه (یا دو IP با کاما برای دو طرف مثل <span class="ltr">185.143.233.10,8.8.8.8</span>) وارد کنید.</span>
+        </div>
+      </div>
+      ${canCheck(w) ? html`<div style="margin-top:10px">
+        <button type="button" class="btn sm" data-act="wiz-spoof-test" ${w.spoofTesting ? "disabled" : ""}>${w.spoofTesting ? html`<i class="spin"></i> در حال تست ۶ پروتکل Spoof در هر دو جهت…` : html`${I.gauge(14)} تست مسیر Spoof روی همه‌ی پروتکل‌ها`}</button>
+        ${rep ? html`<div class="note ${rep.recommended_proto ? "ok" : "bad"}" style="margin-top:8px">
+          <b>${rep.summary}</b>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${(rep.protos || []).map((p) => html`<span class="tag ${p.out_ok && p.in_ok ? "lock" : p.out_ok || p.in_ok ? "warn" : ""}">${p.proto.toUpperCase()}: ارسال ${p.out_ok ? "✓" : "✗"} · دریافت ${p.in_ok ? "✓" : "✗"}</span>`)}</div>
+        </div>` : ""}
+      </div>` : ""}` : ""}
+    </div>`;
+  }
+
   function wizProtect(w) {
-    return html`${wizProtectBody(w)}${profileField("wiz", w.profile, w.mode)}${w.dest !== "remote" && LANE_MODES.includes(w.mode) ? lanesField("wiz", w.lanes) : ""}`;
+    return html`${wizProtectBody(w)}${wizSpoofBox(w)}${profileField("wiz", w.profile, w.mode)}${w.dest !== "remote" && LANE_MODES.includes(w.mode) ? lanesField("wiz", w.lanes) : ""}`;
   }
 
   // Speed profiles: how hard the tunnel works for throughput.
@@ -3185,7 +3231,8 @@
       mode: w.mode, name: w.name.trim(), port: +w.port || 0, forward: w.fwd.trim(), forward_to: +w.fwdTo || 0, proto: fwdProto(wizFmode(w), w.proto),
       forward_mode: wizFmode(w), proxy_version: fwdVersion(wizFmode(w), w), forward_public: w.dest !== "remote" && toPublicOf(wizFmode(w), w),
       queue_mbit: w.gaming ? gameQueue(w) : 0,
-      obfs: prot === "obfs", wireguard: prot === "wg", encrypt: prot === "ipsec" ? w.encrypt : prot === "auto" ? "auto" : "",
+      obfs: prot === "obfs", spoof: w.mode !== "spoof" && !!w.spoof, wireguard: prot === "wg", encrypt: prot === "ipsec" ? w.encrypt : prot === "auto" ? "auto" : "",
+      spoof_proto: w.spoof_proto || "udp", spoof_mode: w.spoof_mode || "both", spoof_src: (w.spoof_src || "auto").trim(),
     });
     if (w.pool === "manual") Object.assign(req, { pool4: (w.pool4 || "").trim(), pool6: (w.pool6 || "").trim() });
     else req.pool = w.pool || "";
@@ -3303,6 +3350,7 @@
       protect: d.obfs ? "obfs" : d.encrypt === "auto" ? "auto" : d.encrypt ? "ipsec" : "none", encrypt: d.encrypt && d.encrypt !== "auto" ? d.encrypt : "aes-gcm-128",
       pool: d.pool || "default", pool4: "", pool6: "", poolName: "",
       fmode: d.forward_mode || "nat", reverse: false, sni: "", conns: "", pver: 2, profile: "balanced", lanes: 1, mtuMode: d.mtu_probe ? "probe" : "auto", mtu: "", ttl: "", dscp: "", pmtud: "on", padding: d.padding || "", keepalive: "", peer_key: "", adv: false,
+      spoof: !!d.spoof, spoof_proto: d.spoof_proto || "udp", spoof_mode: d.spoof_mode || "both", spoof_src: d.spoof_src || "auto", spoofTesting: false, spoofRep: null,
     }, preset);
     if (preset.peer) { S.wiz.dest = "peer"; S.wiz.step = preset.mode ? 3 : 2; }
     const p = wizPeer(S.wiz); if (p && p.address6) S.wiz.remote6 = p.address6;
@@ -3656,6 +3704,17 @@
       drawModal(); runCheck(false);
     },
     "wiz-protect"(el) { S.wiz.protect = el.dataset.value; drawModal(); runCheck(true); },
+    async "wiz-spoof-test"() {
+      const w = S.wiz; if (!w || !canCheck(w)) return;
+      w.spoofTesting = true; drawModal();
+      try {
+        const rep = await api("POST", "spoof/test", { peer: w.peer, spoof_src: w.spoof_src || "auto" });
+        w.spoofRep = rep;
+        if (rep.recommended_proto) w.spoof_proto = rep.recommended_proto;
+        if (rep.recommended_dir) w.spoof_mode = rep.recommended_dir;
+      } catch (e) { toast(e.message, "bad"); }
+      w.spoofTesting = false; drawModal();
+    },
     "wiz-check-all"() { checkAll(); },
     "wiz-next"() { const w = S.wiz; w.step++; stepAnim(w, "next"); drawModal(); if (w.step === 2) runCheck(false); if (w.step === 3) { runCheck(true); runSpeed(); } },
     "wiz-back"() { S.wiz.step--; stepAnim(S.wiz, "back"); drawModal(); },

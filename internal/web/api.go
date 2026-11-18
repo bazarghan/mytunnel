@@ -199,6 +199,20 @@ func (s *Server) routes(m *http.ServeMux) {
 		rep, err := b.MTR(ctx, r.PathValue("name"), 10)
 		reply(w, rep, err)
 	}))
+	m.HandleFunc("POST /api/spoof/test", s.authed(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Peer     string `json:"peer"`
+			SpoofSrc string `json:"spoof_src"`
+		}
+		if readJSON(r, &req) != nil {
+			fail(w, http.StatusBadRequest, "bad request")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		defer cancel()
+		rep, err := b.TestSpoof(ctx, req.Peer, req.SpoofSrc)
+		reply(w, rep, err)
+	}))
 
 	m.HandleFunc("GET /api/traffic", s.authed(func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, b.Traffic())

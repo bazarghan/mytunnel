@@ -13,6 +13,7 @@ import (
 	"neotunnel/internal/manage"
 	"neotunnel/internal/metrics"
 	"neotunnel/internal/safe"
+	"neotunnel/internal/spoof"
 	"neotunnel/internal/traffic"
 )
 
@@ -70,6 +71,8 @@ type Backend interface {
 	Check(ctx context.Context, req manage.TunnelRequest, all bool, speed *SpeedOptions) ([]bench.Result, error)
 	// MTR traces the path under a tunnel from both of its servers.
 	MTR(ctx context.Context, name string, rounds int) (manage.MTRReport, error)
+	// TestSpoof tests bidirectional forged-source-IP connectivity across all outer protocols.
+	TestSpoof(ctx context.Context, peer, spoofSrc string) (spoof.ProbeReport, error)
 	// ProbeMTU measures the path MTU under a tunnel and remembers it.
 	ProbeMTU(ctx context.Context, name string) (MTUReport, error)
 	Traffic() map[string]traffic.Summary
@@ -266,6 +269,7 @@ type TunnelView struct {
 	Settings manage.Settings `json:"settings"`
 	BasePort uint16          `json:"base_port,omitempty"` // UDP port of the bottom layer
 	Obfs     bool            `json:"obfs,omitempty"`
+	Spoof    bool            `json:"spoof,omitempty"`
 	Encrypt  string          `json:"encrypt,omitempty"` // IPsec or the kind's own encryption
 	// AutoEncrypt: the daemon picks Encrypt by what passes (see Settings.Encrypt).
 	AutoEncrypt bool   `json:"auto_encrypt,omitempty"`

@@ -57,15 +57,16 @@ func (p Port) Key() string { return p.Proto + "/" + strconv.Itoa(int(p.Port)) }
 
 // Input is everything a ruleset is made from.
 type Input struct {
-	Ifaces []string     // interfaces to guard
-	Peers  []netip.Addr // let in whole
-	SSH    []uint16     // never closed
-	Panel  uint16       // never closed
-	Ports  []Port
-	ICMP   string
-	Allow  []string
-	Block  []string
-	IR     []netip.Prefix
+	Ifaces    []string     // interfaces to guard
+	Peers     []netip.Addr // let in whole
+	SSH       []uint16     // never closed
+	Panel     uint16       // never closed
+	Ports     []Port
+	RawProtos []int // raw IP protocols open for Spoof tunnels (e.g. 47, 4, 41, 1)
+	ICMP      string
+	Allow     []string
+	Block     []string
+	IR        []netip.Prefix
 }
 
 // IsXray reports whether a process is an Xray core (3x-ui's inbounds).
@@ -297,6 +298,13 @@ func Script(in Input) string {
 		b.WriteString("    icmp type echo-request accept\n    icmpv6 type echo-request accept\n")
 	case "iran":
 		b.WriteString("    icmp type echo-request ip saddr @ir4 accept\n    icmpv6 type echo-request ip6 saddr @ir6 accept\n")
+	}
+	if len(in.RawProtos) > 0 {
+		var ps []string
+		for _, p := range in.RawProtos {
+			ps = append(ps, strconv.Itoa(p))
+		}
+		fmt.Fprintf(&b, "    meta l4proto { %s } accept\n", strings.Join(ps, ", "))
 	}
 	tail("th dport")
 

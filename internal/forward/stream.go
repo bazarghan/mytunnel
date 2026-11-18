@@ -152,6 +152,13 @@ func farAddrs(st *config.State, t config.Tunnel, byName map[string]config.Tunnel
 			out = append(out, p.Addr())
 		}
 	}
+	if c, ok := byName[t.Over]; ok && t.Over != "" {
+		for _, n := range []string{c.Net4, c.Net6} {
+			if p, ok := config.Inner(n, 1-sideOf(st, c)); ok && n != "" {
+				out = append(out, p.Addr())
+			}
+		}
+	}
 	return out
 }
 

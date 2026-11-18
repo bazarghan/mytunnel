@@ -26,6 +26,7 @@ import (
 	"neotunnel/internal/mtr"
 	"neotunnel/internal/probe"
 	"neotunnel/internal/safe"
+	"neotunnel/internal/spoof"
 	"neotunnel/internal/sysinfo"
 	"neotunnel/internal/traffic"
 	"neotunnel/internal/upgrade"
@@ -59,6 +60,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/safe/confirm", s.fromMaster(s.safeConfirm))
 	mux.HandleFunc("POST /v1/leave", s.fromMaster(s.leave))
 	mux.HandleFunc("POST /v1/restore", s.fromMaster(s.restore))
+	mux.HandleFunc("POST /v1/spoof/probe", s.fromMaster(s.spoofProbe))
 	return mux
 }
 
@@ -510,4 +512,40 @@ func (s *Server) restart(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (s *Server) spoofProbe(w http.ResponseWriter, r *http.Request) {
+	var req SpoofProbeRequest
+	if err := readJSON(r, &req); err != nil {
+		fail(w, http.StatusBadRequest, err)
+		return
+	}
+	switch req.Action {
+	case "listen":
+		dur := time.Duration(req.Millis) * time.Millisecond
+		if dur <= 0 || dur > 10*time.Second {
+			dur = 2 * time.Second
+		}
+		got, err := spoof.ListenProbes(r.Context(), req.Token, req.Port, dur)
+		if err != nil {
+			fail(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, SpoofProbeResponse{Protos: got})
+	case "send":
+		rem, err := netip.ParseAddr(req.Remote)
+		if err != nil || !rem.Is4() {
+			fail(w, http.StatusBadRequest, fmt.Errorf("bad remote IPv4 %q", req.Remote))
+			return
+		}
+		local, _ := engine.RouteSource(rem)
+		sent, err := spoof.SendProbes(rem, local, req.Port, req.Token, req.SpoofSrc, nil)
+		if err != nil {
+			fail(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, SpoofProbeResponse{Protos: sent})
+	default:
+		fail(w, http.StatusBadRequest, fmt.Errorf("unknown action %q", req.Action))
+	}
 }

@@ -205,7 +205,7 @@ func firewallNeeds(st *config.State, specs []LinkSpec, rs forward.Ruleset, strea
 	}
 	for _, s := range specs {
 		n.Ifaces = append(n.Ifaces, s.Name)
-		if s.Port != 0 && s.Kind == config.KindTCP {
+		if s.Port != 0 && (s.Kind == config.KindTCP || (s.Kind == config.KindSpoof && s.SpoofProto == "tcp")) {
 			n.Ports = append(n.Ports, fmt.Sprintf("%d/tcp", s.Port))
 		} else if s.Port != 0 {
 			n.UDPPorts = append(n.UDPPorts, int(s.Port))
@@ -320,7 +320,7 @@ func modulesFor(s LinkSpec) []string {
 		ms = []string{"l2tp_eth", "l2tp_netlink", "l2tp_ip", "l2tp_ip6"}
 	case config.KindWireGuard:
 		ms = []string{"wireguard"}
-	case config.KindObfs, config.KindTCP, config.KindEoIP:
+	case config.KindObfs, config.KindSpoof, config.KindTCP, config.KindEoIP:
 		ms = []string{"tun"}
 	}
 	if s.FOU {

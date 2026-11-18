@@ -140,6 +140,8 @@ func Candidates(self, peer string, selfAddr, peerAddr string) []Candidate {
 			[]config.Tunnel{secret(mk("tcpmux", config.KindStreamTCP, "", BenchPort+4))}},
 		{"tlsmux", fmt.Sprintf("TLS + mux on %d", BenchPort+5), "tlsmux", BenchPort + 5,
 			[]config.Tunnel{secret(mk("tlsmux", config.KindStreamTLS, "", BenchPort+5))}},
+		{"spoof", fmt.Sprintf("Spoof (UDP %d)", BenchPort+6), "spoof", BenchPort + 6,
+			[]config.Tunnel{secret(mk("spoof", config.KindSpoof, "", BenchPort+6))}},
 	}
 }
 

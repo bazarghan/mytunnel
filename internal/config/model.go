@@ -142,7 +142,11 @@ type Defaults struct {
 	Encrypt     string `json:"encrypt,omitempty"`      // IPsec cipher for new tunnels to NeoTunnel servers
 	MTUProbe    bool   `json:"mtu_probe,omitempty"`    // measure the path MTU of new tunnels
 	Obfs        bool   `json:"obfs,omitempty"`         // run new tunnels over a NeoObfs layer
-	Padding     int    `json:"padding,omitempty"`      // NeoObfs random padding
+	Spoof       bool   `json:"spoof,omitempty"`        // run new tunnels over a Spoof (forged source IP) layer
+	SpoofProto  string `json:"spoof_proto,omitempty"`  // outer spoof protocol: udp, tcp, gre, ipip, sit, icmp
+	SpoofMode   string `json:"spoof_mode,omitempty"`   // spoof direction: both, out, in
+	SpoofSrc    string `json:"spoof_src,omitempty"`    // spoof source IP: auto, iran, rotate, or IPv4
+	Padding     int    `json:"padding,omitempty"`      // NeoObfs / Spoof random padding
 	ForwardMode string `json:"forward_mode,omitempty"` // nat, transparent, proxy, relay
 	// NoRecover turns off the daemon's automatic recovery of tunnels that
 	// lose most of their packets (restart once, then move forwards to the
@@ -370,10 +374,22 @@ type Tunnel struct {
 	// of the bottom tunnel, or is a NeoObfs layer marked AutoLayer.
 	AutoEncrypt bool `json:"auto_encrypt,omitempty"`
 	AutoLayer   bool `json:"auto_layer,omitempty"`
-	// ObfsAES runs a NeoObfs tunnel on AES-128-GCM, chosen when both servers
-	// have AES instructions and the far one understands it.
+	// ObfsAES runs a NeoObfs or Spoof tunnel on AES-128-GCM, chosen when both
+	// servers have AES instructions and the far one understands it.
 	ObfsAES bool `json:"obfs_aes,omitempty"`
-	// Padding adds up to this many random bytes to NeoObfs packets so their
+	// SpoofProto is the outer wire protocol of a Spoof tunnel ("udp", "tcp",
+	// "gre", "ipip", "sit", "icmp"; "" = "udp").
+	SpoofProto string `json:"spoof_proto,omitempty"`
+	// SpoofMode is which side(s) forge their outer source IP ("both", "out",
+	// "in"; "" = "both").
+	SpoofMode string `json:"spoof_mode,omitempty"`
+	// SpoofSrc selects the forged outer source IP ("auto", "iran", "rotate",
+	// or a custom IPv4 address / pair "ip0,ip1").
+	SpoofSrc string `json:"spoof_src,omitempty"`
+	// SpoofNoCrypt runs a Spoof carrier with fast HMAC authentication only
+	// (no payload encryption), used when an encrypted tunnel runs on top.
+	SpoofNoCrypt bool `json:"spoof_nocrypt,omitempty"`
+	// Padding adds up to this many random bytes to NeoObfs/Spoof packets so their
 	// sizes don't reveal the traffic inside.
 	Padding int `json:"padding,omitempty"`
 	// Keepalive in seconds for WireGuard and NeoObfs (0 = 25, -1 = off).
@@ -501,7 +517,7 @@ func (t Tunnel) LaneCount() int {
 // those that set a DF bit on outer IPv4 packets (IPv6 has no such bit).
 func PMTUKinds(k Kind) bool {
 	switch k {
-	case KindSIT, KindIPIP, KindGRE, KindGRETAP, KindEoIP:
+	case KindSIT, KindIPIP, KindGRE, KindGRETAP, KindEoIP, KindSpoof:
 		return true
 	}
 	return false

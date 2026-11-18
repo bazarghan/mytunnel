@@ -14,6 +14,7 @@ import (
 	"neotunnel/internal/events"
 	"neotunnel/internal/forward"
 	"neotunnel/internal/pmtu"
+	"neotunnel/internal/spoof"
 )
 
 // Mode is a ready-made tunnel stack. The last kind carries the traffic.
@@ -40,6 +41,7 @@ var modes = []Mode{
 	{Name: "sit", Title: "SIT (IPv6 only)", Kinds: []config.Kind{config.KindSIT}, Layer: 3, Port: true},
 	{Name: "wireguard", Title: "WireGuard", Kinds: []config.Kind{config.KindWireGuard}, Layer: 3, Port: true, UDP: true, Crypt: true},
 	{Name: "obfs", Title: "NeoObfs", Kinds: []config.Kind{config.KindObfs}, Layer: 3, Port: true, UDP: true, Crypt: true, Peer: true},
+	{Name: "spoof", Title: "Spoof (مبدأ جعلی)", Kinds: []config.Kind{config.KindSpoof}, Layer: 3, Port: true, UDP: true, Crypt: true, Peer: true},
 	{Name: "gretap", Title: "GRETAP (L2)", Kinds: []config.Kind{config.KindGRETAP}, Layer: 2, Port: true},
 	{Name: "vxlan", Title: "VXLAN (L2)", Kinds: []config.Kind{config.KindVXLAN}, Layer: 2, Port: true, UDP: true},
 	{Name: "geneve", Title: "GENEVE (L2)", Kinds: []config.Kind{config.KindGENEVE}, Layer: 2, Port: true, UDP: true},
@@ -96,6 +98,11 @@ type Settings struct {
 	Reverse bool   `json:"reverse,omitempty"`
 	SNI     string `json:"sni,omitempty"`
 	Conns   int    `json:"conns,omitempty"`
+	// Spoof options (for Mode "spoof" or when Spoof carrier layer is enabled
+	// under any protocol).
+	SpoofProto string `json:"spoof_proto,omitempty"` // udp, tcp, gre, ipip, sit, icmp
+	SpoofMode  string `json:"spoof_mode,omitempty"`  // both, out, in
+	SpoofSrc   string `json:"spoof_src,omitempty"`   // auto, iran, rotate, or IPv4
 }
 
 // pmtuFlags are the path MTU discovery flags a tunnel of kind k keeps: kinds
@@ -148,6 +155,15 @@ func (s Settings) validate() error {
 			return fmt.Errorf("peer key must be a WireGuard public key (base64, 32 bytes)")
 		}
 	}
+	if s.SpoofProto != "" && !spoof.ValidProto(s.SpoofProto) {
+		return fmt.Errorf("spoof protocol must be udp, tcp, gre, ipip, sit or icmp")
+	}
+	if s.SpoofMode != "" && !spoof.ValidDir(s.SpoofMode) {
+		return fmt.Errorf("spoof direction must be both, out or in")
+	}
+	if err := spoof.ValidateSrc(s.SpoofSrc); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -162,6 +178,9 @@ type TunnelRequest struct {
 	Port uint16 `json:"port,omitempty"`
 	// Obfs runs the tunnel over a NeoObfs layer (encrypted, obfuscated UDP).
 	Obfs bool `json:"obfs,omitempty"`
+	// Spoof runs the tunnel (any protocol) over a Spoof carrier layer that
+	// forges outer source IPv4 addresses.
+	Spoof bool `json:"spoof,omitempty"`
 	// WireGuard runs an Ethernet (layer 2) tunnel over a WireGuard layer:
 	// encrypted at the kernel's speed and carried in UDP, for a path that
 	// drops IPsec's ESP (protocol 50) or GRE.
@@ -304,12 +323,17 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	} else if req.Underlay != "" && req.Underlay != "ipv4" {
 		return "", nil, fmt.Errorf("underlay must be ipv4 or ipv6")
 	}
+	if mode.Name == "spoof" {
+		req.Spoof = false
+	}
 	if req.Remote != "" {
 		switch {
-		case mode.Peer || req.Obfs || req.WireGuard:
+		case mode.Peer || req.Obfs || req.Spoof || req.WireGuard:
 			what := mode.Title
 			if req.Obfs {
 				what = "NeoObfs"
+			} else if req.Spoof {
+				what = "Spoof"
 			} else if req.WireGuard {
 				what = "a WireGuard layer"
 			}
@@ -323,6 +347,9 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 		case req.ForwardMode == config.ForwardRelay:
 			return "", nil, fmt.Errorf("relay mode needs NeoTunnel on the far end to accept the connections")
 		}
+	}
+	if (req.Spoof || mode.Name == "spoof") && local6.IsValid() {
+		return "", nil, fmt.Errorf("Spoof carrier forges IPv4 source addresses; use an IPv4 underlay")
 	}
 	if req.Obfs && mode.TCP {
 		return "", nil, fmt.Errorf("NeoObfs is UDP; it can't run under a TCP tunnel")
@@ -350,7 +377,7 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	if req.Obfs && mode.Crypt {
 		req.Obfs = false // already encrypted; a second layer only costs speed
 	}
-	auto := req.Encrypt == config.EncryptAuto && !mode.Crypt && !req.Obfs && !req.WireGuard
+	auto := req.Encrypt == config.EncryptAuto && !mode.Crypt && !req.Obfs && !req.Spoof && !req.WireGuard
 	if req.Encrypt == config.EncryptAuto {
 		req.Encrypt = "" // the first step of automatic encryption
 	}
@@ -370,6 +397,9 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	if req.WireGuard {
 		kinds = append([]config.Kind{config.KindWireGuard}, kinds...)
 	}
+	if req.Spoof {
+		kinds = append([]config.Kind{config.KindSpoof}, kinds...)
+	}
 	if len(kinds) > 1 && len(name) > 8 {
 		return "", nil, fmt.Errorf("name %q is too long for a stacked tunnel (max 8 characters)", name)
 	}
@@ -385,6 +415,8 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 		n := name
 		switch {
 		case i == len(kinds)-1:
+		case k == config.KindSpoof:
+			n = name + "-s"
 		case k == config.KindObfs:
 			n = name + "-o"
 		case k == config.KindWireGuard:
@@ -392,7 +424,7 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 		default:
 			n = name + "-6" // carrier
 		}
-		opts := TunnelOpts{Kind: string(k), Peer: req.Peer, Remote: req.Remote, PoolChoice: req.PoolChoice, stacked: i > 0}
+		opts := TunnelOpts{Kind: string(k), Peer: req.Peer, Remote: req.Remote, PoolChoice: req.PoolChoice, stacked: i > 0, Settings: req.Settings}
 		if i == 0 {
 			opts.Port = port // the port belongs to the outer tunnel
 		}
@@ -419,6 +451,15 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 			ki, _ := config.LookupKind(k)
 			if !ki.Encrypted {
 				t.Encrypt = req.Encrypt
+			}
+		}
+		if k == config.KindSpoof {
+			t.SpoofProto = spoof.NormalizeProto(req.SpoofProto)
+			t.SpoofMode = spoof.NormalizeDir(req.SpoofMode)
+			t.SpoofSrc = strings.TrimSpace(req.SpoofSrc)
+			t.ObfsAES = obfsAES(st, req.Peer)
+			if len(kinds) > 1 && (mode.Crypt || req.Obfs || req.WireGuard || req.Encrypt != "") {
+				t.SpoofNoCrypt = true
 			}
 		}
 		if k == config.KindEoIP {
@@ -555,6 +596,16 @@ func UpdateTunnel(name string, set Settings, port uint16) (Change, error) {
 			// Saving is when an older tunnel moves to the faster cipher.
 			b.ObfsAES = obfsAES(s, b.Sides[1].Node)
 		}
+		if b.Kind == config.KindSpoof {
+			b.ObfsAES = obfsAES(s, b.Sides[1].Node)
+			if set.SpoofProto != "" {
+				b.SpoofProto = spoof.NormalizeProto(set.SpoofProto)
+			}
+			if set.SpoofMode != "" {
+				b.SpoofMode = spoof.NormalizeDir(set.SpoofMode)
+			}
+			b.SpoofSrc = strings.TrimSpace(set.SpoofSrc)
+		}
 		if top.Kind == config.KindEoIP {
 			top.TunnelID = set.TunnelID
 		}
@@ -593,7 +644,8 @@ func SettingsOf(st *config.State, name string) (Settings, uint16) {
 	top, b := find(name), find(stack[0])
 	s := Settings{MTU: top.MTU, MTUProbe: b.MTUProbe, TTL: b.TTL, NoDF: b.NoDF, IgnoreDF: b.IgnoreDF, DSCP: b.DSCP, Encrypt: b.Encrypt,
 		Padding: b.Padding, Keepalive: b.Keepalive, PeerKey: b.PeerKey, TunnelID: top.TunnelID, Profile: top.Profile, Lanes: top.Lanes,
-		Reverse: top.Reverse, SNI: top.SNI, Conns: top.Conns}
+		Reverse: top.Reverse, SNI: top.SNI, Conns: top.Conns,
+		SpoofProto: b.SpoofProto, SpoofMode: b.SpoofMode, SpoofSrc: b.SpoofSrc}
 	if top.AutoEncrypt {
 		s.Encrypt = config.EncryptAuto
 	}
@@ -662,8 +714,13 @@ func NewTunnel(st *config.State, name string, o TunnelOpts) (config.Tunnel, erro
 	if t.Encrypt == config.EncryptAuto {
 		t.Encrypt, t.AutoEncrypt = "", !ki.Encrypted
 	}
-	if kind == config.KindObfs {
+	if kind == config.KindObfs || kind == config.KindSpoof {
 		t.ObfsAES = obfsAES(st, o.Peer)
+	}
+	if kind == config.KindSpoof {
+		t.SpoofProto = spoof.NormalizeProto(o.SpoofProto)
+		t.SpoofMode = spoof.NormalizeDir(o.SpoofMode)
+		t.SpoofSrc = strings.TrimSpace(o.SpoofSrc)
 	}
 	if ki.Encrypted {
 		t.Encrypt = ""
@@ -829,6 +886,8 @@ func FreePort(st *config.State, kind config.Kind, peer string) uint16 {
 		start = 30443
 	case config.KindTCP:
 		start = 31443
+	case config.KindSpoof:
+		start = 32443
 	}
 	for p := start; p < 65000; p++ {
 		if portAvailable(st, p, "") == nil && !st.PeerTakes(to, p, ki.TCP) {
@@ -845,7 +904,7 @@ func FreeName(st *config.State) string {
 	used := usedNames(st)
 	for i := 1; ; i++ {
 		n := fmt.Sprintf("t%d", i)
-		if !used[n] && !used[n+"-6"] && !used[n+"-o"] {
+		if !used[n] && !used[n+"-6"] && !used[n+"-o"] && !used[n+"-s"] && !used[n+"-w"] {
 			return n
 		}
 	}

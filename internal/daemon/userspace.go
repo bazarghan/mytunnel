@@ -23,15 +23,17 @@ import (
 	"neotunnel/internal/pmtu"
 	"neotunnel/internal/probe"
 	"neotunnel/internal/relay"
+	"neotunnel/internal/spoof"
 	"neotunnel/internal/tcptun"
 	"neotunnel/internal/traffic"
 	"neotunnel/internal/transport"
 )
 
-// dataPlane is the daemon's engine.Userspace: NeoObfs, TCP and EoIP tunnels,
-// connection tunnels and PROXY protocol relays.
+// dataPlane is the daemon's engine.Userspace: NeoObfs, Spoof, TCP and EoIP
+// tunnels, connection tunnels and PROXY protocol relays.
 type dataPlane struct {
 	obfs  *obfs.Manager
+	spoof *spoof.Manager
 	tcp   *tcptun.Manager
 	eoip  *eoip.Manager
 	relay *relay.Manager
@@ -44,7 +46,7 @@ type dataPlane struct {
 type closer interface{ Close() }
 
 func newDataPlane() *dataPlane {
-	d := &dataPlane{obfs: obfs.NewManager(), tcp: tcptun.NewManager(), eoip: eoip.NewManager(), relay: relay.NewManager(),
+	d := &dataPlane{obfs: obfs.NewManager(), spoof: spoof.NewManager(), tcp: tcptun.NewManager(), eoip: eoip.NewManager(), relay: relay.NewManager(),
 		hub: transport.NewHub(), bench: map[string]closer{}}
 	d.relay.SetHub(d.hub)
 	d.hub.SetProbe(net.JoinHostPort("127.0.0.1", strconv.Itoa(probe.DefaultPort)))
@@ -86,8 +88,20 @@ func eoipConfig(s engine.LinkSpec) eoip.Config {
 	}
 }
 
+func spoofConfig(s engine.LinkSpec) spoof.Config {
+	return spoof.Config{
+		Name: s.Name, Tunnel: keyName(s), Secret: s.Secret, Side: s.Side,
+		Local: s.Local, Remote: s.Remote, Port: s.Port, Key: s.Key,
+		Proto: s.SpoofProto, Dir: s.SpoofMode, SpoofSrc: s.SpoofSrc,
+		TTL: s.TTL, DSCP: s.DSCP, NoDF: s.NoDF,
+		Padding: s.Padding, Keepalive: keepalive(s, 20*time.Second),
+		AES: s.ObfsAES, NoCrypt: s.SpoofNoCrypt,
+	}
+}
+
 func (d *dataPlane) SyncLinks(specs []engine.LinkSpec) []error {
 	var oc []obfs.Config
+	var sc []spoof.Config
 	var tc []tcptun.Config
 	var ec []eoip.Config
 	for _, s := range specs {
@@ -96,11 +110,14 @@ func (d *dataPlane) SyncLinks(specs []engine.LinkSpec) []error {
 			tc = append(tc, tcpConfig(s))
 		case config.KindEoIP:
 			ec = append(ec, eoipConfig(s))
+		case config.KindSpoof:
+			sc = append(sc, spoofConfig(s))
 		default:
 			oc = append(oc, obfsConfig(s))
 		}
 	}
-	errs := append(d.obfs.Sync(oc), d.tcp.Sync(tc)...)
+	errs := append(d.obfs.Sync(oc), d.spoof.Sync(sc)...)
+	errs = append(errs, d.tcp.Sync(tc)...)
 	return append(errs, d.eoip.Sync(ec)...)
 }
 
@@ -113,6 +130,8 @@ func (d *dataPlane) StartBench(s engine.LinkSpec, expiry time.Time) error {
 		l, err = tcptun.Start(tcpConfig(s))
 	case config.KindEoIP:
 		l, err = eoip.Start(eoipConfig(s))
+	case config.KindSpoof:
+		l, err = spoof.Start(spoofConfig(s))
 	default:
 		l, err = obfs.Start(obfsConfig(s))
 	}
@@ -229,6 +248,7 @@ func (d *dataPlane) Close() {
 	d.relay.Close()
 	d.eoip.Close()
 	d.obfs.Close()
+	d.spoof.Close()
 	d.tcp.Close()
 	d.StopBench(d.benchNames())
 }

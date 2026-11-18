@@ -35,6 +35,9 @@ func settingsFlags(f *pflag.FlagSet, s *manage.Settings) {
 	f.StringVar(&s.SNI, "sni", "", "tlsmux: the server name its TLS sends (default: none, as for an IP address)")
 	f.IntVar(&s.Conns, "conns", 0, fmt.Sprintf("connection tunnels: sessions kept open at once, 1-%d (default: 2, 4 or 8 by profile)", config.MaxStreamConns))
 	f.Var(tunnelID{&s.TunnelID}, "tunnel-id", "EoIP: the tunnel id, same as the MikroTik's tunnel-id (0-65535, 0-4095 on EoIPv6 without a port; default: from the name)")
+	f.StringVar(&s.SpoofProto, "spoof-proto", "", "Spoof outer protocol: udp (default), tcp (FakeTCP), gre, ipip, sit, icmp")
+	f.StringVar(&s.SpoofMode, "spoof-mode", "", "Spoof direction: both (default), out (this server only), in (far server only)")
+	f.StringVar(&s.SpoofSrc, "spoof-src", "", "Spoof forged source IP: auto (default), iran, rotate, or an IPv4 address")
 }
 
 // tunnelID is an optional uint16 flag: unset leaves the id derived.
@@ -112,6 +115,9 @@ func tunnelSetCmd() *cobra.Command {
 			keep("tunnel-id", func() { s.TunnelID = cur.TunnelID })
 			keep("profile", func() { s.Profile = cur.Profile })
 			keep("lanes", func() { s.Lanes = cur.Lanes })
+			keep("spoof-proto", func() { s.SpoofProto = cur.SpoofProto })
+			keep("spoof-mode", func() { s.SpoofMode = cur.SpoofMode })
+			keep("spoof-src", func() { s.SpoofSrc = cur.SpoofSrc })
 			if f.Changed("no-encrypt") {
 				s.Encrypt = ""
 			}
