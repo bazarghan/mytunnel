@@ -212,12 +212,26 @@ func tunnelRenameCmd() *cobra.Command {
 }
 
 func tunnelRemoveCmd() *cobra.Command {
-	return &cobra.Command{
+	var local bool
+	cmd := &cobra.Command{
 		Use:     "remove <name>",
 		Aliases: []string{"rm"},
 		Short:   "Remove a tunnel on both ends (with tunnels and forwards on top of it)",
-		Args:    cobra.ExactArgs(1),
+		Long: "Removes a tunnel on both ends, with the tunnels and forwards on top of it.\n\n" +
+			"With --local, removes a main server's tunnel on this server only, for\n" +
+			"when that server can't be reached to remove it. It stays removed\n" +
+			"whatever the main server sends, until that server restores it.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if local {
+				drop, ch, err := manage.DropManaged(args[0])
+				if err != nil {
+					return err
+				}
+				printChange(ch)
+				success("removed %s on this server", strings.Join(drop, ", "))
+				return nil
+			}
 			drop, ch, err := manage.RemoveTunnel(args[0])
 			if err != nil {
 				return err
@@ -227,6 +241,8 @@ func tunnelRemoveCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&local, "local", false, "remove a main server's tunnel on this server only")
+	return cmd
 }
 
 // proxyAddr is where a socks forward listens.

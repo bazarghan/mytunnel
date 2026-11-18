@@ -55,6 +55,21 @@ func Doctor(st *config.State, fix bool) []Finding {
 			}
 		}
 	}
+	ls, err := strays(want, 0, now)
+	if err != nil {
+		add(false, false, "could not list interfaces: %v", err)
+	}
+	for _, l := range ls {
+		leftover++
+		name := l.Attrs().Name
+		if fix {
+			if delLink(l) == nil {
+				add(false, true, "removed leftover interface %s (NeoTunnel's name, no tunnel uses it)", name)
+			}
+		} else {
+			add(false, false, "leftover interface %s (NeoTunnel's name, no tunnel uses it)", name)
+		}
+	}
 	if leftover == 0 {
 		add(true, false, "no leftover interfaces")
 	}

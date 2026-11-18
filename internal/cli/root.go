@@ -34,7 +34,7 @@ func cobraRoot() *cobra.Command {
 	}
 	root.AddCommand(
 		versionCmd(), daemonCmd(), setupCmd(), installCmd(), updateCmd(), uninstallCmd(), nodeCmd(), panelCmd(),
-		peerCmd(), tunnelCmd(), forwardCmd(), poolCmd(), quickCmd(),
+		peerCmd(), masterCmd(), tunnelCmd(), forwardCmd(), poolCmd(), quickCmd(),
 		applyCmd(), downCmd(), statusCmd(), trafficCmd(), testCmd(), benchCmd(), boostCmd(), mtuCmd(), doctorCmd(), guardCmd(),
 		historyCmd(), rollbackCmd(), mtrCmd(), upgradeWatchCmd(),
 	)
@@ -73,6 +73,13 @@ func printChange(ch manage.Change) {
 		if p.Setup != nil {
 			printSetup(p.Peer, *p.Setup)
 		}
+	}
+	if c := ch.Cleanup; c != nil {
+		warn("%s could not be told to remove this server's tunnels (%s)", c.Peer, c.Error)
+		info("it will be told whenever it answers in the next %d days; to clean it up now, run on %s as root:", int(config.GoneKeep.Hours()/24), bold(c.Peer))
+		fmt.Println()
+		fmt.Println("  " + c.Command)
+		fmt.Println()
 	}
 }
 

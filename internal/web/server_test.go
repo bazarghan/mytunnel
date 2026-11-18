@@ -26,6 +26,11 @@ type stub struct{}
 func (stub) Overview() (web.Overview, error)                            { return web.Overview{}, nil }
 func (stub) AddPeer(string, string) (fleet.Setup, error)                { return fleet.Setup{}, nil }
 func (stub) RemovePeer(string) (manage.Change, error)                   { return manage.Change{}, nil }
+func (stub) ForgetMaster(string) (manage.Change, error)                 { return manage.Change{}, nil }
+func (stub) KeepMaster(string, bool) error                              { return nil }
+func (stub) SetForgetDays(int) error                                    { return nil }
+func (stub) DropTunnel(string) (manage.Change, error)                   { return manage.Change{}, nil }
+func (stub) RestoreTunnels(string, []string) error                      { return nil }
 func (stub) PeerSetup(string) (fleet.Setup, error)                      { return fleet.Setup{}, nil }
 func (stub) SyncPeers([]string) []manage.PeerSync                       { return nil }
 func (stub) UpgradePeer(context.Context, string) (string, error)        { return "", nil }

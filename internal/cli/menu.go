@@ -166,7 +166,7 @@ func (s *session) main() {
 			{"Port forwarding", fmt.Sprintf("%d · send ports of this server through a tunnel", len(st.Forwards)), false},
 			{"Speed test", "one tunnel, or compare every tunnel kind", false},
 			{"Live traffic", "rates and today's, month's and total traffic per tunnel", false},
-			{"Join a main server", "paste the setup key shown by your main server", false},
+			{"Main servers", mastersLine(st), false},
 			{"Web panel", "address, password, port", false},
 			{"System", "name & IP, network boost, re-apply, restart the service", false},
 			{"Update NeoTunnel", "install the latest release; tunnels and settings stay", false},
@@ -190,7 +190,7 @@ func (s *session) main() {
 		case 5:
 			s.page("Live traffic", showTraffic)
 		case 6:
-			s.join()
+			s.masters()
 		case 7:
 			s.panel()
 		case 8:
@@ -826,7 +826,7 @@ func (s *session) serverActions(name string) {
 			{"Push configuration now", "", !p.Paired()},
 			{"Compare tunnel speeds", "tries every kind and ranks them", !p.Paired()},
 			{"Upgrade it to this version", version.Version, !p.Paired()},
-			{"Remove", "forget it and remove this side's tunnels", false},
+			{"Remove", "forget it; its tunnels go on both servers", false},
 		}
 		sel = s.choose("Server "+name+" · "+p.Address, items, sel)
 		if s.quit {
@@ -847,7 +847,7 @@ func (s *session) serverActions(name string) {
 		case 4:
 			s.page("Upgrade "+name, func() error { return run("peer", "upgrade", name) })
 		case 5:
-			if s.t.confirm("Remove server "+bold(name)+"? (nothing is changed on it)", false) {
+			if s.t.confirm("Remove server "+bold(name)+"? (its tunnels from here are removed there too)", false) {
 				s.page("Removing "+name, func() error {
 					ch, err := manage.RemovePeer(name)
 					if err != nil {
@@ -1024,6 +1024,123 @@ func (s *session) join() {
 		return
 	}
 	s.page("Joining the main server", func() error { return applyKey(key, false) })
+}
+
+// mastersLine sums up the main servers for the main menu.
+func mastersLine(st *config.State) string {
+	ms := manage.Masters(st, time.Now())
+	if len(ms) == 0 {
+		return "join one with the setup key it shows"
+	}
+	silent := 0
+	for _, m := range ms {
+		if m.SilentDays >= config.WarnSilentDays {
+			silent++
+		}
+	}
+	if silent > 0 {
+		return fmt.Sprintf("%d · %d silent for days · join, forget one that is gone", len(ms), silent)
+	}
+	return fmt.Sprintf("%d · join another, forget one that is gone", len(ms))
+}
+
+// masters lists the main servers of this one, and joins another.
+func (s *session) masters() {
+	sel := 0
+	for {
+		st, err := loadNode()
+		if err != nil {
+			return
+		}
+		ms := manage.Masters(st, time.Now())
+		var items []item
+		for _, m := range ms {
+			state := fmt.Sprintf("%d tunnels", m.Tunnels)
+			switch {
+			case !m.Paired:
+				state += " · not connected yet"
+			case m.SilentDays >= config.WarnSilentDays:
+				state += fmt.Sprintf(" · silent %d days", m.SilentDays)
+			case m.LastContact > 0:
+				state += " · seen " + time.Unix(m.LastContact, 0).Local().Format("01-02 15:04")
+			}
+			items = append(items, item{m.Name, m.Address + " · " + state, false})
+		}
+		items = append(items, item{"+ Join a main server", "paste the setup key it shows", false})
+		sel = s.choose("Main servers", items, sel)
+		if s.quit {
+			return
+		}
+		switch {
+		case sel < 0:
+			return
+		case sel == len(ms):
+			s.join()
+		default:
+			s.masterActions(ms[sel].Name)
+		}
+	}
+}
+
+func (s *session) masterActions(name string) {
+	sel := 0
+	for {
+		st, err := loadNode()
+		if err != nil {
+			return
+		}
+		var m *manage.MasterInfo
+		for _, x := range manage.Masters(st, time.Now()) {
+			if x.Name == name {
+				m = &x
+				break
+			}
+		}
+		if m == nil {
+			return
+		}
+		keep := item{"Keep it however long it is silent", "", false}
+		if m.Keep {
+			keep = item{"Forget it again once silent", fmt.Sprintf("after %d days", st.ForgetDays()), st.ForgetDays() == 0}
+		} else if st.ForgetDays() > 0 {
+			keep.hint = fmt.Sprintf("otherwise forgotten after %d silent days", st.ForgetDays())
+		} else {
+			keep.off = true
+		}
+		items := []item{
+			{"Forget it here", fmt.Sprintf("remove its %d tunnels and forwards on this server", m.Tunnels), false},
+			keep,
+		}
+		sel = s.choose("Main server "+name, items, sel)
+		if s.quit {
+			return
+		}
+		switch sel {
+		case 0:
+			if s.t.confirm("Forget "+bold(name)+" and remove its tunnels here? (for a server that is gone)", false) {
+				s.page("Forgetting "+name, func() error {
+					n, ch, err := manage.ForgetMaster(name)
+					if err != nil {
+						return err
+					}
+					printChange(ch)
+					success("forgot %s; %d tunnels removed", name, n)
+					return nil
+				})
+				return
+			}
+		case 1:
+			s.page("Main server "+name, func() error {
+				if err := manage.KeepMaster(name, !m.Keep); err != nil {
+					return err
+				}
+				success("saved")
+				return nil
+			})
+		default:
+			return
+		}
+	}
 }
 
 // ---------- web panel ----------

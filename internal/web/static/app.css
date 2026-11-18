@@ -750,6 +750,12 @@ details.adv > .in { padding: 4px 16px 16px; display: flex; flex-direction: colum
 .peer dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; padding: 12px 0; border-block: 1px solid var(--line); }
 .peer dt { color: var(--ink-3); font-size: 11.5px; margin-bottom: 4px; }
 .peer dd { margin: 0; font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.neoexit { padding: 10px 0 12px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
+.neoexit .ne-head { display: flex; align-items: center; gap: 8px; }
+.neoexit .ne-head .btn { margin-inline-start: auto; }
+.neoexit ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; }
+.neoexit li { display: flex; align-items: center; gap: 7px; }
+.panel .neoexit { border-bottom: 0; padding-bottom: 0; }
 .peer footer { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 @media (hover: hover) and (pointer: fine) { .peer:hover { border-color: var(--line-2); } }
 

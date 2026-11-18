@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"fmt"
+	"neotunnel/internal/neoexit"
 	"net/netip"
 	"os"
 	"os/exec"
@@ -125,6 +126,7 @@ func (l *Live) Overview() (Overview, error) {
 		Time:     time.Now().UnixMilli(),
 	}
 	readSystem(&ov.Node)
+	ov.Node.NeoExit = neoexit.Local()
 	if l.History != nil {
 		if p := l.History.Pressure(); p.At > 0 {
 			ov.Node.Pressure = &p
@@ -134,12 +136,13 @@ func (l *Live) Overview() (Overview, error) {
 		ov.Node.BBR = true
 	}
 	ov.Pools = poolViews(st)
-	for _, m := range st.Masters() {
-		mi := MasterInfo{Name: m.Master.Name, Address: m.Master.Address, Paired: m.EnrollToken == ""}
-		if ov.Master == nil {
-			ov.Master = &mi
-		}
-		ov.Masters = append(ov.Masters, mi)
+	ov.Masters = manage.Masters(st, time.Now())
+	if len(ov.Masters) > 0 {
+		ov.Master = &ov.Masters[0]
+	}
+	ov.ForgetDays = st.ForgetDays()
+	for _, g := range st.Gone {
+		ov.Gone = append(ov.Gone, GoneView{Name: g.Peer.Name, Address: g.Peer.Address, Since: g.Since.Unix(), Command: "neotunnel master forget " + st.Self})
 	}
 	if p := st.Panel; p != nil {
 		ov.Panel = PanelInfo{URL: PanelURL(st), Port: p.Port, User: p.User}
@@ -294,7 +297,7 @@ func peerViews(st *config.State) []PeerView {
 		v := PeerView{
 			Name: p.Name, Label: p.Label, Address: p.Address, Address6: p.Address6, AESNI: p.AESNI, Paired: p.Paired(),
 			InSync: p.Paired() && p.AppliedRevision == st.Revision, Applied: p.AppliedRevision,
-			Version: p.Version, Arch: p.Arch,
+			Version: p.Version, Arch: p.Arch, NeoExit: neoexit.Peer(p.Name), Dropped: p.Dropped,
 		}
 		if !p.LastSeen.IsZero() {
 			v.LastSeen = p.LastSeen.Unix()
@@ -431,6 +434,20 @@ func (l *Live) AddPeer(name, address string) (fleet.Setup, error) {
 }
 
 func (l *Live) RemovePeer(name string) (manage.Change, error) { return manage.RemovePeer(name) }
+
+func (l *Live) ForgetMaster(name string) (manage.Change, error) {
+	_, ch, err := manage.ForgetMaster(name)
+	return ch, err
+}
+func (l *Live) KeepMaster(name string, keep bool) error { return manage.KeepMaster(name, keep) }
+func (l *Live) SetForgetDays(days int) error            { return manage.SetForgetDays(days) }
+func (l *Live) DropTunnel(name string) (manage.Change, error) {
+	_, ch, err := manage.DropManaged(name)
+	return ch, err
+}
+func (l *Live) RestoreTunnels(peer string, names []string) error {
+	return manage.RestoreDropped(peer, names)
+}
 
 func (l *Live) PeerSetup(name string) (fleet.Setup, error) { return manage.Setup(name) }
 

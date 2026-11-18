@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"neotunnel/internal/neoexit"
 	"net"
 	"net/netip"
 	"strconv"
@@ -204,6 +205,7 @@ func Refresh(ctx context.Context, id *identity.Identity, st *config.State, peer 
 	if err != nil {
 		return s, err
 	}
+	neoexit.SetPeer(peer, s.NeoExit)
 	behind := false
 	cur, _ := config.Update(func(st *config.State) error {
 		if p, ok := st.Peer(peer); ok {
@@ -218,6 +220,7 @@ func Refresh(ctx context.Context, id *identity.Identity, st *config.State, peer 
 			}
 			behind = s.Revision < st.Revision
 			p.Busy, p.BusyPorts = s.Busy, s.BusyPorts
+			p.Dropped = s.Dropped
 			if s.Address6 != "" {
 				p.Address6 = s.Address6
 			}

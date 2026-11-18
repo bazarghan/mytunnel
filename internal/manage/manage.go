@@ -40,6 +40,18 @@ type PeerSync struct {
 type Change struct {
 	Errors []string   `json:"errors,omitempty"` // problems applying on this node
 	Peers  []PeerSync `json:"peers,omitempty"`
+	// Cleanup is set when a removed server couldn't be told to drop our
+	// tunnels: what to run on it.
+	Cleanup *Cleanup `json:"cleanup,omitempty"`
+}
+
+// Cleanup is how a removed server that couldn't be reached drops the
+// tunnels this server set up there: by itself, whenever it answers within
+// config.GoneKeep, or at once with Command run on it.
+type Cleanup struct {
+	Peer    string `json:"peer"`
+	Command string `json:"command"`
+	Error   string `json:"error"`
 }
 
 // Commit saves fn's change (bumping the revision), applies it here and pushes
@@ -195,17 +207,46 @@ func AddPeer(name, address string) error {
 				return fmt.Errorf("server %s already uses %s", p.Name, address)
 			}
 		}
+		// Added back: it must not be told later to forget us.
+		for _, g := range s.Gone {
+			if g.Peer.Name == name || g.Peer.Address == address {
+				s.DropGone(g.Peer.PublicKey)
+			}
+		}
 		s.Peers = append(s.Peers, config.Peer{Name: name, Address: address, AgentPort: agent.DefaultPort})
 		return nil
 	})
 	return err
 }
 
-// RemovePeer forgets a peer and removes this node's tunnels to it.
+// RemovePeer forgets a peer and removes this node's tunnels to it, there
+// first: the peer is told to drop them. One that can't be reached now is
+// told whenever it answers within config.GoneKeep; Change.Cleanup has the
+// command that does it there at once.
 func RemovePeer(name string) (Change, error) {
+	st, err := Node()
+	if err != nil {
+		return Change{}, err
+	}
+	p, ok := st.Peer(name)
+	if !ok {
+		return Change{}, fmt.Errorf("unknown server %q", name)
+	}
+	peer := *p
+	var left error
+	if peer.Paired() {
+		if id, err := identity.LoadOrCreate(); err != nil {
+			left = err
+		} else {
+			left = fleet.Leave(context.Background(), id, peer)
+		}
+	}
 	_, ch, err := Commit(nil, func(s *config.State) error {
 		if _, ok := s.Peer(name); !ok {
 			return fmt.Errorf("unknown server %q", name)
+		}
+		if peer.Paired() && left != nil {
+			s.AddGone(peer, time.Now())
 		}
 		var ps []config.Peer
 		for _, p := range s.Peers {
@@ -223,6 +264,9 @@ func RemovePeer(name string) (Change, error) {
 		removeTunnels(s, drop)
 		return nil
 	})
+	if err == nil && peer.Paired() && left != nil {
+		ch.Cleanup = &Cleanup{Peer: name, Command: "neotunnel master forget " + st.Self, Error: left.Error()}
+	}
 	return ch, err
 }
 

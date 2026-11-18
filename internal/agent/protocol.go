@@ -5,6 +5,7 @@ package agent
 import (
 	"neotunnel/internal/config"
 	"neotunnel/internal/engine"
+	"neotunnel/internal/neoexit"
 	"neotunnel/internal/traffic"
 )
 
@@ -97,6 +98,25 @@ type Status struct {
 	// or another master's): that master gives its tunnels others.
 	Busy      []string `json:"busy_nets,omitempty"`
 	BusyPorts []string `json:"busy_ports,omitempty"`
+	// NeoExit is the NeoExit program on this node, if it runs there.
+	NeoExit *neoexit.Status `json:"neoexit,omitempty"`
+	// Dropped are the asking master's tunnels (its names) removed on this
+	// node by hand; they stay off until it restores or deletes them.
+	Dropped []string `json:"dropped,omitempty"`
+	// Leave: this version forgets a master that asks it to (/v1/leave)
+	// and takes back tunnels removed by hand (/v1/restore).
+	Leave bool `json:"leave,omitempty"`
+}
+
+// LeaveResponse is what a node dropped when its master let it go.
+type LeaveResponse struct {
+	Tunnels int `json:"tunnels"`
+}
+
+// RestoreRequest names the master's tunnels removed by hand on the node
+// that may run again (none = all).
+type RestoreRequest struct {
+	Names []string `json:"names,omitempty"`
 }
 
 type ProbeRequest struct {

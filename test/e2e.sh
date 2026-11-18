@@ -1079,7 +1079,7 @@ ip -n $HUB2 addr add $HUB2_IP/24 dev veth-h2; ip -n $EDGE addr add $EDGE2_IP/24 
 ip -n $HUB2 link set lo up; ip -n $HUB2 link set veth-h2 up; ip -n $EDGE link set veth-e2 up
 in_hub2() { ip netns exec $HUB2 env NEOTUNNEL_DIR=$WORK/hub2 NO_COLOR=1 "$BIN" "$@"; }
 in_hub2 node --name hub2 --address $HUB2_IP >/dev/null
-ip netns exec $HUB2 env NEOTUNNEL_DIR=$WORK/hub2 "$BIN" daemon >"$WORK/hub2.log" 2>&1 & echo $! > "$WORK/hub2.pid"
+ip netns exec $HUB2 env NEOTUNNEL_DIR=$WORK/hub2 NEOTUNNEL_PEER_WATCH=3s "$BIN" daemon >"$WORK/hub2.log" 2>&1 & echo $! > "$WORK/hub2.pid"
 sleep 1
 in_hub2 peer add edge --address $EDGE2_IP >/dev/null || fail "hub2: add edge"
 in_hub2 tunnel add t1 --kind gre --peer edge >/dev/null 2>&1 || true # edge not paired yet
@@ -1089,7 +1089,7 @@ out=$(in_edge apply "$key2" 2>&1) || { echo "$out"; fail "edge refused a second 
 grep -q "managed by 2 main servers" <<<"$out" || { echo "$out"; fail "edge does not report two main servers"; }
 in_edge node | grep -q "master.*hub2" || fail "edge does not list hub2 as a master"
 ip netns exec $HUB ping -c 2 -W 2 10.77.0.2 >/dev/null || fail "hub's t1 disturbed by the second master"
-# hub2 hears edge's report on its next refresh (once a minute) and moves t1.
+# hub2 hears edge's report on its next refresh and moves t1.
 moved=""
 for i in $(seq 90); do
   n=$(ip -n $EDGE -o link show | grep -oE 'nt-t1-[a-z0-9]{3}[@:]' | tr -d '@:' | head -1 || true)
@@ -1101,7 +1101,47 @@ done
 ip netns exec $HUB ping -c 2 -W 2 10.77.0.2 >/dev/null || fail "hub's t1 broken after hub2 moved"
 in_hub2 peer list | grep -q "edge.*in sync" || fail "hub2 not in sync with edge"
 pass "two main servers: edge runs both t1s (hub2's as $moved), hub2 moved its subnet off hub's"
+
+# 16e. hub2 can't be reached, so edge removes hub2's t1 there by hand. It
+#      stays removed whatever hub2 sends, and hub2 hears which it was.
+in_edge tunnel remove "${moved#nt-}" --local >/dev/null || fail "edge: remove hub2's t1 locally"
+ip -n $EDGE -o link show "$moved" >/dev/null 2>&1 && fail "the locally removed tunnel is still up"
+in_hub2 peer sync edge >/dev/null 2>&1 || true
+sleep 1
+ip -n $EDGE -o link show "$moved" >/dev/null 2>&1 && fail "a push from hub2 brought the locally removed tunnel back"
+wait_for 15 grep -q '"dropped"' "$WORK/hub2/state.json" || fail "hub2 does not know edge removed its t1"
+ip netns exec $HUB ping -c 2 -W 2 10.77.0.2 >/dev/null || fail "hub's t1 broken by removing hub2's"
+in_edge master list | grep -q "hub2.*removed here by hand" || { in_edge master list; fail "master list does not show the removal"; }
+pass "a main server's tunnel removed on the far server only stays removed, and its main server is told"
+
+# 16f. hub2 removes edge while edge is down: hub2 prints the command that
+#      cleans up there, and tells edge itself as soon as it is back. edge
+#      then forgets hub2 alone; hub's tunnels stay.
+kill "$(cat "$WORK/edge.pid")"; sleep 0.5
+out=$(in_hub2 peer remove edge 2>&1) || { echo "$out"; fail "hub2: remove edge"; }
+grep -q "neotunnel master forget hub2" <<<"$out" || { echo "$out"; fail "hub2 did not print the cleanup command"; }
+grep -q '"gone_peers"' "$WORK/hub2/state.json" || fail "hub2 does not keep edge to tell later"
+start_edge
+wait_for 40 sh -c "! grep -q '\"hub2\"' $WORK/edge/state.json" || { tail -20 "$WORK/hub2.log"; fail "edge was not told to forget hub2 once back"; }
+wait_for 10 sh -c "! grep -q '\"gone_peers\"' $WORK/hub2/state.json" || fail "hub2 still keeps edge after telling it"
+grep -q "let this server go" "$WORK/edge.log" || fail "edge did not log forgetting hub2"
+wait_for 20 ip netns exec $HUB ping -c 1 -W 2 10.77.0.2 >/dev/null || fail "hub's t1 broken when edge forgot hub2"
+pass "a server removed while down drops the tunnels of that main server only, once it is back"
 kill "$(cat "$WORK/hub2.pid")" 2>/dev/null; ip netns del $HUB2
+
+# 16g. An interface with NeoTunnel's name but none of its tags (a process
+#      that died between creating and tagging it) is found by the doctor,
+#      and removed by the service a minute later. Other names stay.
+ip -n $EDGE link add nt-ghost type dummy; ip -n $EDGE link add keep0 type dummy
+doc=$(in_edge doctor 2>&1 || true)
+grep -q "leftover interface nt-ghost" <<<"$doc" || { echo "$doc"; fail "doctor does not see an untagged nt- interface"; }
+in_edge doctor --fix >/dev/null 2>&1 || true
+ip -n $EDGE -o link show nt-ghost >/dev/null 2>&1 && fail "doctor --fix left nt-ghost"
+ip -n $EDGE link add nt-ghost2 type dummy
+wait_for 120 sh -c "! ip -n $EDGE -o link show nt-ghost2 >/dev/null 2>&1" || fail "the service did not remove an untagged nt- interface"
+ip -n $EDGE -o link show keep0 >/dev/null 2>&1 || fail "an interface outside NeoTunnel's names was removed"
+ip -n $EDGE link del keep0
+pass "untagged interfaces with NeoTunnel's names are removed (doctor at once, the service after a minute)"
 
 # 17. Uninstall from the command line removes everything, the program too.
 kill "$(cat "$WORK/edge.pid")"; sleep 0.5

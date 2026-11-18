@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"neotunnel/internal/neoexit"
 	"time"
 
 	"neotunnel/internal/bench"
@@ -21,6 +22,16 @@ type Backend interface {
 	Overview() (Overview, error)
 	AddPeer(name, address string) (fleet.Setup, error)
 	RemovePeer(name string) (manage.Change, error)
+	// ForgetMaster forgets a server that manages this one, with its
+	// tunnels here; KeepMaster stops (or allows again) forgetting it for
+	// being silent, SetForgetDays sets after how long (0 = never).
+	ForgetMaster(name string) (manage.Change, error)
+	KeepMaster(name string, keep bool) error
+	SetForgetDays(days int) error
+	// DropTunnel removes a main server's tunnel on this server only;
+	// RestoreTunnels lets those a peer removed so run there again.
+	DropTunnel(name string) (manage.Change, error)
+	RestoreTunnels(peer string, names []string) error
 	PeerSetup(name string) (fleet.Setup, error)
 	SyncPeers(names []string) []manage.PeerSync
 	UpgradePeer(ctx context.Context, name string) (string, error)
@@ -144,26 +155,30 @@ type Overview struct {
 	Node NodeInfo `json:"node"`
 	// Master is the first server that manages this one (older panels read
 	// it); Masters are all of them.
-	Master   *MasterInfo     `json:"master,omitempty"`
-	Masters  []MasterInfo    `json:"masters,omitempty"`
-	Revision uint64          `json:"revision"`
-	Tunnels  []TunnelView    `json:"tunnels"`
-	Peers    []PeerView      `json:"peers"`
-	Forwards []ForwardView   `json:"forwards"`
-	Modes    []manage.Mode   `json:"modes"`
-	Ciphers  []config.Cipher `json:"ciphers"`
-	Defaults config.Defaults `json:"defaults"`
-	Pools    []PoolView      `json:"pools"`
-	NextName string          `json:"next_name"` // what a new tunnel without a name is called
-	Errors   []string        `json:"errors,omitempty"`
-	Panel    PanelInfo       `json:"panel"`
-	Commands []CommandGroup  `json:"commands"`
-	Safe     *SafeView       `json:"safe,omitempty"`      // a safe change waiting for confirmation
-	SafeLast *safe.Outcome   `json:"safe_last,omitempty"` // how the last one ended
-	Install  string          `json:"install"`             // one-line installer for a new server
-	Repo     string          `json:"repo"`
-	Channel  string          `json:"channel"`
-	Time     int64           `json:"time"` // unix ms, for rate calculation
+	Master  *MasterInfo  `json:"master,omitempty"`
+	Masters []MasterInfo `json:"masters,omitempty"`
+	// ForgetDays is after how many silent days a master is forgotten
+	// here (0 = never); Gone the removed servers still to be told.
+	ForgetDays int             `json:"forget_days"`
+	Gone       []GoneView      `json:"gone,omitempty"`
+	Revision   uint64          `json:"revision"`
+	Tunnels    []TunnelView    `json:"tunnels"`
+	Peers      []PeerView      `json:"peers"`
+	Forwards   []ForwardView   `json:"forwards"`
+	Modes      []manage.Mode   `json:"modes"`
+	Ciphers    []config.Cipher `json:"ciphers"`
+	Defaults   config.Defaults `json:"defaults"`
+	Pools      []PoolView      `json:"pools"`
+	NextName   string          `json:"next_name"` // what a new tunnel without a name is called
+	Errors     []string        `json:"errors,omitempty"`
+	Panel      PanelInfo       `json:"panel"`
+	Commands   []CommandGroup  `json:"commands"`
+	Safe       *SafeView       `json:"safe,omitempty"`      // a safe change waiting for confirmation
+	SafeLast   *safe.Outcome   `json:"safe_last,omitempty"` // how the last one ended
+	Install    string          `json:"install"`             // one-line installer for a new server
+	Repo       string          `json:"repo"`
+	Channel    string          `json:"channel"`
+	Time       int64           `json:"time"` // unix ms, for rate calculation
 }
 
 type NodeInfo struct {
@@ -199,6 +214,8 @@ type NodeInfo struct {
 	// Pressure is where the CPU went in the daemon's last round: packet
 	// work, packets dropped for lack of CPU, and the busiest programs.
 	Pressure *metrics.Pressure `json:"pressure,omitempty"`
+	// NeoExit is the NeoExit program on this server (nil = not running).
+	NeoExit *neoexit.Status `json:"neoexit,omitempty"`
 }
 
 // PoolView is an address pool in the panel.
@@ -208,10 +225,16 @@ type PoolView struct {
 	Tunnels int  `json:"tunnels"`           // tunnels that took their addresses from it
 }
 
-type MasterInfo struct {
+// MasterInfo is a server that manages this one, with how long it has
+// been silent.
+type MasterInfo = manage.MasterInfo
+
+// GoneView is a removed server not yet told to drop this server's tunnels.
+type GoneView struct {
 	Name    string `json:"name"`
 	Address string `json:"address"`
-	Paired  bool   `json:"paired"`
+	Since   int64  `json:"since"`   // unix s
+	Command string `json:"command"` // what removes them there by hand
 }
 
 type TunnelView struct {
@@ -312,6 +335,10 @@ type PeerView struct {
 	Arch     string `json:"arch,omitempty"`
 	LastSeen int64  `json:"last_seen,omitempty"` // unix s
 	Tunnels  int    `json:"tunnels"`
+	// Dropped are this server's tunnels the peer removed by hand.
+	Dropped []string `json:"dropped,omitempty"`
+	// NeoExit is what the peer last said about its NeoExit.
+	NeoExit *neoexit.Status `json:"neoexit,omitempty"`
 }
 
 type ForwardView struct {

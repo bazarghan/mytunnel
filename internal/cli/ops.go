@@ -21,6 +21,7 @@ import (
 	"neotunnel/internal/daemon"
 	"neotunnel/internal/engine"
 	"neotunnel/internal/identity"
+	"neotunnel/internal/manage"
 	"neotunnel/internal/service"
 	"neotunnel/internal/setuplink"
 	"neotunnel/internal/sysctl"
@@ -169,6 +170,16 @@ func selfUpdate(ver string) error {
 // uninstall removes the service, every tunnel and rule, and the program;
 // unless keep is set also the configuration, keys and kernel tuning.
 func uninstall(keep bool) {
+	if !keep {
+		// Gone for good: the servers this one manages drop its tunnels.
+		for _, c := range manage.LeaveAll() {
+			if c.Error == "" {
+				success("%s removed this server's tunnels", c.Peer)
+				continue
+			}
+			warn("%s could not be told to remove this server's tunnels (%s); run on it: %s", c.Peer, c.Error, c.Command)
+		}
+	}
 	service.Uninstall()
 	engine.Down()
 	success("service stopped; tunnels, IPsec and forwarding rules removed")

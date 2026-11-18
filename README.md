@@ -256,7 +256,9 @@ sudo neotunnel bench germany                                                 # �
 | `tunnel set <name> --profile lean\|balanced\|max` | حالت سرعت |
 | `tunnel rename <name> "نام"` / `peer rename <name> "نام"` / `node --label "نام"` | نام نمایشی (شناسه همان می‌ماند) |
 | `forward add\|set <tunnel> <ports> [--to] [--proto] [--mode nat\|transparent\|proxy]` | فوروارد پورت |
-| `peer add\|list\|link\|sync\|upgrade\|remove` | سرورهای مقصد |
+| `peer add\|list\|link\|sync\|upgrade\|remove` | سرورهای مقصد (با حذف، تانل‌ها روی خود آن سرور هم حذف می‌شوند) |
+| `master list\|forget\|keep\|auto-forget` | روی سرور مقصد: سرورهای اصلی؛ جدا شدن از سروری که دیگر نیست |
+| `tunnel remove <name> --local` | حذف تانل سرور اصلی فقط روی همین سرور، وقتی سرور اصلی در دسترس نیست |
 | `test <tunnel>` / `bench <server>` / `mtu <tunnel>` | تست سرعت، مقایسه، بهترین MTU |
 | `traffic` / `status` / `doctor` | ترافیک زنده، وضعیت و عیب‌یابی |
 | `panel info\|setup\|password\|port\|disable` | مدیریت پنل |
@@ -295,7 +297,18 @@ sudo neotunnel bench germany                                                 # �
 <details>
 <summary><b>حذف کامل</b></summary>
 
-`sudo neotunnel uninstall` تانل‌ها، IPsec، قوانین، تنظیمات و خود برنامه را پاک می‌کند؛ با `--keep-config` تنظیمات می‌ماند.
+`sudo neotunnel uninstall` تانل‌ها، IPsec، قوانین، تنظیمات و خود برنامه را پاک می‌کند، و به سرورهای مقصد هم می‌گوید تانل‌های این سرور را پاک کنند. با `--keep-config` تنظیمات می‌ماند و سرورهای مقصد دست نمی‌خورند.
+</details>
+
+<details>
+<summary><b>تانل‌ها روی سرور مقصد ماندند.</b></summary>
+
+وقتی سروری را حذف می‌کنید، به خود آن سرور هم گفته می‌شود تانل‌های این سرور را پاک کند. اگر در دسترس نباشد، تا ۳۰ روز هر بار که جواب بدهد دوباره گفته می‌شود، و پنل دستور پاک‌سازی دستی را هم نشان می‌دهد.
+
+- روی سرور مقصد، `sudo neotunnel master forget <name>` (یا `all`) همین کار را همان لحظه انجام می‌دهد.
+- سرور اصلی‌ای که ۳۰ روز وصل نشود و تانل‌هایش هم جواب ندهند، خودکار فراموش می‌شود. `master auto-forget <days|off>` این مدت را عوض می‌کند.
+- کارت‌هایی با اسم `nt-` که هیچ تانلی لازمشان ندارد، بعد از یک دقیقه پاک می‌شوند؛ `doctor --fix` همان لحظه.
+- کارت‌هایی مثل `gre0` و `sit0` را خود کرنل می‌سازد و تانل نیستند.
 </details>
 
 ## ساخت از سورس

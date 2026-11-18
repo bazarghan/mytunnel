@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"neotunnel/internal/neoexit"
 	"net"
 	"net/http"
 	"net/netip"
@@ -56,6 +57,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/restart", s.fromMaster(s.restart))
 	mux.HandleFunc("POST /v1/mtr", s.fromMaster(s.mtr))
 	mux.HandleFunc("POST /v1/safe/confirm", s.fromMaster(s.safeConfirm))
+	mux.HandleFunc("POST /v1/leave", s.fromMaster(s.leave))
+	mux.HandleFunc("POST /v1/restore", s.fromMaster(s.restore))
 	return mux
 }
 
@@ -127,6 +130,7 @@ func (s *Server) fromMaster(h http.HandlerFunc) http.HandlerFunc {
 			fail(w, http.StatusForbidden, errors.New("not my master"))
 			return
 		}
+		noteContact(st, key)
 		// This version reaches its main server: an upgrade to it holds.
 		upgrade.Confirm()
 		h(w, r.WithContext(context.WithValue(r.Context(), masterKey{}, key)))
@@ -218,6 +222,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	key := master(r)
 	if m := st.MasterByKey(key); m != nil {
 		out.Revision = m.Revision
+		out.Dropped = m.Dropped
 	}
 	mine := out.Tunnels[:0]
 	for _, t := range out.Tunnels {
@@ -245,7 +250,7 @@ func agentBusy(st *config.State) []string {
 // LocalStatus reports this node's tunnels and counters.
 func LocalStatus(st *config.State, started time.Time) Status {
 	aes := sysinfo.AESNI()
-	out := Status{Name: st.Self, Version: version.Version, Arch: version.Arch(), Address6: engine.PublicIPv6(), AESNI: &aes, ObfsAES: true, StreamTunnels: true, StreamTests: true, StreamFallback: true, AgentPort: st.ListenAgentPort(), RolledBack: upgrade.LastFailed().Version}
+	out := Status{Name: st.Self, Version: version.Version, Arch: version.Arch(), Address6: engine.PublicIPv6(), AESNI: &aes, ObfsAES: true, StreamTunnels: true, StreamTests: true, StreamFallback: true, Leave: true, AgentPort: st.ListenAgentPort(), RolledBack: upgrade.LastFailed().Version, NeoExit: neoexit.Local()}
 	if st.Managed != nil {
 		out.Revision = st.Managed.Revision
 	}
@@ -283,6 +288,7 @@ func (s *Server) apply(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		m.Revision, m.Tunnels, m.Forwards = req.Revision, req.Tunnels, req.Forwards
+		m.PruneDropped()
 		if ap, err := netip.ParseAddrPort(req.Master); err == nil && ap.Addr().IsValid() && ap.Port() != 0 {
 			m.Master.Address = ap.String()
 		}
@@ -387,7 +393,7 @@ func localName(key, name string) string {
 }
 
 // BenchIfname keeps temporary test interfaces apart from real tunnels.
-func BenchIfname(tunnel string) string { return "ntx-" + tunnel }
+func BenchIfname(tunnel string) string { return engine.BenchPrefix + tunnel }
 
 func (s *Server) benchDown(w http.ResponseWriter, r *http.Request) {
 	var req BenchDownRequest

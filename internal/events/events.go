@@ -43,6 +43,9 @@ const (
 	// automatically; Detail: ok, failed: why, or rolled back (it went back
 	// to its old version by itself). Tunnel is empty.
 	Upgrade = "upgrade"
+	// Master: this server forgot the main server From, silent for Detail
+	// days, and removed its To tunnels. Tunnel is empty.
+	Master = "master"
 )
 
 // Event is one thing that happened to a tunnel.

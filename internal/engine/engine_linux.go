@@ -112,9 +112,20 @@ func Apply(st *config.State) Result {
 	for name, l := range have {
 		alias := l.Attrs().Alias
 		stale := strings.HasPrefix(alias, aliasPersistent) && !want[name]
-		if stale || benchExpired(alias, now) {
+		// A user-space one only the daemon can judge: it holds them all,
+		// and has just let go of those no tunnel wants (SyncLinks).
+		userStale := us != nil && strings.HasPrefix(alias, aliasUser) && !want[name]
+		if stale || userStale || benchExpired(alias, now) {
 			if err := delLink(l); err == nil {
 				res.Removed = append(res.Removed, name)
+			}
+		}
+	}
+	// Our names without our tag: nothing above would ever remove them.
+	if ls, err := strays(want, strayGrace, now); err == nil {
+		for _, l := range ls {
+			if err := delLink(l); err == nil {
+				res.Removed = append(res.Removed, l.Attrs().Name)
 			}
 		}
 	}
@@ -376,6 +387,11 @@ func Down() error {
 	}
 	for _, l := range have {
 		delLink(l)
+	}
+	if ls, err := strays(nil, 0, time.Now()); err == nil {
+		for _, l := range ls {
+			delLink(l)
+		}
 	}
 	removeAllFOU()
 	removeIPsec()

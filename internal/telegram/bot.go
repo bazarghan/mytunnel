@@ -324,6 +324,8 @@ func alertKind(e events.Event) string {
 		return "upgrade"
 	case events.Guard:
 		return "guard"
+	case events.Master:
+		return "master"
 	}
 	return ""
 }
@@ -442,6 +444,8 @@ func alertText(st *config.State, e events.Event) string {
 			return "⏰ مدت پورت " + port + " تمام شد؛ پورت بسته شد تا تمدید." + where
 		}
 		return "⏸ پورت " + port + " متوقف شد." + where
+	case events.Master:
+		return "🧹 سرور اصلی <b>" + esc(e.From) + "</b> " + esc(e.Detail) + " روز به این سرور وصل نشد؛ فراموش شد و " + esc(e.To) + " تانلش حذف شد." + where
 	case events.Guard:
 		return "🛡 فایروال خودش خاموش شد: بعد از روشن شدن، پنل تأیید نکرد که هنوز به سرور می‌رسد." + where
 	}

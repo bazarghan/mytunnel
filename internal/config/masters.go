@@ -109,8 +109,12 @@ func (m *Managed) view(rename bool, own map[string]bool) ([]Tunnel, []Forward) {
 		}
 		return LocalName(n, m.Master.PublicKey)
 	}
+	dropped := m.dropped()
 	ts := make([]Tunnel, 0, len(m.Tunnels))
 	for _, t := range m.Tunnels {
+		if dropped[t.Name] {
+			continue
+		}
 		t.MasterName, t.MasterKey = m.Master.Name, m.Master.PublicKey
 		if n := local(t.Name); n != t.Name || rename {
 			t.Origin, t.Name, t.Over = t.Name, n, local(t.Over)
@@ -121,11 +125,19 @@ func (m *Managed) view(rename bool, own map[string]bool) ([]Tunnel, []Forward) {
 	}
 	fs := make([]Forward, 0, len(m.Forwards))
 	for _, f := range m.Forwards {
+		if dropped[f.Tunnel] {
+			continue
+		}
+		if dropped[f.Backup] {
+			f.Backup = ""
+		}
 		f.Tunnel, f.Backup = local(f.Tunnel), local(f.Backup)
 		if len(f.MoreBackups) > 0 {
-			more := make([]string, len(f.MoreBackups))
-			for i, n := range f.MoreBackups {
-				more[i] = local(n)
+			var more []string
+			for _, n := range f.MoreBackups {
+				if !dropped[n] {
+					more = append(more, local(n))
+				}
 			}
 			f.MoreBackups = more
 		}
@@ -139,7 +151,7 @@ func (m *Managed) view(rename bool, own map[string]bool) ([]Tunnel, []Forward) {
 func (s *State) managed() (ts []Tunnel, fs []Forward, selfOf []string) {
 	own := s.ownNames()
 	for i, m := range s.Masters() {
-		mts, mfs := m.view(i > 0, own)
+		mts, mfs := m.view(i > 0 || m.Tagged, own)
 		for range mts {
 			selfOf = append(selfOf, m.Self)
 		}
@@ -149,6 +161,18 @@ func (s *State) managed() (ts []Tunnel, fs []Forward, selfOf []string) {
 	return ts, fs, selfOf
 }
 
+// ManagedTunnels lists the tunnels of the master with key as this node
+// runs them (local names), clashing ones too.
+func (s *State) ManagedTunnels(key string) []Tunnel {
+	for i, m := range s.Masters() {
+		if m.Master.PublicKey == key {
+			ts, _ := m.view(i > 0 || m.Tagged, s.ownNames())
+			return ts
+		}
+	}
+	return nil
+}
+
 // ManagedFor returns the master's tunnel named name (its own name for it)
 // as this node runs it.
 func (s *State) ManagedFor(key, name string) (Tunnel, bool) {
@@ -156,7 +180,7 @@ func (s *State) ManagedFor(key, name string) (Tunnel, bool) {
 		if m.Master.PublicKey != key {
 			continue
 		}
-		ts, _ := m.view(i > 0, s.ownNames())
+		ts, _ := m.view(i > 0 || m.Tagged, s.ownNames())
 		for _, t := range ts {
 			if t.KeyName() == name {
 				return t, true

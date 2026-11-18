@@ -48,8 +48,16 @@ type State struct {
 
 	// Managed is the first server that manages this node, More the others
 	// (see Masters).
-	Managed  *Managed   `json:"managed,omitempty"`
-	More     []*Managed `json:"more_masters,omitempty"`
+	Managed *Managed   `json:"managed,omitempty"`
+	More    []*Managed `json:"more_masters,omitempty"`
+	// ForgetMasterDays: a master silent this many days is forgotten here,
+	// with its tunnels (0 = DefaultForgetMasterDays, -1 = never; see
+	// SilentMasters).
+	ForgetMasterDays int `json:"forget_master_days,omitempty"`
+	// Gone are servers removed here before they could be told to drop
+	// this server's tunnels: each is told again whenever it answers, for
+	// GoneKeep (see manage.RemovePeer).
+	Gone     []GonePeer `json:"gone_peers,omitempty"`
 	Panel    *Panel     `json:"panel,omitempty"`
 	Defaults *Defaults  `json:"defaults,omitempty"`
 	// Fetch sends this server's own downloads from listed sites through a
@@ -75,7 +83,7 @@ type Telegram struct {
 	// tunnel and leaves from the far server).
 	Proxy string `json:"proxy,omitempty"`
 	// Mute lists alerts that are not sent: down, recover, restart,
-	// failover, cipher, quota, guard.
+	// failover, cipher, quota, port, upgrade, guard, master.
 	Mute []string `json:"mute,omitempty"`
 	// Users lets anyone who starts the bot look up a port's traffic, of
 	// UserPorts ("" = every forward).
@@ -221,6 +229,27 @@ type Managed struct {
 	// EnrollToken lets the daemon register with the master once it becomes
 	// reachable. Cleared after a successful registration.
 	EnrollToken string `json:"enroll_token,omitempty"`
+
+	// LastContact is when the master last reached this node (zero on
+	// nodes from before; the daemon starts the count then).
+	LastContact time.Time `json:"last_contact,omitempty"`
+	// Keep: never forget this master for being silent.
+	Keep bool `json:"keep,omitempty"`
+	// Dropped are tunnels of this master (its names for them) removed on
+	// this node by hand while it couldn't be reached: they stay out of
+	// whatever it sends until it restores them or deletes them itself.
+	Dropped []string `json:"dropped,omitempty"`
+	// Tagged: its tunnels keep local names (LocalName) although it is the
+	// first master now. It was a later one, and kept its names when the
+	// first was forgotten, so its interfaces didn't have to be rebuilt.
+	Tagged bool `json:"tagged,omitempty"`
+}
+
+// GonePeer is a removed server that still has to be told to drop this
+// server's tunnels.
+type GonePeer struct {
+	Peer  Peer      `json:"peer"`
+	Since time.Time `json:"since"`
 }
 
 type MasterRef struct {
@@ -271,6 +300,9 @@ type Peer struct {
 	// VXLAN/GENEVE ids): new tunnels to it get others.
 	Busy      []string `json:"busy_nets,omitempty"`
 	BusyPorts []string `json:"busy_ports,omitempty"`
+	// Dropped are tunnels of ours the peer reports removed there by hand
+	// (see Managed.Dropped).
+	Dropped []string `json:"dropped,omitempty"`
 }
 
 func (p Peer) Paired() bool { return p.PublicKey != "" }

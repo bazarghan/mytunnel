@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/vishvananda/netlink"
@@ -220,12 +221,69 @@ func owned() (map[string]netlink.Link, error) {
 	}
 	out := map[string]netlink.Link{}
 	for _, l := range ls {
-		a := l.Attrs().Alias
-		if strings.HasPrefix(a, aliasPersistent) || strings.HasPrefix(a, aliasBench) || strings.HasPrefix(a, aliasUser) {
+		if ourAlias(l.Attrs().Alias) {
 			out[l.Attrs().Name] = l
 		}
 	}
 	return out, nil
+}
+
+// strayGrace is how long an interface with our name but none of our tags
+// is left alone: one another process is creating right now (the CLI
+// running a test while the daemon applies) gets its tag within moments.
+const strayGrace = time.Minute
+
+var (
+	strayMu   sync.Mutex
+	straySeen = map[string]time.Time{}
+)
+
+// ourName reports whether an interface name is in NeoTunnel's own space:
+// nt-<tunnel> and ntx-<test tunnel>.
+func ourName(n string) bool {
+	return strings.HasPrefix(n, IfPrefix) || strings.HasPrefix(n, BenchPrefix)
+}
+
+// strays lists interfaces named like ours that carry none of our tags and
+// that no tunnel here wants: left behind by a process that died between
+// creating an interface and tagging it, or by an older version. Cleanup
+// by tag alone never sees them. With grace, only those first seen at
+// least that long ago.
+func strays(want map[string]bool, grace time.Duration, now time.Time) ([]netlink.Link, error) {
+	ls, err := netlink.LinkList()
+	if err != nil {
+		return nil, err
+	}
+	strayMu.Lock()
+	defer strayMu.Unlock()
+	present := map[string]bool{}
+	var out []netlink.Link
+	for _, l := range ls {
+		a := l.Attrs()
+		if !ourName(a.Name) || want[a.Name] || ourAlias(a.Alias) {
+			continue
+		}
+		present[a.Name] = true
+		first, ok := straySeen[a.Name]
+		if !ok {
+			first = now
+			straySeen[a.Name] = now
+		}
+		if now.Sub(first) >= grace {
+			out = append(out, l)
+		}
+	}
+	for n := range straySeen {
+		if !present[n] {
+			delete(straySeen, n)
+		}
+	}
+	return out, nil
+}
+
+// ourAlias reports whether an interface alias is one of our tags.
+func ourAlias(alias string) bool {
+	return strings.HasPrefix(alias, aliasPersistent) || strings.HasPrefix(alias, aliasBench) || strings.HasPrefix(alias, aliasUser)
 }
 
 func benchExpired(alias string, now time.Time) bool {

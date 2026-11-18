@@ -83,6 +83,38 @@ func (s *Server) routes(m *http.ServeMux) {
 		ch, err := b.RemovePeer(r.PathValue("name"))
 		reply(w, ch, err)
 	}))
+	m.HandleFunc("POST /api/masters/{name}/forget", s.changing(func(w http.ResponseWriter, r *http.Request) {
+		ch, err := b.ForgetMaster(r.PathValue("name"))
+		reply(w, ch, err)
+	}))
+	m.HandleFunc("POST /api/masters/{name}/keep", s.changing(func(w http.ResponseWriter, r *http.Request) {
+		var req struct{ Keep bool }
+		if readJSON(r, &req) != nil {
+			fail(w, http.StatusBadRequest, "bad request")
+			return
+		}
+		reply(w, map[string]bool{"ok": true}, b.KeepMaster(r.PathValue("name"), req.Keep))
+	}))
+	m.HandleFunc("POST /api/settings/forget-masters", s.changing(func(w http.ResponseWriter, r *http.Request) {
+		var req struct{ Days int }
+		if readJSON(r, &req) != nil {
+			fail(w, http.StatusBadRequest, "bad request")
+			return
+		}
+		reply(w, map[string]bool{"ok": true}, b.SetForgetDays(req.Days))
+	}))
+	m.HandleFunc("POST /api/tunnels/{name}/drop", s.changing(func(w http.ResponseWriter, r *http.Request) {
+		ch, err := b.DropTunnel(r.PathValue("name"))
+		reply(w, ch, err)
+	}))
+	m.HandleFunc("POST /api/peers/{name}/restore", s.changing(func(w http.ResponseWriter, r *http.Request) {
+		var req struct{ Names []string }
+		if readJSON(r, &req) != nil {
+			fail(w, http.StatusBadRequest, "bad request")
+			return
+		}
+		reply(w, map[string]bool{"ok": true}, b.RestoreTunnels(r.PathValue("name"), req.Names))
+	}))
 	m.HandleFunc("GET /api/peers/{name}/setup", s.authed(func(w http.ResponseWriter, r *http.Request) {
 		setup, err := b.PeerSetup(r.PathValue("name"))
 		reply(w, setup, err)

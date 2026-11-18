@@ -417,6 +417,9 @@
 
   // The servers that manage this one (older daemons report only one).
   const masters = () => (S.ov && (S.ov.masters || (S.ov.master ? [S.ov.master] : []))) || [];
+  // A tunnel of this server that its far server removed there by hand.
+  const droppedOn = (t) => !t.managed && t.peer && ((peer(t.peer) || {}).dropped || []).includes(t.name);
+  const droppedTag = (t) => droppedOn(t) ? html`<span class="tag bad" title="روی ${pname(t.peer)} دستی حذف شده؛ تا بازگردانی آنجا ساخته نمی‌شود">روی ${pname(t.peer)} حذف شده</span>` : "";
   const visible = () => (S.ov ? S.ov.tunnels.filter((t) => !t.carrier) : []);
   const tunnel = (name) => S.ov && S.ov.tunnels.find((t) => t.name === name);
   const rate = (name) => S.rates[name] || { rx: 0, tx: 0 };
@@ -1134,7 +1137,7 @@
       body = html`<header><div><h3>${tname(t)}</h3><div class="sub">${kindTitle(t)} به ${pname(t.peer) || "دستگاه دیگر"} <span class="ltr">${t.far_ip}</span></div></div>
           <button class="btn sm ghost icon" data-act="drawer-close" aria-label="بستن">${I.x(16)}</button></header>
         <div class="body">
-          <div class="row">${stateEl(t)}${healthTag(t)}${t.auto_encrypt ? encryptTag(t) : t.encrypt ? html`<span class="tag lock">${I.lock(12)} ${cipherTitle(t.encrypt)}</span>` : ""}${t.obfs ? html`<span class="tag lock">${I.mask(12)} مبهم</span>` : ""}${t.managed ? html`<span class="tag warn">از سرور اصلی</span>` : ""}</div>
+          <div class="row">${stateEl(t)}${healthTag(t)}${t.auto_encrypt ? encryptTag(t) : t.encrypt ? html`<span class="tag lock">${I.lock(12)} ${cipherTitle(t.encrypt)}</span>` : ""}${t.obfs ? html`<span class="tag lock">${I.mask(12)} مبهم</span>` : ""}${t.managed ? html`<span class="tag warn">از سرور اصلی</span>` : ""}${droppedTag(t)}</div>
           <div class="figs">
             <div><div class="k">دانلود</div><div class="v ltr" data-live="rx:${t.name}">${fmtRate(r.rx)}</div></div>
             <div><div class="k">آپلود</div><div class="v ltr" data-live="tx:${t.name}">${fmtRate(r.tx)}</div></div>
@@ -1760,7 +1763,9 @@
           <span class="grow"></span>
           ${t.managed ? "" : safeField(true)}
           ${t.managed ? "" : html`<button class="btn sm ${t.limits.disabled ? "primary" : "ghost"}" data-act="tunnel-power" data-name="${t.name}">${I.power(15)} ${t.limits.disabled ? "روشن کردن" : "خاموش کردن"}</button>`}
-          ${t.managed ? "" : html`<button class="btn sm danger" data-act="del-tunnel" data-name="${t.name}">${I.trash(15)} حذف</button>`}
+          ${droppedOn(t) ? html`<button class="btn sm primary" data-act="restore-tunnel" data-peer="${t.peer}" data-name="${t.name}">${I.sync(15)} ساخت دوباره روی ${pname(t.peer)}</button>` : ""}
+          ${t.managed ? html`<button class="btn sm danger" data-act="drop-tunnel" data-name="${t.name}" title="برای وقتی که سرور اصلی در دسترس نیست">${I.trash(15)} حذف فقط از این سرور</button>`
+            : html`<button class="btn sm danger" data-act="del-tunnel" data-name="${t.name}">${I.trash(15)} حذف</button>`}
         </div>
       ${html`<div class="seg dtabs" role="tablist">${tabs.map(([id, l]) => html`<button type="button" role="tab" aria-selected="${tab === id}" class="${tab === id ? "on" : ""}" data-act="dtab" data-name="${t.name}" data-tab="${id}">${l}</button>`)}</div>`}
       ${tab === "events" ? eventsPane(t) : ""}
@@ -1889,12 +1894,50 @@
   // ---------- servers ----------
   function viewServers() {
     const ov = S.ov;
-    const master = masters().map((m) => html`<div class="note ${m.paired ? "ok" : "warn"}" style="margin-bottom:16px">این سرور توسط <b>${m.name}</b> (<span class="ltr">${m.address}</span>) مدیریت می‌شود ${m.paired ? "و به آن متصل است." : "ولی هنوز به آن نرسیده؛ سرویس مدام تلاش می‌کند."} تانل‌های آن فقط از پنل همان سرور تغییر می‌کنند.</div>`);
-    if (!ov.peers.length) return html`${master}<div class="panel"><div class="empty">${I.server(32)}<b>هنوز سروری اضافه نشده</b>سرور خارج را با نام و IP اضافه کنید؛ پنل دستور یک‌خطی نصب و اتصال را برای همان سرور می‌سازد.<br><button class="btn primary" data-act="add-server">${I.plus(16)} افزودن سرور</button></div></div>`;
+    const master = masters().map(masterNote);
+    const gone = (ov.gone || []).map((g) => html`<div class="note warn" style="margin-bottom:16px"><b>در انتظار پاک‌سازی روی ${g.name}</b> (<span class="ltr">${g.address}</span>): این سرور حذف شد ولی در دسترس نبود. هر بار که جواب بدهد، تانل‌های این سرور روی آن حذف می‌شوند (تا ۳۰ روز). برای پاک‌سازی همین الان، روی خودش اجرا کنید:
+      <div class="code ltr" style="margin-top:8px">${g.command}<button class="btn sm ghost icon" data-act="copy" data-text="${g.command}" aria-label="کپی">${I.copy(15)}</button></div></div>`);
+    const self = ov.node.neoexit ? html`<div class="panel" style="margin-bottom:16px"><h3 style="margin:0 0 8px">همین سرور</h3>${neoexitBlock(ov.node.neoexit, ov.node.address)}</div>` : "";
+    if (!ov.peers.length) return html`${master}${gone}${self}<div class="panel"><div class="empty">${I.server(32)}<b>هنوز سروری اضافه نشده</b>سرور خارج را با نام و IP اضافه کنید؛ پنل دستور یک‌خطی نصب و اتصال را برای همان سرور می‌سازد.<br><button class="btn primary" data-act="add-server">${I.plus(16)} افزودن سرور</button></div></div>`;
     const old = ov.peers.filter((p) => p.paired && p.version && p.version !== ov.node.version);
-    return html`${master}
+    return html`${master}${gone}${self}
       ${old.length ? html`<div class="note warn" style="margin-bottom:16px">${old.length} سرور نسخه‌ی قدیمی‌تری از این سرور (<span class="ltr">${ov.node.version}</span>) دارد. برای اینکه همه‌ی قابلیت‌ها کار کنند ارتقا دهید.</div>` : ""}
       <div class="peers">${ov.peers.map(peerCard)}</div>`;
+  }
+
+  // A server that manages this one: whether it still reaches us, and what
+  // to do when it is gone (forget it, or keep it however long it is silent).
+  function masterNote(m) {
+    const days = S.ov.forget_days || 0, silent = m.paired && m.silent_days >= 7;
+    const cls = !m.paired ? "warn" : silent ? "bad" : "ok";
+    const state = !m.paired ? "ولی هنوز به آن نرسیده؛ سرویس مدام تلاش می‌کند."
+      : silent ? html`ولی <b>${m.silent_days} روز</b> است به این سرور وصل نشده.${m.keep ? " نگه داشته می‌شود." : m.forget_in >= 0 ? html` اگر تا <b>${m.forget_in} روز</b> دیگر وصل نشود، خودکار فراموش و ${m.tunnels} تانلش حذف می‌شود.` : ""}`
+      : "و به آن متصل است.";
+    return html`<div class="note ${cls}" style="margin-bottom:16px">این سرور توسط <b>${m.name}</b> (<span class="ltr">${m.address}</span>) مدیریت می‌شود ${state} تانل‌های آن فقط از پنل همان سرور تغییر می‌کنند.
+      ${(m.dropped || []).length ? html`<div class="small" style="margin-top:6px">${m.dropped.length} تانل آن روی این سرور دستی حذف شده است.</div>` : ""}
+      <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap;align-items:center">
+        <button class="btn sm danger" data-act="forget-master" data-name="${m.name}">${I.trash(14)} جدا شدن از ${m.name}</button>
+        ${days ? html`<button class="btn sm ghost" data-act="keep-master" data-name="${m.name}" data-keep="${m.keep ? "" : "1"}">${m.keep ? "فراموش کن اگر خاموش ماند" : "همیشه نگه دار"}</button>` : ""}
+        <span class="grow"></span>
+        <label class="small faint">فراموشی خودکار بعد از
+          <select data-act="forget-days">${[[7, "۷ روز"], [14, "۱۴ روز"], [30, "۳۰ روز"], [60, "۶۰ روز"], [90, "۹۰ روز"], [0, "هرگز"]].map(([v, l]) => html`<option value="${v}" ${v === days ? "selected" : ""}>${l}</option>`)}</select></label>
+      </div></div>`;
+  }
+
+  // NeoExit (free exits for AI services, a separate program) on a server:
+  // each service and the exit it leaves through, and a link to its panel.
+  function neoexitBlock(ne, address) {
+    if (!ne) return "";
+    const word = { ok: "باز", geo: "کشور بسته", challenge: "کپچا", error: "خطا", down: "بسته" };
+    const cls = { ok: "ok", geo: "bad", challenge: "warn", error: "bad", down: "bad" };
+    const host = address && address.includes(":") ? `[${address}]` : address;
+    const svcs = ne.services || [];
+    const bad = svcs.filter((s) => s.state !== "ok").length;
+    return html`<div class="neoexit">
+      <div class="ne-head"><b>NeoExit</b><span class="faint small">${svcs.length ? (bad ? `${bad} سرویس مشکل دارد` : "همه‌ی سرویس‌ها باز") : "سرویسی روشن نیست"}</span>
+        ${host && ne.panel ? html`<a class="btn sm" href="https://${host}${ne.panel}" target="_blank" rel="noopener noreferrer">پنل NeoExit</a>` : ""}</div>
+      <ul>${svcs.map((s) => html`<li><i class="dot ${cls[s.state] || "warn"}"></i><span class="ltr">${s.name}</span><span class="faint">${word[s.state] || "تست نشده"}${s.exit ? html` · از ${s.exit}` : ""}</span></li>`)}</ul>
+    </div>`;
   }
 
   // A peer: reachability, version and what to do next, at a glance.
@@ -1913,6 +1956,9 @@
         <div><dt>تانل‌ها</dt><dd>${p.tunnels}</dd></div>
         <div><dt>آخرین ارتباط</dt><dd>${ago(p.last_seen)}</dd></div>
       </dl>
+      ${(p.dropped || []).length ? html`<div class="note warn small" style="margin:10px 0 0">${p.dropped.length} تانل این سرور روی ${plabel(p)} دستی حذف شده (<span class="ltr">${p.dropped.join(", ")}</span>) و آنجا ساخته نمی‌شود.
+        <div style="margin-top:6px"><button class="btn sm" data-act="restore-tunnel" data-peer="${p.name}">${I.sync(14)} ساخت دوباره</button></div></div>` : ""}
+      ${neoexitBlock(p.neoexit, p.address)}
       <footer>
         ${!p.paired ? html`<button class="btn sm primary" data-act="setup" data-name="${p.name}">${I.term(15)} دستور اتصال</button>`
           : html`${outdated || up ? html`<button class="btn sm primary" data-act="upgrade" data-name="${p.name}" ${up ? "disabled" : ""}>${I.upgrade(15)} ${up ? "در حال ارتقا…" : `ارتقا به ${ov.node.version}`}</button>` : ""}
@@ -2530,7 +2576,7 @@
   }
 
   // The Telegram bot (package telegram): alerts, reports and port lookups.
-  const TG_ALERTS = [["down", "قطعی یا افت شدید تانل"], ["recover", "سالم شدن دوباره"], ["restart", "ری‌استارت خودکار"], ["failover", "رفتن پورت‌ها به تانل پشتیبان"], ["cipher", "عوض شدن خودکار رمزنگاری"], ["quota", "تمام شدن حجم ماهانه"], ["port", "بسته و باز شدن پورت‌های فروخته"], ["upgrade", "ارتقای خودکار سرورهای مقابل"], ["guard", "خاموش شدن خودکار فایروال"]];
+  const TG_ALERTS = [["down", "قطعی یا افت شدید تانل"], ["recover", "سالم شدن دوباره"], ["restart", "ری‌استارت خودکار"], ["failover", "رفتن پورت‌ها به تانل پشتیبان"], ["cipher", "عوض شدن خودکار رمزنگاری"], ["quota", "تمام شدن حجم ماهانه"], ["port", "بسته و باز شدن پورت‌های فروخته"], ["upgrade", "ارتقای خودکار سرورهای مقابل"], ["guard", "خاموش شدن خودکار فایروال"], ["master", "فراموش شدن خودکار سرور اصلی خاموش"]];
   const TG_EVERY = [["hourly", "هر ساعت"], ["daily", "هر روز"], ["weekly", "هر هفته (شنبه)"]];
   function setTelegram() {
     const v = S.tv;
@@ -3345,6 +3391,16 @@
       <footer><span class="grow"></span><button class="btn ghost" type="button" data-act="close">انصراف</button><button class="btn primary" type="submit">${I.check(16)} ذخیره</button></footer></form>`;
   }
 
+  // A removed server that couldn't be told to drop our tunnels.
+  function cleanupView(c) {
+    return html`${modalHead("پاک‌سازی روی " + c.peer)}
+      <div class="body">
+        <div class="note warn"><b>${c.peer}</b> در دسترس نبود (<span class="ltr small">${c.error}</span>)، پس تانل‌های این سرور هنوز روی آن هستند. هر بار که جواب بدهد (تا ۳۰ روز) خودکار حذف می‌شوند.</div>
+        ${codeBlock("برای پاک‌سازی همین الان", c.command, c.peer)}
+      </div>
+      <footer><span class="grow"></span><button class="btn primary" data-act="close">بستن</button></footer>`;
+  }
+
   function confirmView(title, text, act, data, label, icon = I.trash) {
     return html`${modalHead(title)}<div class="body"><div>${text}</div></div>
       <footer><span class="grow"></span><button class="btn ghost" data-act="close">انصراف</button><button class="btn danger" data-act="${act}" ${raw(Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(" "))}>${icon(16)} ${label}</button></footer>`;
@@ -3382,6 +3438,7 @@
       S.speed.only = t.checked ? only.concat(t.value) : only;
     }
     if (t.dataset.act === "st-subject") { S.st.subject = t.value; draw(); }
+    if (t.dataset.act === "forget-days") api("POST", "settings/forget-masters", { days: +t.value }).then(() => refresh()).then(() => toast("ذخیره شد"), (e) => toast(e.message, "bad"));
     if (t.dataset.act === "safe-pref") { S.safe = t.checked; store("nt-safe", S.safe ? "1" : "0"); if (t.closest(".modal")) drawModal(); else draw(); }
     if (t.dataset.act === "def-check") { S.defs[t.dataset.key] = t.checked; S.edit = true; }
     if (t.dataset.act === "fe-check") { S.fe[t.dataset.key] = t.checked; S.edit = true; }
@@ -3753,9 +3810,29 @@
       try { const ch = await api("DELETE", "tunnels/" + encodeURIComponent(el.dataset.name)); closeModal(); S.open = null; S.drawer = null; await refresh(); reportChange(ch, "تانل حذف شد"); }
       catch (e) { toast(e.message, "bad"); }
     },
-    "del-server"(el) { openModal(() => confirmView("حذف سرور", html`سرور <b>${pname(el.dataset.name)}</b> و تانل‌های این سرور به آن حذف شوند؟ روی خود آن سرور چیزی پاک نمی‌شود.`, "del-server-go", { name: el.dataset.name }, "حذف سرور")); },
+    "del-server"(el) { openModal(() => confirmView("حذف سرور", html`سرور <b>${pname(el.dataset.name)}</b> و تانل‌های این سرور به آن حذف شوند؟ همین تانل‌ها روی خود آن سرور هم حذف می‌شوند.`, "del-server-go", { name: el.dataset.name }, "حذف سرور")); },
     async "del-server-go"(el) {
-      try { const ch = await api("DELETE", "peers/" + encodeURIComponent(el.dataset.name)); closeModal(); await refresh(); reportChange(ch, "سرور حذف شد"); }
+      try {
+        const ch = await api("DELETE", "peers/" + encodeURIComponent(el.dataset.name)); closeModal(); await refresh(); reportChange(ch, "سرور حذف شد");
+        if (ch.cleanup) openModal(() => cleanupView(ch.cleanup));
+      } catch (e) { toast(e.message, "bad"); }
+    },
+    "forget-master"(el) { const n = el.dataset.name, m = masters().find((x) => x.name === n) || {}; openModal(() => confirmView("جدا شدن از " + n, html`<b>${n}</b> روی این سرور فراموش و <b>${m.tunnels || 0} تانل</b> و فورواردهایش همین‌جا حذف شوند؟ این برای سروری است که دیگر نیست یا در دسترس نیست. اگر هنوز کار می‌کند، برای مدیریت دوباره باید از نو وصل شود.`, "forget-master-go", { name: n }, "جدا شدن")); },
+    async "forget-master-go"(el) {
+      try { const ch = await api("POST", `masters/${encodeURIComponent(el.dataset.name)}/forget`); closeModal(); await refresh(); reportChange(ch, "از " + el.dataset.name + " جدا شد"); }
+      catch (e) { toast(e.message, "bad"); }
+    },
+    async "keep-master"(el) {
+      try { await api("POST", `masters/${encodeURIComponent(el.dataset.name)}/keep`, { keep: !!el.dataset.keep }); await refresh(); toast("ذخیره شد"); }
+      catch (e) { toast(e.message, "bad"); }
+    },
+    "drop-tunnel"(el) { openModal(() => confirmView("حذف فقط از این سرور", html`تانل <b>${tlabel(el.dataset.name)}</b> فقط روی همین سرور حذف شود؟ سرور اصلی دوباره آن را نمی‌سازد تا خودش آن را بازگرداند یا حذف کند.`, "drop-tunnel-go", { name: el.dataset.name }, "حذف از این سرور")); },
+    async "drop-tunnel-go"(el) {
+      try { const ch = await api("POST", `tunnels/${encodeURIComponent(el.dataset.name)}/drop`); closeModal(); await refresh(); reportChange(ch, "تانل از این سرور حذف شد"); }
+      catch (e) { toast(e.message, "bad"); }
+    },
+    async "restore-tunnel"(el) {
+      try { await api("POST", `peers/${encodeURIComponent(el.dataset.peer)}/restore`, { names: el.dataset.name ? [el.dataset.name] : [] }); await refresh(); toast("روی " + pname(el.dataset.peer) + " دوباره ساخته می‌شود"); }
       catch (e) { toast(e.message, "bad"); }
     },
     async sync(el) {

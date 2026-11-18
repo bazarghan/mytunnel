@@ -110,6 +110,7 @@ func Run(ctx context.Context) error {
 
 	startPanel(id, store, history, tracker, hooks, poke)
 	go watchPeers(ctx, id)
+	go watchMasters(ctx, tracker, poke)
 	go watchAddress(ctx)
 	go watchGuard(ctx)
 	go watchNet(ctx, poke)
@@ -292,6 +293,7 @@ func watchPeers(ctx context.Context, id *identity.Identity) {
 	defer t.Stop()
 	for {
 		fleet.RefreshAll(ctx, id)
+		fleet.TellGone(ctx, id)
 		fixClashes()
 		useObfsAES()
 		useRelayPorts()

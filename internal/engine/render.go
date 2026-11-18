@@ -17,6 +17,7 @@ import (
 
 const (
 	IfPrefix      = "nt-"
+	BenchPrefix   = "ntx-" // temporary test tunnels
 	DefaultMTU    = 1500
 	DefaultTTL    = 255
 	DefaultPort   = 4789 // VXLAN

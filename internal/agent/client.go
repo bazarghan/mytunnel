@@ -14,6 +14,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -346,4 +347,22 @@ var ErrUnsupported = errors.New("not supported by this server's version")
 // changes answer ErrUnsupported.
 func (c *Client) SafeConfirm(ctx context.Context, id string) error {
 	return c.do(ctx, "POST", "/v1/safe/confirm", SafeConfirmRequest{ID: id}, nil, nil)
+}
+
+// Leave asks the peer to forget this node as its main server and remove
+// the tunnels it set up there.
+func (c *Client) Leave(ctx context.Context) (LeaveResponse, error) {
+	var r LeaveResponse
+	return r, c.do(ctx, "POST", "/v1/leave", struct{}{}, &r, nil)
+}
+
+// Restore lets tunnels removed by hand on the peer run again (none = all).
+func (c *Client) Restore(ctx context.Context, names []string) error {
+	return c.do(ctx, "POST", "/v1/restore", RestoreRequest{Names: names}, nil, nil)
+}
+
+// NotMaster reports whether err is the peer saying this node isn't (or is
+// no longer) one of its main servers.
+func NotMaster(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "not my master")
 }
