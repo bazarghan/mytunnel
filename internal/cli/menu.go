@@ -38,6 +38,7 @@ var modeHints = map[string]string{
 	"tcp":       "packets over TCP: a last resort when UDP and GRE/SIT are blocked",
 	"l2tpv3":    "layer 2 pseudowire over IP or UDP, MikroTik compatible",
 	"eoip":      "MikroTik EoIP / EoIPv6: layer 2 over GRE, IPv6 or UDP",
+	"spoof":     "forged-source-IP carrier over UDP, FakeTCP, GRE, IPIP, SIT or ICMP",
 }
 
 type session struct {

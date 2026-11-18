@@ -41,7 +41,6 @@ var modes = []Mode{
 	{Name: "sit", Title: "SIT (IPv6 only)", Kinds: []config.Kind{config.KindSIT}, Layer: 3, Port: true},
 	{Name: "wireguard", Title: "WireGuard", Kinds: []config.Kind{config.KindWireGuard}, Layer: 3, Port: true, UDP: true, Crypt: true},
 	{Name: "obfs", Title: "NeoObfs", Kinds: []config.Kind{config.KindObfs}, Layer: 3, Port: true, UDP: true, Crypt: true, Peer: true},
-	{Name: "spoof", Title: "Spoof (مبدأ جعلی)", Kinds: []config.Kind{config.KindSpoof}, Layer: 3, Port: true, UDP: true, Crypt: true, Peer: true},
 	{Name: "gretap", Title: "GRETAP (L2)", Kinds: []config.Kind{config.KindGRETAP}, Layer: 2, Port: true},
 	{Name: "vxlan", Title: "VXLAN (L2)", Kinds: []config.Kind{config.KindVXLAN}, Layer: 2, Port: true, UDP: true},
 	{Name: "geneve", Title: "GENEVE (L2)", Kinds: []config.Kind{config.KindGENEVE}, Layer: 2, Port: true, UDP: true},
@@ -51,6 +50,7 @@ var modes = []Mode{
 	{Name: "eoip", Title: "EoIP (L2)", Kinds: []config.Kind{config.KindEoIP}, Layer: 2, Port: true},
 	{Name: "tcpmux", Title: "TCP + mux", Kinds: []config.Kind{config.KindStreamTCP}, Port: true, TCP: true, Peer: true, Stream: true},
 	{Name: "tlsmux", Title: "TLS + mux", Kinds: []config.Kind{config.KindStreamTLS}, Port: true, TCP: true, Crypt: true, Peer: true, Stream: true},
+	{Name: "spoof", Title: "Spoof (مبدأ جعلی)", Kinds: []config.Kind{config.KindSpoof}, Layer: 3, Port: true, UDP: true, Crypt: true, Peer: true},
 }
 
 func Modes() []Mode { return modes }
