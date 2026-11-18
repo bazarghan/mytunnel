@@ -1,53 +1,80 @@
 <div dir="rtl">
 
-<p align="center"><img src="docs/icon.png" width="240" alt="NeoTunnel"></p>
-<p align="center"><b>تانل‌های میکروتیکی روی اوبونتو، با سرعت کرنل و یک پنل فارسی تمیز</b></p>
+<p align="center"><img src="docs/icon.png" width="240" alt="MyTunnel"></p>
+<p align="center"><b>تانل‌های کرنلی + تانل Spoof (مبدأ جعلی) روی همه‌ی پروتکل‌ها، با پنل فارسی و نصب یک‌خطی</b></p>
 <p align="center">
-<a href="https://github.com/neoauroraproject/neotunnel/releases/latest"><img src="https://img.shields.io/github/v/release/neoauroraproject/neotunnel?style=flat-square&color=f5a524&labelColor=111111" alt="release"></a>
-<a href="https://github.com/neoauroraproject/neotunnel/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/neoauroraproject/neotunnel/ci.yml?branch=main&style=flat-square&label=tests&labelColor=111111" alt="tests"></a>
+<a href="https://github.com/bazarghan/mytunnel/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/bazarghan/mytunnel/ci.yml?branch=main&style=flat-square&label=tests&labelColor=111111" alt="tests"></a>
 <img src="https://img.shields.io/badge/Ubuntu-20.04%2B-ececec?style=flat-square&labelColor=111111" alt="ubuntu">
-<a href="LICENSE"><img src="https://img.shields.io/github/license/neoauroraproject/neotunnel?style=flat-square&color=ececec&labelColor=111111" alt="license"></a>
-<a href="https://github.com/neoauroraproject/neotunnel/releases"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fneoauroraproject%2Fneotunnel%2Fbadges%2Finstalls.json&style=flat-square" alt="installs"></a>
-<a href="https://hits.sh/github.com/neoauroraproject/neotunnel/"><img src="https://hits.sh/github.com/neoauroraproject/neotunnel.svg?style=flat-square&label=views&color=f5a524&labelColor=111111" alt="views"></a>
-<a href="https://t.me/neoaurora"><img src="https://img.shields.io/badge/Telegram-NeoAurora-26a5e4?style=flat-square&logo=telegram&labelColor=111111" alt="telegram"></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/bazarghan/mytunnel?style=flat-square&color=ececec&labelColor=111111" alt="license"></a>
 </p>
 
-<p align="center"><img src="docs/screenshots/dashboard.png" alt="داشبورد NeoTunnel: جریان ترافیک زنده‌ی هر تانل، بار سرور، پینگ، کارت شبکه و جزئیات سرور"></p>
+<p align="center"><img src="docs/screenshots/dashboard.png" alt="داشبورد پنل: جریان ترافیک زنده‌ی هر تانل، بار سرور، پینگ، کارت شبکه و جزئیات سرور"></p>
 
 یک سرور (مثلاً ایران) **سرور اصلی** است و پنل روی آن نصب می‌شود. سرورهای مقصد (خارج) با یک دستور به آن وصل می‌شوند و از آن به بعد **هر تغییری در پنل، خودکار روی هر دو طرف اعمال می‌شود**.
 
 <table>
 <tr>
+<td width="50%">🎭 <b>تانل Spoof روی همه‌ی پروتکل‌ها</b><br>جعل IP مبدأ روی ۶ حامل (<code>UDP</code>، <code>FakeTCP</code>، <code>GRE</code>، <code>IPIP</code>، <code>6to4/SIT</code>، <code>ICMP</code>) به‌صورت مستقل یا زیرِ هر پروتکل دیگر.</td>
 <td width="50%">⚡ <b>سرعت کرنل</b><br>تانل‌ها مستقیم در کرنل لینوکس ساخته می‌شوند؛ MTU خودکار، BBR و بافرهای شبکه با یک کلیک.</td>
-<td width="50%">🧭 <b>بررسی زنده پیش از ساخت</b><br>هر انتخاب در ویزارد چند ثانیه روی هر دو سرور امتحان می‌شود؛ قبل از ساخت می‌دانید وصل می‌شود یا نه.</td>
 </tr>
 <tr>
-<td>📊 <b>مقایسه‌ی همه‌ی پروتکل‌ها در یک دقیقه</b><br>اول اتصال همه با هم، بعد سرعت فقط برای آن‌هایی که وصل شدند.</td>
-<td>🎛️ <b>کنترل کامل هر تانل</b><br>روشن/خاموش، سقف سرعت، حجم ماهانه، رمزنگاری، MTU، پورت.</td>
+<td>🧭 <b>بررسی زنده و تست مسیر Spoof</b><br>بررسی زنده‌ی پروتکل‌ها پیش از ساخت + تست دوطرفه‌ی هر ۶ حامل Spoof بین سرور ایران و خارج.</td>
+<td>🎛️ <b>کنترل کامل هر تانل</b><br>روشن/خاموش، سقف سرعت، حجم ماهانه، رمزنگاری، MTU، پورت و صف هوشمند (CAKE).</td>
 </tr>
 <tr>
-<td>👤 <b>IP واقعی کاربر</b><br>حالت شفاف یا PROXY protocol v1/v2، برای TCP و UDP.</td>
-<td>🔒 <b>امن و ماندگار</b><br>TLS 1.3 دوطرفه بین سرورها، IPsec در کرنل، سرویس systemd با ترمیم خودکار.</td>
+<td>👤 <b>IP واقعی کاربر</b><br>حالت شفاف، PROXY protocol v1/v2 و رله TCP، برای TCP و UDP.</td>
+<td>🔒 <b>امن و ماندگار</b><br>TLS 1.3 دوطرفه بین سرورها، IPsec در کرنل، XChaCha20 / AES-GCM، سرویس systemd با ترمیم خودکار.</td>
 </tr>
 <tr>
+<td>📊 <b>مقایسه‌ی همه‌ی پروتکل‌ها در یک دقیقه</b><br>اول اتصال همه با هم، بعد تست سرعت واقعی فقط برای آن‌هایی که وصل شدند.</td>
 <td>📈 <b>آمار از یک ساعت تا از ابتدا</b><br>ترافیک، پینگ و افت هر تانل، پردازنده و حافظه؛ میانگین هر بازه همراه با اوج آن.</td>
-<td>⏱️ <b>تست سرعت دقیق</b><br>۵ تا ۳۰ ثانیه، ۱ تا ۳۲ اتصال هم‌زمان؛ ثانیه‌های گرم شدن TCP در نتیجه حساب نمی‌شوند.</td>
 </tr>
 </table>
 
-## نصب
+## نصب روی سرور اصلی (ایران)
 
-روی **سرور اصلی** با دسترسی root:
+> **نکته:** چون مخزن `bazarghan/mytunnel` خصوصی (Private) است، برای نصب مستقیم از گیت‌هاب یا باید از توکن گیت‌هاب (`GITHUB_TOKEN`) استفاده کنید یا از باینری آماده‌ی داخل مخزن استفاده نمایید.
+
+### روش ۱: نصب یک‌خطی از گیت‌هاب
+
+اگر مخزن را Public کرده‌اید، روی سرور با دسترسی root بزنید:
 
 </div>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/neoauroraproject/neotunnel/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/bazarghan/mytunnel/main/install.sh | sudo bash
 ```
 
 <div dir="rtl">
 
-نصاب نسخه‌ی مناسب (amd64 یا arm64) را دانلود و checksum آن را بررسی می‌کند، پنل را روی یک پورت تصادفی بالا می‌آورد و آدرس و رمز را نشان می‌دهد:
+اگر مخزن **Private** است (با توکن گیت‌هاب خودتان `ghp_...` یا `github_pat_...`):
+
+</div>
+
+```bash
+TOKEN="YOUR_GITHUB_TOKEN"
+curl -fsSL -H "Authorization: Bearer $TOKEN" https://raw.githubusercontent.com/bazarghan/mytunnel/main/install.sh -o /tmp/install.sh
+curl -fsSL -H "Authorization: Bearer $TOKEN" https://raw.githubusercontent.com/bazarghan/mytunnel/main/neotunnel-linux-$(dpkg --print-architecture) -o /tmp/neotunnel-linux-$(dpkg --print-architecture)
+sudo bash /tmp/install.sh --binary /tmp/neotunnel-linux-$(dpkg --print-architecture)
+```
+
+<div dir="rtl">
+
+<details>
+<summary>گزینه‌های نصب آنلاین</summary>
+
+</div>
+
+```bash
+# پورت پنل دلخواه
+curl -fsSL https://raw.githubusercontent.com/bazarghan/mytunnel/main/install.sh | sudo bash -s -- --port 2096
+# بدون پنل (سرور مقصد)
+curl -fsSL https://raw.githubusercontent.com/bazarghan/mytunnel/main/install.sh | sudo bash -s -- --no-panel
+```
+
+<div dir="rtl">
+
+نصاب نسخه‌ی مناسب را نصب و checksum را بررسی می‌کند، پنل را روی پورت انتخابی (یا تصادفی) بالا می‌آورد و آدرس، نام کاربری و رمز را نمایش می‌دهد:
 
 </div>
 
@@ -59,257 +86,137 @@ curl -fsSL https://raw.githubusercontent.com/neoauroraproject/neotunnel/main/ins
 
 <div dir="rtl">
 
-<details>
-<summary>گزینه‌های نصب</summary>
-
-</div>
-
-```bash
-# پورت پنل دلخواه
-curl -fsSL https://raw.githubusercontent.com/neoauroraproject/neotunnel/main/install.sh | sudo bash -s -- --port 2096
-# بدون پنل (سرور مقصد)
-curl -fsSL https://raw.githubusercontent.com/neoauroraproject/neotunnel/main/install.sh | sudo bash -s -- --no-panel
-# نسخه‌ی مشخص
-curl -fsSL https://raw.githubusercontent.com/neoauroraproject/neotunnel/main/install.sh | sudo bash -s -- --version v0.4.0
-```
-
-<div dir="rtl">
-
-اجرای دوباره‌ی همان دستور (یا `sudo neotunnel update`) به‌روزرسانی می‌کند و تنظیمات می‌ماند. از خود پنل هم می‌شود: پنل هر ساعت نسخه‌ی تازه را بررسی می‌کند و وقتی آمد، دکمه‌ی به‌روزرسانی بالای پنل، در منو و در «تنظیمات ← درباره» پیدا می‌شود؛ بعد از نصب، صفحه خودش تازه می‌شود. گواهی پنل self-signed است؛ بار اول هشدار مرورگر را تأیید کنید.
-
 </details>
 
-### نصب آفلاین (بدون دسترسی سرور به گیت‌هاب)
+### روش ۲: نصب آفلاین با باینری آماده (ساده‌ترین روش بدون نیاز به اینترنت گیت‌هاب)
 
-۱. از صفحه‌ی [Releases](https://github.com/neoauroraproject/neotunnel/releases/latest) فایل `neotunnel-linux-amd64` را دانلود کنید (برای سرور ARM فایل `neotunnel-linux-arm64`). اگر می‌خواهید فایل بررسی شود، `SHA256SUMS` را هم بگیرید.
+فایل `neotunnel-linux-amd64` و `SHA256SUMS` از قبل کامپایل‌شده و داخل همین مخزن قرار دارند:
 
-۲. فایل را بدون تغییر نام در پوشه‌ی `/root` سرور بگذارید (با WinSCP، FileZilla یا `scp`).
+۱. فایل `neotunnel-linux-amd64` (و در صورت تمایل `SHA256SUMS`) را در پوشه‌ی `/root` سرور ایران بگذارید (با `scp`، WinSCP یا FileZilla).
 
-۳. این دستور را با کاربر root در سرور اجرا کنید:
+۲. روی سرور ایران با کاربر `root` این دستور را بزنید:
 
 </div>
 
 ```bash
-f=/root/neotunnel-linux-$(dpkg --print-architecture); chmod +x "$f" && "$f" setup
+chmod +x /root/neotunnel-linux-amd64 && sudo /root/neotunnel-linux-amd64 setup
 ```
 
 <div dir="rtl">
 
-همه‌ی کارهای نصب آنلاین انجام می‌شود: ماژول‌های کرنل، تنظیم شبکه، نصب برنامه، پنل و سرویس. در پایان آدرس و رمز پنل نمایش داده می‌شود. اگر `SHA256SUMS` کنار فایل باشد، checksum آن بررسی می‌شود. برای سرور مقصد بدون پنل، آخر دستور `--no-panel` را اضافه کنید. برای پورت دلخواه پنل هم `--port 2096` را اضافه کنید. برای به‌روزرسانی آفلاین، فایل نسخه‌ی تازه را جای قبلی بگذارید و همین دستور را دوباره اجرا کنید؛ تنظیمات و رمز پنل می‌مانند.
+برای پورت دلخواه پنل، `--port 2096` و برای سرور مقصد بدون پنل `--no-panel` را به انتهای دستور اضافه کنید. برای به‌روزرسانی آفلاین هم کافی است باینری جدید را جایگزین کرده و همین دستور را دوباره اجرا کنید؛ تنظیمات و رمز پنل دست نمی‌خورند.
+
+### روش ۳: کلون و نصب مستقیم از گیت‌هاب
+
+</div>
+
+```bash
+git clone https://github.com/bazarghan/mytunnel.git
+cd mytunnel
+sudo ./neotunnel-linux-amd64 setup
+```
+
+<div dir="rtl">
 
 ## شروع در سه قدم
 
-1. **افزودن سرور**: در صفحه‌ی «سرورها» نام و IP سرور خارج را وارد کنید.
-2. **اتصال**: دستور یک‌خطی‌ای را که پنل برای همان سرور می‌سازد روی سرور خارج اجرا کنید. برنامه را مستقیم از سرور ایران می‌گیرد (به گیت‌هاب نیازی ندارد).
-3. **ساخت تانل**: «تانل جدید» ← مقصد ← پروتکل ← امنیت و پورت ← فوروارد. هر دو طرف ساخته می‌شوند.
+1. **افزودن سرور مقصد (خارج)**: در پنل وب وارد صفحه‌ی «سرورها» شوید و نام و IP سرور خارج را وارد کنید.
+2. **اتصال**: پنل یک دستور یک‌خطی می‌سازد؛ آن را روی سرور خارج اجرا کنید. برنامه مستقیم از سرور ایران روی سرور خارج دانلود و نصب می‌شود (سرور خارج نیازی به دسترسی به گیت‌هاب ندارد).
+3. **ساخت تانل**: «تانل جدید» ← مقصد ← پروتکل ← امنیت و پورت (یا روشن کردن **حمل با تانل Spoof**) ← فوروارد. هر دو طرف خودکار ساخته می‌شوند.
 
 <p align="center"><img src="docs/screenshots/wizard.png" alt="ویزارد ساخت تانل با بررسی زنده‌ی اتصال هر پروتکل"></p>
 
-در مرحله‌ی پروتکل، «بررسی سریع همه» همه‌ی انواع را با هم امتحان می‌کند و روی هر گزینه می‌نویسد وصل شد (با پینگ) یا نه. با عوض کردن رمزنگاری یا پورت، همان ترکیب دوباره بررسی می‌شود.
+---
 
-## داشبورد و آمار
+## تانل Spoof (مبدأ جعلی) روی همه‌ی پروتکل‌ها
 
-داشبورد از چند کارت ساخته شده و هر کارت به یک سؤال جواب می‌دهد:
+این قابلیت برای عبور از محدودیت‌ها و فیلترینگ‌های شدید طراحی شده و هم به‌صورت **تانل مستقل (`spoof`)** و هم به‌عنوان **لایه‌ی حامل زیرِ تمام پروتکل‌ها** قابل استفاده است:
 
-<p align="center"><img src="docs/screenshots/flow.png" width="720" alt="کارت Traffic flow: از مجموع لحظه‌ای سرور به هر تانل یک نوار می‌رود که ضخامتش سهم آن تانل از ترافیک است"></p>
+- **سوار شدن زیر تمام پروتکل‌ها**: هر پروتکلی را انتخاب کنید (`6to4`، `6to4-gre`، `IPIP`، `GRE`، `SIT`، `WireGuard`، `NeoObfs`، `GRETAP`، `VXLAN`، `GENEVE`، `L2TPv3`، `EoIP`، `TCP`، `TCP+mux`، `TLS+mux`)، می‌توانید گزینه‌ی **«حمل با تانل Spoof»** را در پنل (یا `--spoof` در CLI) روشن کنید تا کل ترافیک آن پروتکل با IP مبدأ جعلی منتقل شود.
+- **۶ حامل روی سیم (`spoof_proto` / `--spoof-proto`)**:
+  - `udp`: بسته‌های UDP با IP مبدأ جعلی (سریع‌ترین، همراه با `recvmmsg` و `GRO`)
+  - `tcp`: بسته‌های FakeTCP / TCP خام (`PSH-ACK`) با فیلتر BPF کرنل و مسدودسازی خودکار `RST` کرنل در `nftables`
+  - `gre`: فریم‌های GRE (پروتکل ۴۷) با مبدأ جعلی
+  - `ipip`: بسته‌های IPIP (پروتکل ۴) با مبدأ جعلی
+  - `sit`: بسته‌های 6to4 / SIT (پروتکل ۴۱) با مبدأ جعلی
+  - `icmp`: بسته‌های ICMP Echo Reply (پروتکل ۱) با مبدأ جعلی بدون ایجاد پاسخ خودکار در کرنل
+- **۳ حالت جهت Spoof (`spoof_mode` / `--spoof-mode`)**:
+  - `both` (پیش‌فرض): هر دو سرور بسته‌ها را با IP مبدأ جعلی می‌فرستند.
+  - `out`: فقط سرور اصلی (ایران) با IP مبدأ جعلی می‌فرستد و سرور مقصد پاسخ را با IP واقعی خودش برمی‌گرداند (مناسب وقتی دیتاسنتر خارج `uRPF` دارد).
+  - `in`: فقط سرور مقصد با IP مبدأ جعلی می‌فرستد.
+- **۴ حالت تولید IP مبدأ جعلی (`spoof_src` / `--spoof-src`)**:
+  - `auto`: یک IP عمومی معتبر و ثابت برای هر طرف
+  - `iran`: انتخاب و چرخش از رنج IPهای عمومی ایران
+  - `rotate`: چرخش پویا و مداوم IP مبدأ در بسته‌ها
+  - یا وارد کردن یک IPv4 دلخواه (یا دو IP با کاما برای دو طرف، مثل `185.143.233.10,8.8.8.8`)
+- **تست زنده‌ی مسیر Spoof**: پیش از ساخت تانل، با دکمه‌ی **«تست مسیر Spoof روی همه‌ی پروتکل‌ها»** در ویزارد یا دستور `sudo neotunnel spoof-test <peer>`، هر ۶ حامل در هر دو جهت (`ایران ⇄ خارج`) تست می‌شوند و بهترین حامل و جهت به‌صورت خودکار انتخاب می‌گردد.
 
-
-- **Traffic flow**: از این سرور به هر تانل یک نوار می‌رود که ضخامتش سهم آن تانل از ترافیک لحظه‌ای است. کنار هر تانل یک کلید روشن/خاموش هست و پنل پیش از خاموش کردن تأیید می‌گیرد.
-- **کارت سرور**: نام سرور، وضعیت BBR و کلید «به‌روزرسانی زنده»؛ وقتی چیزی را با دقت می‌خوانید، تازه شدن هر ۳ ثانیه را متوقف کنید.
-- **Server load**، **پینگ** و **کارت شبکه**: درصد پردازنده و پرکارترین هسته و حافظه؛ میانگین، کمترین و بیشترین پینگ تانل‌ها؛ سرعت دریافت و ارسال کارت شبکه و حجم امروز.
-- **Details** و **Traffic history**: تانل‌های سالم، مدت روشن بودن، افت بسته و حجم ترافیک، و نمودار ترافیک تانل‌ها یا کارت شبکه در بازه‌ی دلخواه.
-
-<p align="center"><img src="docs/screenshots/stats.png" alt="صفحه‌ی آمار: ترافیک کارت شبکه و همه‌ی تانل‌ها، پردازنده و حافظه در ۲۴ ساعت گذشته"></p>
-
-صفحه‌ی **«آمار»** همین داده‌ها را با جزئیات نشان می‌دهد. سرویس هر ۱۰ ثانیه ترافیک، پینگ و افت هر تانل، ترافیک هر پورت، کارت شبکه، پردازنده، حافظه و load را ثبت می‌کند.
-
-- **بازه‌ها**: ۱ ساعت، ۶ ساعت، ۲۴ ساعت، ۷ روز، ۳۰ روز، ۹۰ روز و «از ابتدا». برای هر بازه میانگین، اوج و حجم دانلود و آپلود نشان داده می‌شود و با بردن نشانگر روی نمودار، زمان و مقدار همان لحظه را می‌بینید.
-- **میانگین و اوج**: هر نقطه میانگین بازه‌ی خودش است و محدوده‌ی روشن بالای خط تا اوج همان بازه می‌رسد، پس جهش‌های کوتاه در نمودار یک‌ماهه هم گم نمی‌شوند. زمان‌هایی که سرویس خاموش بوده خالی می‌مانند، نه صفر.
-- **کل سرور یا یک تانل**: برای کل سرور، کارت شبکه، همه‌ی تانل‌ها، پردازنده، حافظه، load، حجم روزانه و جدول تانل‌ها در همان بازه؛ برای یک تانل، ترافیک، پینگ، افت، حجم روزانه و حجم از زمان ساخت تانل.
-- **پرکارترین هسته**: بسته‌های یک تانل معمولاً روی یک هسته پردازش می‌شوند. اگر این عدد به ۱۰۰٪ می‌رسد ولی میانگین پردازنده پایین است، همان هسته جلوی سرعت را گرفته؛ حالت سرعت «پرسرعت» یا مسیرهای موازی کمک می‌کند.
-
-تاریخچه با دقت‌های مختلف نگه داشته می‌شود (هر ۱۰ ثانیه برای ساعت گذشته تا روزانه برای ۳ سال) و در `/etc/neotunnel/metrics.gob.gz` می‌ماند.
-
-## تست سرعت و مقایسه
-
-</div>
-
-<p align="center"><img src="docs/screenshots/speed.png" alt="تست سرعت زنده‌ی یک تانل: عقربه، نمودار زنده با بخش گرم شدن، و گزینه‌های مدت و تعداد اتصال"></p>
-<p align="center"><img src="docs/screenshots/compare.png" width="520" alt="نتیجه‌ی مقایسه‌ی انواع تانل بین دو سرور"></p>
-
-<div dir="rtl">
-
-- **تست یک تانل**: پینگ، جیتر و افت، بعد آپلود و دانلود واقعی داخل خود تانل، با عقربه و نمودار زنده. اگر سرعت از ۱ گیگابیت بگذرد، مقیاس عقربه تا ۱۰ گیگابیت باز می‌شود.
-- **مدت و تعداد اتصال**: هر جهت به‌طور پیش‌فرض ۱۰ ثانیه با ۸ اتصال TCP هم‌زمان اندازه گرفته می‌شود. در پنل مدت را بین ۵ و ۳۰ ثانیه و اتصال‌ها را بین ۱ و ۳۲ انتخاب کنید (در خط فرمان `--duration` و `--streams`). چند اتصال، مثل Connection Count در Bandwidth Test میکروتیک، ظرفیت کل مسیر را می‌سنجد؛ ۱ اتصال یعنی سرعت یک دانلود تکی.
-- **بدون گرم شدن**: یک‌چهارم اول هر جهت (حداکثر ۳ ثانیه) در نتیجه حساب نمی‌شود، چون TCP روی مسیر دور آهسته به سرعت کامل می‌رسد؛ این بخش روی نمودار با «گرم شدن» مشخص است. آپلود از بایت‌هایی که سرور مقابل تحویل گرفته اندازه گرفته می‌شود، نه بایت‌های فرستاده‌شده.
-- **مقایسه**: تانل‌های موقت از هر نوع بین دو سرور ساخته می‌شوند. اول اتصال همه با هم چند ثانیه بررسی می‌شود، بعد سرعت فقط برای آن‌هایی که وصل شدند؛ کل کار حدود یک دقیقه. با یک کلیک، بهترین گزینه ساخته می‌شود. اگر پورت تست روی یکی از دو سرور اشغال باشد، روی یک پورت آزاد دیگر تست می‌شود و نتیجه می‌گوید کدام پورت. تانل‌های فعلی دست نمی‌خورند و ترافیک تست جزو آمار حساب نمی‌شود.
-- **تانل‌های اتصال** (TCP + mux و TLS + mux) آدرس داخلی ندارند؛ تست سرعت، بررسی ویزارد و مقایسه‌ی آن‌ها از روی خود جلسه‌های تانل انجام می‌شود.
-
-## مدیریت هر تانل
-
-<p align="center"><img src="docs/screenshots/tunnels.png" alt="کارت تانل‌ها با وضعیت، پینگ و ترافیک زنده"></p>
-
-هر تانل یک کارت دارد: وضعیت و پینگ، سرعت لحظه‌ای دانلود و آپلود، حجم امروز، حالت سرعت و رمزنگاری، و دکمه‌های تست، ری‌استارت و روشن/خاموش. با زدن کارت، جزئیات آن باز می‌شود که سه بخش دارد: **نمای کلی** (ترافیک امروز، ماه و کل، آدرس‌ها، لایه‌ها، MTU و پورت‌های فوروارد)، **محدودیت‌ها** و **تنظیمات** (حالت سرعت، رمزنگاری، MTU، TTL، DSCP، پورت).
-
-<p align="center"><img src="docs/screenshots/tunnel-limits.png" alt="سقف سرعت و حجم ماهانه‌ی یک تانل"></p>
-
-- **سقف سرعت**: هر دو سر روی ارسال خود محدود می‌کنند (TBF در کرنل)، پس دانلود و آپلود هر دو محدود می‌شوند.
-- **حجم ماهانه**: وقتی پر شد تانل تا اول ماه بعد خاموش می‌شود و بعد خودش برمی‌گردد.
-- **روشن/خاموش**: تانل بدون از دست رفتن تنظیمات روی هر دو سرور پایین می‌آید.
-- **تغییر نام**: هر تانل و هر سرور یک نام نمایشی دارد که هر وقت بخواهید، به هر زبانی، عوض می‌شود (دکمه‌ی مداد کنار نام). نام اصلی شناسه‌ی آن می‌ماند و رابط‌ها، کلیدها و پورت‌ها با همان کار می‌کنند، پس تانل قطع نمی‌شود.
-
-### حالت سرعت
-
-هر تانل یکی از سه حالت را دارد (در ویزارد، زبانه‌ی تنظیمات تانل، یا `--profile` در خط فرمان):
-
-| حالت | چه می‌کند | مناسب برای |
-|---|---|---|
-| **کم‌تأخیر** (`lean`) | صف‌های کوتاه، کمترین مصرف پردازنده؛ تانل TCP روی ۲ اتصال | پینگ پایدار، ترافیک سبک |
-| **متعادل** (پیش‌فرض) | تنظیمات پیش‌فرض کرنل؛ تانل TCP روی ۴ اتصال | بیشتر کاربردها |
-| **پرسرعت** (`max`) | دریافت بسته‌ها روی همه‌ی هسته‌های پردازنده پخش می‌شود (RPS روی تانل، و روی کارت شبکه اگر صف‌هایش کمتر از هسته‌هاست)، صف ارسال بلندتر؛ تانل TCP روی ۸ اتصال | ترافیک سنگین، سرورهای مجازی با کارت شبکه‌ی تک‌صف |
-
-در ویزارد، با انتخاب هر حالت سرعتِ همان ترکیب با یک تانل موقت اندازه گرفته می‌شود و نتیجه‌ی هر سه حالت کنار هم می‌ماند تا مقایسه کنید.
-
-**گیمینگ:** در ویزارد، «هدف تانل» را روی «گیمینگ، کمترین پینگ» بگذارید. از GRE، IPIP، 6to4 و WireGuard آن که کمترین پینگ را دارد انتخاب می‌شود، با حالت کم‌تأخیر، MTU اندازه‌گیری‌شده، فوروارد NAT با TCP و UDP و صف هوشمند روی ۹۰٪ سرعت اندازه‌گیری‌شده، تا دانلود هم‌زمان روی همان تانل پینگ بازی را بالا نبرد.
-
-تانل TCP ترافیک را روی چند اتصال هم‌زمان می‌برد و هر جریان روی یکی از آن‌ها می‌ماند؛ با عوض کردن حالت، تعداد اتصال‌ها بدون قطع شدن تانل تغییر می‌کند.
+---
 
 ## انواع تانل
 
-| نوع | لایه | بستر | روی پورت | معادل میکروتیک |
-|---|:-:|---|:-:|---|
-| **6to4** (SIT + IPIP6) | 3 | IPv4 | UDP | 6to4 + IPIPv6 |
-| 6to4-gre (SIT + GRE6) | 3 | IPv4 | UDP | 6to4 + GREv6 |
-| IPIP / SIT | 3 | IPv4 یا IPv6 | UDP (روی IPv4) | IPIP / 6to4 |
-| GRE / GRETAP | 3 / 2 | IPv4 یا IPv6 | UDP (روی IPv4) | GRE |
-| **EoIP / EoIPv6** | 2 | IPv4 یا IPv6 | UDP | EoIP (با tunnel-id یکسان) |
-| VXLAN / GENEVE | 2 | IPv4 یا IPv6 | همیشه UDP | VXLAN |
-| L2TPv3 | 2 | IPv4 یا IPv6 | UDP یا IP 115 | L2TPv3 ایستا |
-| **WireGuard** (رمزدار) | 3 | IPv4 یا IPv6 | همیشه UDP | WireGuard (RouterOS 7) |
-| **NeoObfs** (رمزدار، مبهم) | 3 | IPv4 یا IPv6 | همیشه UDP | — |
-| **TCP** (آخرین راه) | 3 | IPv4 یا IPv6 | همیشه TCP | — |
+| نوع | لایه | بستر | روی پورت | حمل روی Spoof |
+|---|:-:|---|:-:|:-:|
+| **6to4** (SIT + IPIP6) | 3 | IPv4 | UDP (اختیاری) | ✅ (`--spoof`) |
+| 6to4-gre (SIT + GRE6) | 3 | IPv4 | UDP (اختیاری) | ✅ (`--spoof`) |
+| IPIP / SIT | 3 | IPv4 یا IPv6 | UDP (روی IPv4) | ✅ (`--spoof`) |
+| GRE / GRETAP | 3 / 2 | IPv4 یا IPv6 | UDP (روی IPv4) | ✅ (`--spoof`) |
+| **EoIP / EoIPv6** | 2 | IPv4 یا IPv6 | UDP (اختیاری) | ✅ (`--spoof`) |
+| VXLAN / GENEVE | 2 | IPv4 یا IPv6 | همیشه UDP | ✅ (`--spoof`) |
+| L2TPv3 | 2 | IPv4 یا IPv6 | UDP یا IP 115 | ✅ (`--spoof`) |
+| **WireGuard** (رمزدار) | 3 | IPv4 یا IPv6 | همیشه UDP | ✅ (`--spoof`) |
+| **NeoObfs** (رمزدار، مبهم) | 3 | IPv4 یا IPv6 | همیشه UDP | ✅ (`--spoof`) |
+| **TCP** | 3 | IPv4 یا IPv6 | همیشه TCP | ✅ (`--spoof`) |
+| **TCP + mux / TLS + mux** | 4 | IPv4 یا IPv6 | همیشه TCP | ✅ (`--spoof`) |
+| **Spoof** (مستقل، رمزدار) | 3 | IPv4 | UDP / FakeTCP / GRE / IPIP / SIT / ICMP | بومی |
 
-- **بستر IPv6**: اگر هر دو سرور IPv6 دارند، در ویزارد «IPv6» را بزنید؛ آدرس‌ها خودکار پیدا می‌شوند و GRE و IPIP به نسخه‌ی IPv6 خود تبدیل می‌شوند.
-- **TCP** برای مسیرهایی است که نه UDP رد می‌کنند و نه پروتکل خام؛ TCP روی TCP زیر افت بسته کند می‌شود، پس فقط وقتی بقیه وصل نشدند.
-- **رمزنگاری**: IPsec در کرنل (AES-GCM یا ChaCha20) برای هر تانل کرنلی، با کلیدهایی که از رمز مشترک خود تانل ساخته می‌شوند؛ یا WireGuard، NeoObfs و TCP رمزدار.
-- **رمزنگاری خودکار**: تانل بدون رمز شروع می‌شود و تا ترافیک رد می‌شود دست نمی‌خورد. اگر رد نشد، به ترتیب AES-128، AES-256، ChaCha20 و NeoObfs را امتحان می‌کند؛ روی هر مرحله تانل را ری‌استارت می‌کند و ۵ دقیقه صبر می‌کند. تانلی که پورت‌هایش پشتیبانِ سالم دارند فقط بررسی می‌شود تا سالم شود.
-- **چند تانل پشتیبان برای هر پورت**: اگر تانل فعال ترافیک رد نکند، پورت حدود ۲۰ ثانیه بعد به اولین پشتیبانی می‌رود که کار می‌کند و وقتی تانل بالاتر سالم شد برمی‌گردد.
-- **Address pool**: پریست‌های آماده و پریست‌های خودتان برای آدرس داخلی تانل‌ها؛ در ساخت تانل هم می‌شود محدوده را دستی داد.
-- **MTU خودکار**: با «اندازه‌گیری مسیر»، MTU واقعی مسیر پیدا و با سربار همه‌ی لایه‌ها تنظیم می‌شود و هر ۳۰ دقیقه دوباره سنجیده می‌شود.
-- **PMTUD**: برای هر تانل روشن، خاموش (`nopmtudisc`) و روی GRE همراه با `ignore-df`؛ برای مسیرهایی که ICMP را می‌بندند.
+## داشبورد، آمار و تست سرعت
 
-## فوروارد پورت و IP واقعی کاربر
+<p align="center"><img src="docs/screenshots/flow.png" width="720" alt="کارت Traffic flow"></p>
+<p align="center"><img src="docs/screenshots/speed.png" alt="تست سرعت زنده‌ی تانل"></p>
 
-<p align="center"><img src="docs/screenshots/ports.png" alt="فوروارد پورت‌ها به تانل‌ها و مقصدهای مختلف"></p>
+- **تست یک تانل و مقایسه‌ی همه**: اندازه‌گیری پینگ، جیتر، افت بسته و سرعت واقعی آپلود و دانلود روی ۱ تا ۳۲ اتصال هم‌زمان (بدون احتساب زمان گرم شدن TCP).
+- **مدیریت کامل هر تانل**: سقف سرعت کرنلی (TBF)، سهمیه‌ی حجم ماهانه، صف هوشمند (CAKE) برای گیمینگ، MTU خودکار، و چند تانل پشتیبان برای هر پورت با جابه‌جایی خودکار.
+- **فوروارد پورت**: حالت‌های `nat`، `transparent` (IP واقعی کاربر)، `proxy` (PROXY protocol v1/v2)، `relay` (رله TCP) و `socks` (پروکسی SOCKS5/HTTP).
 
-هر پورت این سرور می‌تواند از تانلی جدا به مقصدی جدا برود (مثلاً 443 به آلمان، 2053 به 443 هلند). سرویس مقصد کاربر را این‌طور می‌بیند:
+## دستورات خط فرمان (CLI)
 
-| حالت | سرویس مقصد چه می‌بیند | TCP / UDP |
-|---|---|---|
-| `nat` (پیش‌فرض) | آدرس داخلی تانل | هر دو |
-| `transparent` | IP واقعی کاربر، بدون هیچ تنظیمی در برنامه (مقصد باید NeoTunnel داشته باشد) | هر دو |
-| `proxy` | هدر PROXY protocol v1/v2 برای nginx، HAProxy، Xray | TCP؛ UDP با v2 |
-
-با گزینه‌ی **«IP پابلیک سرور مقصد»** (`--public`)، ترافیک باز هم داخل تانل می‌رود ولی سرور مقصد آن را روی IP پابلیک خودش تحویل می‌گیرد، نه روی آدرس داخلی تانل. این برای سرویسی است که فقط روی IP پابلیک گوش می‌دهد، یا فایروالی روی آن سرور که رنج داخلی را می‌بندد. بسته‌های آدرس داخلی تانل هم هیچ‌وقت از کارت شبکه‌ی اصلی بیرون نمی‌روند، حتی وقتی تانل قطع است.
-
-## پنل، روی هر صفحه‌ای
-
-</div>
-
-<table>
-<tr>
-<td width="60%"><img src="docs/screenshots/dashboard-light.png" alt="تم روشن"></td>
-<td width="20%"><img src="docs/screenshots/mobile.png" alt="پنل روی موبایل"></td>
-<td width="20%"><img src="docs/screenshots/mobile-menu.png" alt="منوی کناری پنل روی موبایل"></td>
-</tr>
-<tr>
-<td colspan="3"><img src="docs/screenshots/servers.png" alt="سرورها با نسخه و وضعیت همگام‌سازی"></td>
-</tr>
-</table>
-
-<div dir="rtl">
-
-تم تیره و روشن، چیدمان موبایل و تبلت با منوی کناری (همه‌ی صفحه‌ها، تانل جدید، تم، توقف به‌روزرسانی زنده و خروج)، و صفحه‌ی «دستورها» که هر کار پنل را با IP و نام واقعی سرورهای شما آماده‌ی کپی نشان می‌دهد. پنل هر ۳ ثانیه فقط چیزهایی را که عوض شده به‌روز می‌کند، پس ترافیک زنده بدون پرش و ریلود جلو می‌رود.
-
-## خط فرمان
-
-همه‌ی کارهای پنل از ترمینال هم انجام می‌شود؛ `sudo neotunnel` منوی تعاملی را باز می‌کند.
+همه‌ی امکانات پنل در ترمینال هم در دسترس است (`sudo neotunnel` منوی تعاملی را باز می‌کند):
 
 </div>
 
 ```bash
+# تست مسیر Spoof در هر دو جهت روی هر ۶ پروتکل حامل
+sudo neotunnel spoof-test germany --src iran
+
+# تانل Spoof مستقل با حامل FakeTCP و IP مبدأ ایران + فوروارد پورت 443
+sudo neotunnel quick germany --address 198.51.100.24 --mode spoof --spoof-proto tcp --spoof-src iran --forward 443
+
+# اجرای هر پروتکلی (مثلاً 6to4، GRE یا WireGuard) روی لایه‌ی Spoof
+sudo neotunnel quick germany --mode 6to4 --spoof --spoof-proto udp --spoof-mode both --forward 443
+sudo neotunnel quick germany --mode wireguard --spoof --spoof-proto tcp --spoof-src rotate --forward 8443
+
+# سایر دستورات پرکاربرد
 sudo neotunnel quick germany --address 198.51.100.24 --forward 443          # 6to4 + فوروارد در یک مرحله
-sudo neotunnel quick holland --address 203.0.113.57 --mode gre --port 3001 \
-     --encrypt aes-gcm-128 --forward 2053 --forward-to 443                  # GRE رمزدار روی UDP
-sudo neotunnel tunnel add mk1 --kind eoip --remote 203.0.113.99 --tunnel-id 10   # EoIP به میکروتیک
-sudo neotunnel tunnel limit t1 --rate 200 --quota 500                        # سقف سرعت و حجم
-sudo neotunnel bench germany                                                 # مقایسه‌ی همه‌ی انواع
+sudo neotunnel tunnel add mk1 --kind eoip --remote 203.0.113.99 --tunnel-id 10
+sudo neotunnel tunnel limit t1 --rate 200 --quota 500
+sudo neotunnel bench germany
 ```
 
 <div dir="rtl">
 
 | دستور | کار |
 |---|---|
-| `quick <server> --address <ip> [--mode] [--port] [--forward] [--encrypt] [--obfs]` | ساخت تانل در یک مرحله |
+| `spoof-test <peer> [--src auto\|iran\|rotate\|ip]` | تست دوطرفه‌ی Spoof روی هر ۶ حامل (UDP، FakeTCP، GRE، IPIP، SIT، ICMP) |
+| `quick <server> --address <ip> [--mode] [--spoof] [--spoof-proto] [--spoof-mode] [--spoof-src] [--forward]` | ساخت تانل (با یا بدون Spoof) در یک مرحله |
 | `tunnel add\|set\|list\|remove\|kinds` | مدیریت تانل‌ها و تنظیمات پیشرفته |
 | `tunnel enable\|disable\|limit <name>` | روشن/خاموش، سقف سرعت و حجم ماهانه |
-| `tunnel set <name> --profile lean\|balanced\|max` | حالت سرعت |
-| `tunnel rename <name> "نام"` / `peer rename <name> "نام"` / `node --label "نام"` | نام نمایشی (شناسه همان می‌ماند) |
-| `forward add\|set <tunnel> <ports> [--to] [--proto] [--mode nat\|transparent\|proxy]` | فوروارد پورت |
-| `peer add\|list\|link\|sync\|upgrade\|remove` | سرورهای مقصد (با حذف، تانل‌ها روی خود آن سرور هم حذف می‌شوند) |
-| `master list\|forget\|keep\|auto-forget` | روی سرور مقصد: سرورهای اصلی؛ جدا شدن از سروری که دیگر نیست |
-| `tunnel remove <name> --local` | حذف تانل سرور اصلی فقط روی همین سرور، وقتی سرور اصلی در دسترس نیست |
+| `forward add\|set <tunnel> <ports> [--to] [--proto] [--mode nat\|transparent\|proxy\|relay]` | فوروارد پورت |
+| `peer add\|list\|link\|sync\|upgrade\|remove` | مدیریت سرورهای مقصد |
 | `test <tunnel>` / `bench <server>` / `mtu <tunnel>` | تست سرعت، مقایسه، بهترین MTU |
 | `traffic` / `status` / `doctor` | ترافیک زنده، وضعیت و عیب‌یابی |
-| `panel info\|setup\|password\|port\|disable` | مدیریت پنل |
-| `boost` / `update` / `uninstall` | تنظیم شبکه، به‌روزرسانی، حذف کامل |
-
-## امنیت و پورت‌ها
-
-| پورت | کاربرد |
-|---|---|
-| پورت پنل (تصادفی) | پنل وب روی یک آدرس مخفی؛ رمز با bcrypt و قفل بعد از ۵ تلاش ناموفق |
-| یک پورت TCP تصادفی برای هر سرور | ارتباط سرورها: TLS 1.3 دوطرفه با کلیدهای pin‌شده، که روی سیم شبیه TLS نیست تا مسیرهای فیلترشده آن را نگیرند. هر سرور یک بار پورتی تصادفی برای خودش انتخاب می‌کند و سرور اصلی آن را یاد می‌گیرد؛ سرورهایی که از قبل نصب بودند 7710 را هم برای سازگاری باز نگه می‌دارند |
-| 7711/tcp+udp | ترافیک تست سرعت، فقط برای نشست‌هایی که سرور اصلی باز کرده |
-
-اگر ufw فعال باشد، پورت‌ها و پروتکل‌های لازم (از جمله GRE از سمت سرور مقابل) خودکار باز می‌شوند. پورت‌های 22، 7710، 7711 و پورت ارتباط خود سرور هرگز فوروارد نمی‌شوند.
-
-## سؤال‌های رایج
-
-<details>
-<summary><b>تانل ساخته شد ولی ترافیک رد نمی‌شود.</b></summary>
-
-احتمالاً مسیر پروتکل خام (41 یا 47) را نمی‌گذارد. در ویزارد «بررسی سریع همه» را بزنید یا تانل را روی یک پورت UDP بسازید. اگر هیچ UDP‌ای رد نشد، TCP را امتحان کنید. `sudo neotunnel doctor` هم مشکلات رایج را پیدا می‌کند.
-</details>
-
-<details>
-<summary><b>دومین 6to4 یا IPIP به همان سرور ساخته نمی‌شود.</b></summary>
-
-کرنل بین دو آدرس فقط یک تانل SIT یا IPIP بی‌کلید می‌پذیرد، حتی روی پورت UDP؛ برای دومی GRE، GENEVE یا نوع دیگری بسازید.
-</details>
-
-<details>
-<summary><b>ترافیک دیتاسنتر با آمار پنل فرق دارد.</b></summary>
-
-پنل ترافیک کاربران را جدا از تست‌ها نشان می‌دهد و ترافیک کارت شبکه (همان چیزی که دیتاسنتر حساب می‌کند) را هم کنارش می‌آورد؛ سربار لایه‌های تانل باعث فرق کوچک بین این دو است.
-</details>
-
-<details>
-<summary><b>حذف کامل</b></summary>
-
-`sudo neotunnel uninstall` تانل‌ها، IPsec، قوانین، تنظیمات و خود برنامه را پاک می‌کند، و به سرورهای مقصد هم می‌گوید تانل‌های این سرور را پاک کنند. با `--keep-config` تنظیمات می‌ماند و سرورهای مقصد دست نمی‌خورند.
-</details>
-
-<details>
-<summary><b>تانل‌ها روی سرور مقصد ماندند.</b></summary>
-
-وقتی سروری را حذف می‌کنید، به خود آن سرور هم گفته می‌شود تانل‌های این سرور را پاک کند. اگر در دسترس نباشد، تا ۳۰ روز هر بار که جواب بدهد دوباره گفته می‌شود، و پنل دستور پاک‌سازی دستی را هم نشان می‌دهد.
-
-- روی سرور مقصد، `sudo neotunnel master forget <name>` (یا `all`) همین کار را همان لحظه انجام می‌دهد.
-- سرور اصلی‌ای که ۳۰ روز وصل نشود و تانل‌هایش هم جواب ندهند، خودکار فراموش می‌شود. `master auto-forget <days|off>` این مدت را عوض می‌کند.
-- کارت‌هایی با اسم `nt-` که هیچ تانلی لازمشان ندارد، بعد از یک دقیقه پاک می‌شوند؛ `doctor --fix` همان لحظه.
-- کارت‌هایی مثل `gre0` و `sit0` را خود کرنل می‌سازد و تانل نیستند.
-</details>
+| `panel info\|setup\|password\|port\|disable` | مدیریت پنل وب |
+| `boost` / `update` / `uninstall` | تنظیم شبکه (BBR)، به‌روزرسانی، حذف کامل |
 
 ## ساخت از سورس
 
@@ -317,68 +224,11 @@ sudo neotunnel bench germany                                                 # �
 
 ```bash
 go test ./...
-GOOS=linux GOARCH=amd64 go build -o dist/neotunnel-linux-amd64 ./cmd/neotunnel
-sudo test/e2e.sh dist/neotunnel-linux-amd64   # تست کامل روی کرنل واقعی
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X neotunnel/internal/version.Version=v0.9.0-spoof" -o neotunnel-linux-amd64 ./cmd/neotunnel
+sudo test/e2e.sh neotunnel-linux-amd64   # تست کامل روی کرنل واقعی
 ```
 
 <div dir="rtl">
-
-</div>
-
-<h2 align="center" id="حمایت-مالی">💛 حمایت مالی</h2>
-
-<p align="center" dir="rtl">اگر NeoTunnel برایتان مفید بوده و می‌خواهید از ادامه‌ی توسعه‌اش حمایت کنید، از این راه کمک کنید.</p>
-<p align="center" dir="ltr"><sub>If you find NeoTunnel helpful and want to support its development, you can donate here.</sub></p>
-
-<div align="center">
-<table>
-<tr><td align="center">
-<br>
-<p>
-  <a href="https://bscscan.com/address/0x94efb6642b8fcc591c28a8c04db2279908f66e18">
-    <img src="https://img.shields.io/badge/USDT-BEP20-26A17B?style=for-the-badge&logo=tether&logoColor=white" alt="USDT BEP20"/>
-  </a>
-  <br>
-  <code>0x94efb6642b8fcc591c28a8c04db2279908f66e18</code>
-</p>
-
-<p>
-  <a href="https://tonscan.org/address/UQD6NpICg2Q7nF_yFRrKW2_ZgB5LPI1X2KDK0JDjlivwhCJ5">
-    <img src="https://img.shields.io/badge/TON-Network-0098EA?style=for-the-badge&logo=ton&logoColor=white" alt="TON"/>
-  </a>
-  <br>
-  <code>UQD6NpICg2Q7nF_yFRrKW2_ZgB5LPI1X2KDK0JDjlivwhCJ5</code>
-</p>
-
-<p>
-  <a href="https://tronscan.org/#/address/TJsBskCPtbVk6gKxTkcocjJX2qNa62Mo1X">
-    <img src="https://img.shields.io/badge/TRON-Network-FF0000?style=for-the-badge&logo=tron&logoColor=white" alt="TRON"/>
-  </a>
-  <br>
-  <code>TJsBskCPtbVk6gKxTkcocjJX2qNa62Mo1X</code>
-</p>
-<sub dir="rtl">فقط USDT و فقط روی شبکه‌ی BEP20 بفرستید</sub><br>
-<sub dir="ltr">Send USDT on BEP20 only</sub>
-<br><br>
-</td></tr>
-</table>
-</div>
-
-<p align="center" dir="rtl">⭐ ستاره دادن به پروژه هم کمک بزرگی است</p>
-
-<div dir="rtl">
-
-## پروژه‌های دیگر Neo Aurora
-
-- [HMPanel](https://github.com/neoauroraproject/hmpanel): پنل مدیریت HMray
-- [3xFactor](https://github.com/neoauroraproject/3xfactor): ضریب ترافیک برای 3x-ui، با پنل داخلی
-- [NeoTemplate](https://github.com/neoauroraproject/NeoTemplate): قالب‌های صفحه‌ی اشتراک برای پنل ثنایی (3x-ui)
-- [Neo-Uptime](https://github.com/neoauroraproject/Neo-Uptime): مانیتورینگ آپتایم روی سرور خودتان، با صفحه‌ی وضعیت
-- [NeoCheck](https://github.com/neoauroraproject/neocheck): بررسی سریع وضعیت اتصال و شبکه
-
-## کانال‌های تلگرام
-
-اخبار، نسخه‌های تازه و پشتیبانی: [NeoAurora](https://t.me/neoaurora) / [HMPanel](https://t.me/hmpanel)
 
 ## مجوز
 
