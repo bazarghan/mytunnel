@@ -33,21 +33,42 @@ var globalPublicOctets = []byte{
 	45, 51, 62, 77, 81, 84, 88, 89, 91, 93, 95, 109, 138, 141, 145, 149, 176, 178, 185, 188, 193, 194, 195, 212, 213, 217,
 }
 
+func effectivePort(port uint16) uint16 {
+	if port == 0 {
+		return 32443
+	}
+	return port
+}
+
+func portForSide(dport uint16, side int) uint16 {
+	dport = effectivePort(dport)
+	sport := dport ^ uint16(0x2531+side*19)
+	if sport < 1024 {
+		sport += 10000
+	}
+	return sport
+}
+
+func spoofSrcSpecForSide(spoofSrc string, side int) string {
+	spec := strings.TrimSpace(spoofSrc)
+	if strings.Contains(spec, ",") {
+		parts := strings.Split(spec, ",")
+		if side >= 0 && side < len(parts) {
+			spec = strings.TrimSpace(parts[side])
+		} else {
+			spec = strings.TrimSpace(parts[0])
+		}
+	}
+	return spec
+}
+
 // resolveSpoofSrc returns the outer source IPv4 address for this packet.
 // When this side does not spoof (per Dir), it returns c.Local.
 func resolveSpoofSrc(c Config, seq uint64) [4]byte {
 	if !ShouldSpoof(c.Dir, c.Side) && c.Local.Is4() {
 		return c.Local.As4()
 	}
-	spec := strings.TrimSpace(c.SpoofSrc)
-	if strings.Contains(spec, ",") {
-		parts := strings.Split(spec, ",")
-		if c.Side >= 0 && c.Side < len(parts) {
-			spec = strings.TrimSpace(parts[c.Side])
-		} else {
-			spec = strings.TrimSpace(parts[0])
-		}
-	}
+	spec := spoofSrcSpecForSide(c.SpoofSrc, c.Side)
 	switch strings.ToLower(spec) {
 	case "", SrcAuto:
 		h := sha256.Sum256([]byte(c.Secret + "|spoof-src|" + c.Tunnel + "|" + string(rune('0'+c.Side))))
@@ -89,6 +110,36 @@ func resolveSpoofSrc(c Config, seq uint64) [4]byte {
 		}
 		return [4]byte{185, 143, 233, 17}
 	}
+}
+
+// peerExpectedOuterSrc returns the outer source IPv4 address that the remote
+// peer is expected to send on its outer packets, if it is static/predictable.
+// When the peer rotates its source IP (iran/rotate), it returns ok=false.
+func peerExpectedOuterSrc(c Config) (netip.Addr, bool) {
+	peerSide := 1 - c.Side
+	if !ShouldSpoof(c.Dir, peerSide) {
+		r := c.Remote.Unmap()
+		if !r.Is4() {
+			return netip.Addr{}, false
+		}
+		return r, true
+	}
+	spec := strings.ToLower(spoofSrcSpecForSide(c.SpoofSrc, peerSide))
+	switch spec {
+	case SrcIran, SrcRotate:
+		return netip.Addr{}, false
+	case "", SrcAuto:
+	default:
+		a, err := netip.ParseAddr(spec)
+		if err != nil || !a.Is4() {
+			return netip.Addr{}, false
+		}
+	}
+	peerCfg := c
+	peerCfg.Side = peerSide
+	peerCfg.Local = c.Remote
+	peerCfg.Remote = c.Local
+	return netip.AddrFrom4(resolveSpoofSrc(peerCfg, 1)), true
 }
 
 // ipv4Checksum calculates the standard RFC 1071 16-bit one's complement checksum.
@@ -135,18 +186,8 @@ func l4Checksum(src, dst [4]byte, proto uint8, seg []byte) uint16 {
 	return cs
 }
 
-// buildOuterPacket writes the full raw IPv4 packet (20-byte IPv4 header +
-// outer protocol header + payload) into out and returns the slice.
-func buildOuterPacket(out []byte, c Config, proto string, src, dst [4]byte, payload []byte, seq uint64) []byte {
-	hl := ProtoHeaderLen(proto)
-	totalLen := 20 + hl + len(payload)
-	if len(out) < totalLen {
-		out = make([]byte, totalLen)
-	}
-	// Copy payload into place first (safe even if payload aliases out).
-	copy(out[20+hl:totalLen], payload)
-
-	ipProto := uint8(IPProto(proto))
+// writeIPv4Header encodes a 20-byte IPv4 header into out[:20].
+func writeIPv4Header(out []byte, c Config, ipProto uint8, totalLen int, src, dst [4]byte, seq uint64) {
 	ttl := c.TTL
 	if ttl == 0 {
 		ttl = 64
@@ -160,7 +201,6 @@ func buildOuterPacket(out []byte, c Config, proto string, src, dst [4]byte, payl
 		id = uint16(mrand.Uint32())
 	}
 
-	// 20-byte IPv4 header
 	out[0] = 0x45
 	out[1] = c.DSCP << 2
 	binary.BigEndian.PutUint16(out[2:4], uint16(totalLen))
@@ -172,54 +212,118 @@ func buildOuterPacket(out []byte, c Config, proto string, src, dst [4]byte, payl
 	copy(out[12:16], src[:])
 	copy(out[16:20], dst[:])
 	binary.BigEndian.PutUint16(out[10:12], ipv4Checksum(out[:20]))
+}
 
-	dport := c.Port
-	if dport == 0 {
-		dport = 32443
+func writeUDPHeader(l4 []byte, src, dst [4]byte, sport, dport uint16) {
+	binary.BigEndian.PutUint16(l4[0:2], sport)
+	binary.BigEndian.PutUint16(l4[2:4], dport)
+	binary.BigEndian.PutUint16(l4[4:6], uint16(len(l4)))
+	l4[6], l4[7] = 0, 0
+	binary.BigEndian.PutUint16(l4[6:8], l4Checksum(src, dst, 17, l4))
+}
+
+func writeTCPHeader(l4 []byte, src, dst [4]byte, sport, dport uint16, seqNum, ackNum uint32, flags byte) {
+	binary.BigEndian.PutUint16(l4[0:2], sport)
+	binary.BigEndian.PutUint16(l4[2:4], dport)
+	binary.BigEndian.PutUint32(l4[4:8], seqNum)
+	binary.BigEndian.PutUint32(l4[8:12], ackNum)
+	l4[12] = 5 << 4 // 20-byte TCP header
+	l4[13] = flags
+	binary.BigEndian.PutUint16(l4[14:16], 65535)
+	l4[16], l4[17] = 0, 0
+	l4[18], l4[19] = 0, 0
+	binary.BigEndian.PutUint16(l4[16:18], l4Checksum(src, dst, 6, l4))
+}
+
+func writeGREHeader(l4 []byte, key uint32, dport uint16) {
+	// GRE with Key Present (0x2000), protocol 0x0800
+	binary.BigEndian.PutUint16(l4[0:2], 0x2000)
+	binary.BigEndian.PutUint16(l4[2:4], 0x0800)
+	if key == 0 {
+		key = uint32(dport)<<16 | 0x4d4b
 	}
-	sport := dport ^ uint16(0x2531+c.Side*19)
-	if sport < 1024 {
-		sport += 10000
+	binary.BigEndian.PutUint32(l4[4:8], key)
+}
+
+func writeICMPHeader(l4 []byte, typ byte, id, seq uint16) {
+	l4[0] = typ
+	l4[1] = 0
+	l4[2], l4[3] = 0, 0
+	binary.BigEndian.PutUint16(l4[4:6], id)
+	binary.BigEndian.PutUint16(l4[6:8], seq)
+	binary.BigEndian.PutUint16(l4[2:4], ipv4Checksum(l4))
+}
+
+// buildOuterPacket writes the full raw IPv4 packet (20-byte IPv4 header +
+// outer protocol header + payload) into out and returns the slice.
+func buildOuterPacket(out []byte, c Config, proto string, src, dst [4]byte, payload []byte, seq uint64) []byte {
+	hl := ProtoHeaderLen(proto)
+	totalLen := 20 + hl + len(payload)
+	if len(out) < totalLen {
+		out = make([]byte, totalLen)
 	}
+	// Copy payload into place first (safe even if payload aliases out).
+	copy(out[20+hl:totalLen], payload)
+
+	ipProto := uint8(IPProto(proto))
+	writeIPv4Header(out, c, ipProto, totalLen, src, dst, seq)
+
+	dport := effectivePort(c.Port)
+	sport := portForSide(dport, c.Side)
 
 	l4 := out[20:totalLen]
 	switch NormalizeProto(proto) {
 	case ProtoUDP:
-		binary.BigEndian.PutUint16(l4[0:2], sport)
-		binary.BigEndian.PutUint16(l4[2:4], dport)
-		binary.BigEndian.PutUint16(l4[4:6], uint16(len(l4)))
-		l4[6], l4[7] = 0, 0
-		binary.BigEndian.PutUint16(l4[6:8], l4Checksum(src, dst, ipProto, l4))
+		writeUDPHeader(l4, src, dst, sport, dport)
 	case ProtoTCP:
-		binary.BigEndian.PutUint16(l4[0:2], sport)
-		binary.BigEndian.PutUint16(l4[2:4], dport)
-		binary.BigEndian.PutUint32(l4[4:8], uint32(seq*1360+0x10203040))
-		binary.BigEndian.PutUint32(l4[8:12], uint32(seq*512+0x50607080))
-		l4[12] = 5 << 4 // 20-byte TCP header
-		l4[13] = 0x18   // PSH | ACK
-		binary.BigEndian.PutUint16(l4[14:16], 65535)
-		l4[16], l4[17] = 0, 0
-		l4[18], l4[19] = 0, 0
-		binary.BigEndian.PutUint16(l4[16:18], l4Checksum(src, dst, ipProto, l4))
+		writeTCPHeader(l4, src, dst, sport, dport, uint32(seq*1360+0x10203040), uint32(seq*512+0x50607080), 0x18) // PSH | ACK
 	case ProtoGRE:
-		// GRE with Key Present (0x2000), protocol 0x6558 (Transparent Ethernet / custom) or 0x0800
-		binary.BigEndian.PutUint16(l4[0:2], 0x2000)
-		binary.BigEndian.PutUint16(l4[2:4], 0x0800)
-		key := c.Key
-		if key == 0 {
-			key = uint32(dport)<<16 | 0x4d4b
-		}
-		binary.BigEndian.PutUint32(l4[4:8], key)
+		writeGREHeader(l4, c.Key, dport)
 	case ProtoICMP:
 		// ICMP Echo Reply (Type 0, Code 0) so the receiving kernel never sends an automatic Echo Reply
-		l4[0] = 0
-		l4[1] = 0
-		l4[2], l4[3] = 0, 0
-		binary.BigEndian.PutUint16(l4[4:6], dport)
-		binary.BigEndian.PutUint16(l4[6:8], uint16(seq&0xffff))
-		binary.BigEndian.PutUint16(l4[2:4], ipv4Checksum(l4))
+		writeICMPHeader(l4, 0, dport, uint16(seq&0xffff))
 	case ProtoIPIP, ProtoSIT:
 		// 0-byte transport header; payload follows the 20-byte IPv4 header directly.
+	}
+	return out[:totalLen]
+}
+
+// buildPinholePacket builds a minimal real-source-IP packet with reversed ports
+// (SrcIP=c.Local, DstIP=dst, SrcPort=dport, DstPort=peerSport) to open and
+// maintain a stateful firewall conntrack pinhole for return traffic from the peer.
+func buildPinholePacket(out []byte, c Config, proto string, dst [4]byte, seq uint64) []byte {
+	normProto := NormalizeProto(proto)
+	hl := ProtoHeaderLen(normProto)
+	payloadLen := 0
+	if normProto == ProtoUDP {
+		payloadLen = 1
+	}
+	totalLen := 20 + hl + payloadLen
+	if len(out) < totalLen {
+		out = make([]byte, totalLen)
+	}
+
+	src := c.Local.Unmap().As4()
+	ipProto := uint8(IPProto(normProto))
+	writeIPv4Header(out, c, ipProto, totalLen, src, dst, seq)
+
+	dport := effectivePort(c.Port)
+	peerSport := portForSide(dport, 1-c.Side)
+
+	l4 := out[20:totalLen]
+	switch normProto {
+	case ProtoUDP:
+		l4[8] = 0x00 // explicit clear in case out is reused
+		writeUDPHeader(l4, src, dst, dport, peerSport)
+	case ProtoTCP:
+		writeTCPHeader(l4, src, dst, dport, peerSport, uint32(seq*1360+0x10203040), 0, 0x02) // SYN
+	case ProtoGRE:
+		writeGREHeader(l4, c.Key, dport)
+	case ProtoICMP:
+		// ICMP Echo Request (Type 8, Code 0) with ID == dport matches peer's Echo Reply (Type 0)
+		writeICMPHeader(l4, 8, dport, uint16(seq&0xffff))
+	case ProtoIPIP, ProtoSIT:
+		// 0-byte transport header; 20-byte IPv4 header only.
 	}
 	return out[:totalLen]
 }

@@ -58,19 +58,21 @@ type LinkSpec struct {
 
 	// Side is this node's side of the tunnel (0 or 1); keys are derived
 	// per direction from Secret, which never leaves the node in a spec.
-	Side         int    `json:"side"`
-	Secret       string `json:"-"`
-	Encrypt      string `json:"encrypt,omitempty"` // IPsec cipher on the outer packets
-	Cipher       string `json:"cipher,omitempty"`  // user-space stream cipher (TCP)
-	Padding      int    `json:"padding,omitempty"`
-	ObfsAES      bool   `json:"obfs_aes,omitempty"`
-	SpoofProto   string `json:"spoof_proto,omitempty"`
-	SpoofMode    string `json:"spoof_mode,omitempty"`
-	SpoofSrc     string `json:"spoof_src,omitempty"`
-	SpoofNoCrypt bool   `json:"spoof_nocrypt,omitempty"`
-	Keepalive    int    `json:"keepalive,omitempty"`
-	PeerKey      string `json:"peer_key,omitempty"`
-	Userspace    bool   `json:"userspace,omitempty"`
+	Side                 int    `json:"side"`
+	Secret               string `json:"-"`
+	Encrypt              string `json:"encrypt,omitempty"` // IPsec cipher on the outer packets
+	Cipher               string `json:"cipher,omitempty"`  // user-space stream cipher (TCP)
+	Padding              int    `json:"padding,omitempty"`
+	ObfsAES              bool   `json:"obfs_aes,omitempty"`
+	SpoofProto           string `json:"spoof_proto,omitempty"`
+	SpoofMode            string `json:"spoof_mode,omitempty"`
+	SpoofSrc             string `json:"spoof_src,omitempty"`
+	SpoofNoCrypt         bool   `json:"spoof_nocrypt,omitempty"`
+	SpoofPinhole         bool   `json:"spoof_pinhole,omitempty"`
+	SpoofPinholeInterval int    `json:"spoof_pinhole_interval,omitempty"`
+	Keepalive            int    `json:"keepalive,omitempty"`
+	PeerKey              string `json:"peer_key,omitempty"`
+	Userspace            bool   `json:"userspace,omitempty"`
 	// RateMbit shapes what this side sends (0 = no limit). It is applied
 	// in place, so it is not part of Hash.
 	RateMbit int `json:"rate_mbit,omitempty"`
@@ -99,7 +101,11 @@ func (l LinkSpec) Hash() string {
 		d := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%d|%d", l.Secret, l.PeerKey, l.Side, l.Keepalive)))
 		keys = hex.EncodeToString(d[:6])
 	} else if l.Kind == config.KindSpoof {
-		d := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|%s|%v|%v|%d|%d", l.Secret, l.SpoofProto, l.SpoofMode, l.SpoofSrc, l.SpoofNoCrypt, l.ObfsAES, l.Padding, l.Keepalive)))
+		sig := fmt.Sprintf("%s|%s|%s|%s|%v|%v|%d|%d", l.Secret, l.SpoofProto, l.SpoofMode, l.SpoofSrc, l.SpoofNoCrypt, l.ObfsAES, l.Padding, l.Keepalive)
+		if l.SpoofPinhole {
+			sig += fmt.Sprintf("|pinhole:%d", l.SpoofPinholeInterval)
+		}
+		d := sha256.Sum256([]byte(sig))
 		keys = hex.EncodeToString(d[:6])
 	}
 	b, _ := json.Marshal(struct {
@@ -399,11 +405,15 @@ func renderOne(isSelf func(string) bool, t config.Tunnel, byName map[string]conf
 		SpoofMode:    t.SpoofMode,
 		SpoofSrc:     t.SpoofSrc,
 		SpoofNoCrypt: t.SpoofNoCrypt,
+		SpoofPinhole: t.SpoofPinhole && me == 0,
 		Keepalive:    t.Keepalive,
 		PeerKey:      t.PeerKey,
 		Userspace:    ki.Userspace,
 		RateMbit:     t.RateMbit,
 		QueueMbit:    t.QueueMbit,
+	}
+	if s.SpoofPinhole {
+		s.SpoofPinholeInterval = t.SpoofPinholeInterval
 	}
 	if parent != nil {
 		s.Parent = parent.Name

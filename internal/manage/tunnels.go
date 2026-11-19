@@ -100,9 +100,11 @@ type Settings struct {
 	Conns   int    `json:"conns,omitempty"`
 	// Spoof options (for Mode "spoof" or when Spoof carrier layer is enabled
 	// under any protocol).
-	SpoofProto string `json:"spoof_proto,omitempty"` // udp, tcp, gre, ipip, sit, icmp
-	SpoofMode  string `json:"spoof_mode,omitempty"`  // both, out, in
-	SpoofSrc   string `json:"spoof_src,omitempty"`   // auto, iran, rotate, or IPv4
+	SpoofProto           string `json:"spoof_proto,omitempty"`            // udp, tcp, gre, ipip, sit, icmp
+	SpoofMode            string `json:"spoof_mode,omitempty"`             // both, out, in
+	SpoofSrc             string `json:"spoof_src,omitempty"`              // auto, iran, rotate, or IPv4
+	SpoofPinhole         bool   `json:"spoof_pinhole,omitempty"`          // stateful firewall pinhole keepalive (side 0)
+	SpoofPinholeInterval int    `json:"spoof_pinhole_interval,omitempty"` // pinhole keepalive interval in seconds (0 = 15s)
 }
 
 // pmtuFlags are the path MTU discovery flags a tunnel of kind k keeps: kinds
@@ -163,6 +165,14 @@ func (s Settings) validate() error {
 	}
 	if err := spoof.ValidateSrc(s.SpoofSrc); err != nil {
 		return err
+	}
+	if s.SpoofPinholeInterval < 0 || s.SpoofPinholeInterval > 3600 {
+		return fmt.Errorf("spoof pinhole interval must be 0 (default 15s) or 1-3600 seconds")
+	}
+	if s.SpoofPinhole {
+		if err := spoof.ValidatePinhole(s.SpoofMode, s.SpoofSrc, 0); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -457,6 +467,10 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 			t.SpoofProto = spoof.NormalizeProto(req.SpoofProto)
 			t.SpoofMode = spoof.NormalizeDir(req.SpoofMode)
 			t.SpoofSrc = strings.TrimSpace(req.SpoofSrc)
+			t.SpoofPinhole = req.SpoofPinhole
+			if req.SpoofPinhole {
+				t.SpoofPinholeInterval = req.SpoofPinholeInterval
+			}
 			t.ObfsAES = obfsAES(st, req.Peer)
 			if len(kinds) > 1 && (mode.Crypt || req.Obfs || req.WireGuard || req.Encrypt != "") {
 				t.SpoofNoCrypt = true
@@ -605,6 +619,12 @@ func UpdateTunnel(name string, set Settings, port uint16) (Change, error) {
 				b.SpoofMode = spoof.NormalizeDir(set.SpoofMode)
 			}
 			b.SpoofSrc = strings.TrimSpace(set.SpoofSrc)
+			b.SpoofPinhole = set.SpoofPinhole
+			if set.SpoofPinhole {
+				b.SpoofPinholeInterval = set.SpoofPinholeInterval
+			} else {
+				b.SpoofPinholeInterval = 0
+			}
 		}
 		if top.Kind == config.KindEoIP {
 			top.TunnelID = set.TunnelID
@@ -645,7 +665,8 @@ func SettingsOf(st *config.State, name string) (Settings, uint16) {
 	s := Settings{MTU: top.MTU, MTUProbe: b.MTUProbe, TTL: b.TTL, NoDF: b.NoDF, IgnoreDF: b.IgnoreDF, DSCP: b.DSCP, Encrypt: b.Encrypt,
 		Padding: b.Padding, Keepalive: b.Keepalive, PeerKey: b.PeerKey, TunnelID: top.TunnelID, Profile: top.Profile, Lanes: top.Lanes,
 		Reverse: top.Reverse, SNI: top.SNI, Conns: top.Conns,
-		SpoofProto: b.SpoofProto, SpoofMode: b.SpoofMode, SpoofSrc: b.SpoofSrc}
+		SpoofProto: b.SpoofProto, SpoofMode: b.SpoofMode, SpoofSrc: b.SpoofSrc,
+		SpoofPinhole: b.SpoofPinhole, SpoofPinholeInterval: b.SpoofPinholeInterval}
 	if top.AutoEncrypt {
 		s.Encrypt = config.EncryptAuto
 	}
@@ -721,6 +742,10 @@ func NewTunnel(st *config.State, name string, o TunnelOpts) (config.Tunnel, erro
 		t.SpoofProto = spoof.NormalizeProto(o.SpoofProto)
 		t.SpoofMode = spoof.NormalizeDir(o.SpoofMode)
 		t.SpoofSrc = strings.TrimSpace(o.SpoofSrc)
+		t.SpoofPinhole = o.SpoofPinhole
+		if o.SpoofPinhole {
+			t.SpoofPinholeInterval = o.SpoofPinholeInterval
+		}
 	}
 	if ki.Encrypted {
 		t.Encrypt = ""

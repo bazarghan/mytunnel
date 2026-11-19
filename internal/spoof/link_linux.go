@@ -211,6 +211,16 @@ func Start(c Config) (*Link, error) {
 		l.wg.Add(1)
 		go l.keepalive()
 	}
+	if c.PinholeInterval > 0 {
+		if !c.Local.Unmap().Is4() {
+			log.Printf("spoof %s: pinhole disabled (local endpoint %s is not IPv4)", c.Name, c.Local)
+		} else if peerSrc, ok := peerExpectedOuterSrc(c); !ok {
+			log.Printf("spoof %s: pinhole disabled (remote outer source %q is not predictable)", c.Name, c.SpoofSrc)
+		} else {
+			l.wg.Add(1)
+			go l.pinhole(peerSrc.As4())
+		}
+	}
 	return l, nil
 }
 
@@ -252,6 +262,13 @@ func (l *Link) emitRaw(frame []byte, rawBuf []byte) error {
 	dst := l.cfg.Remote.As4()
 	pkt := buildOuterPacket(rawBuf, l.cfg, l.proto, src, dst, frame, seq)
 	sa := &unix.SockaddrInet4{Port: int(l.cfg.Port), Addr: dst}
+	return unix.Sendto(l.sendFD, pkt, 0, sa)
+}
+
+func (l *Link) emitPinhole(dst [4]byte, rawBuf []byte) error {
+	seq := l.seq.Add(1)
+	pkt := buildPinholePacket(rawBuf, l.cfg, l.proto, dst, seq)
+	sa := &unix.SockaddrInet4{Port: int(portForSide(l.cfg.Port, 1-l.cfg.Side)), Addr: dst}
 	return unix.Sendto(l.sendFD, pkt, 0, sa)
 }
 
@@ -442,6 +459,47 @@ func (l *Link) keepalive() {
 		case <-t.C:
 			if time.Since(time.Unix(0, l.sent.Load())) >= l.cfg.Keepalive {
 				l.sendControl(typeKeepalive, nil)
+			}
+		}
+	}
+}
+
+func (l *Link) pinhole(dst [4]byte) {
+	defer l.wg.Done()
+	dport := effectivePort(l.cfg.Port)
+	peerSport := portForSide(dport, 1-l.cfg.Side)
+	dstAddr := netip.AddrFrom4(dst)
+	if l.proto == ProtoUDP || l.proto == ProtoTCP {
+		log.Printf("spoof %s: stateful pinhole active (%s %s:%d -> %s:%d every %s)", l.cfg.Name, l.proto, l.cfg.Local.Unmap(), dport, dstAddr, peerSport, l.cfg.PinholeInterval)
+	} else {
+		log.Printf("spoof %s: stateful pinhole active (%s %s -> %s every %s)", l.cfg.Name, l.proto, l.cfg.Local.Unmap(), dstAddr, l.cfg.PinholeInterval)
+	}
+
+	rawBuf := make([]byte, 64)
+	if err := l.emitPinhole(dst, rawBuf); err != nil && !l.closed() {
+		log.Printf("spoof %s: pinhole send: %v", l.cfg.Name, err)
+	}
+
+	burst := time.NewTimer(200 * time.Millisecond)
+	select {
+	case <-l.done:
+		burst.Stop()
+		return
+	case <-burst.C:
+	}
+	if err := l.emitPinhole(dst, rawBuf); err != nil && !l.closed() {
+		log.Printf("spoof %s: pinhole send: %v", l.cfg.Name, err)
+	}
+
+	t := time.NewTicker(l.cfg.PinholeInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-l.done:
+			return
+		case <-t.C:
+			if err := l.emitPinhole(dst, rawBuf); err != nil && !l.closed() {
+				log.Printf("spoof %s: pinhole send: %v", l.cfg.Name, err)
 			}
 		}
 	}

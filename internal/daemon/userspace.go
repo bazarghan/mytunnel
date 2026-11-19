@@ -88,6 +88,16 @@ func eoipConfig(s engine.LinkSpec) eoip.Config {
 	}
 }
 
+func pinholeInterval(s engine.LinkSpec) time.Duration {
+	if !s.SpoofPinhole {
+		return 0
+	}
+	if s.SpoofPinholeInterval > 0 {
+		return time.Duration(s.SpoofPinholeInterval) * time.Second
+	}
+	return spoof.DefaultPinholeInterval
+}
+
 func spoofConfig(s engine.LinkSpec) spoof.Config {
 	return spoof.Config{
 		Name: s.Name, Tunnel: keyName(s), Secret: s.Secret, Side: s.Side,
@@ -95,7 +105,8 @@ func spoofConfig(s engine.LinkSpec) spoof.Config {
 		Proto: s.SpoofProto, Dir: s.SpoofMode, SpoofSrc: s.SpoofSrc,
 		TTL: s.TTL, DSCP: s.DSCP, NoDF: s.NoDF,
 		Padding: s.Padding, Keepalive: keepalive(s, 20*time.Second),
-		AES: s.ObfsAES, NoCrypt: s.SpoofNoCrypt,
+		PinholeInterval: pinholeInterval(s),
+		AES:             s.ObfsAES, NoCrypt: s.SpoofNoCrypt,
 	}
 }
 

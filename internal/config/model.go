@@ -139,15 +139,17 @@ const (
 
 // Defaults pre-fill the advanced options of new tunnels and forwards.
 type Defaults struct {
-	Encrypt     string `json:"encrypt,omitempty"`      // IPsec cipher for new tunnels to NeoTunnel servers
-	MTUProbe    bool   `json:"mtu_probe,omitempty"`    // measure the path MTU of new tunnels
-	Obfs        bool   `json:"obfs,omitempty"`         // run new tunnels over a NeoObfs layer
-	Spoof       bool   `json:"spoof,omitempty"`        // run new tunnels over a Spoof (forged source IP) layer
-	SpoofProto  string `json:"spoof_proto,omitempty"`  // outer spoof protocol: udp, tcp, gre, ipip, sit, icmp
-	SpoofMode   string `json:"spoof_mode,omitempty"`   // spoof direction: both, out, in
-	SpoofSrc    string `json:"spoof_src,omitempty"`    // spoof source IP: auto, iran, rotate, or IPv4
-	Padding     int    `json:"padding,omitempty"`      // NeoObfs / Spoof random padding
-	ForwardMode string `json:"forward_mode,omitempty"` // nat, transparent, proxy, relay
+	Encrypt              string `json:"encrypt,omitempty"`                // IPsec cipher for new tunnels to NeoTunnel servers
+	MTUProbe             bool   `json:"mtu_probe,omitempty"`              // measure the path MTU of new tunnels
+	Obfs                 bool   `json:"obfs,omitempty"`                   // run new tunnels over a NeoObfs layer
+	Spoof                bool   `json:"spoof,omitempty"`                  // run new tunnels over a Spoof (forged source IP) layer
+	SpoofProto           string `json:"spoof_proto,omitempty"`            // outer spoof protocol: udp, tcp, gre, ipip, sit, icmp
+	SpoofMode            string `json:"spoof_mode,omitempty"`             // spoof direction: both, out, in
+	SpoofSrc             string `json:"spoof_src,omitempty"`              // spoof source IP: auto, iran, rotate, or IPv4
+	SpoofPinhole         bool   `json:"spoof_pinhole,omitempty"`          // stateful firewall pinhole keepalive for Spoof
+	SpoofPinholeInterval int    `json:"spoof_pinhole_interval,omitempty"` // pinhole keepalive interval in seconds (0 = 15s)
+	Padding              int    `json:"padding,omitempty"`                // NeoObfs / Spoof random padding
+	ForwardMode          string `json:"forward_mode,omitempty"`           // nat, transparent, proxy, relay
 	// NoRecover turns off the daemon's automatic recovery of tunnels that
 	// lose most of their packets (restart once, then move forwards to the
 	// backup); see daemon/recover.go.
@@ -389,6 +391,13 @@ type Tunnel struct {
 	// SpoofNoCrypt runs a Spoof carrier with fast HMAC authentication only
 	// (no payload encryption), used when an encrypted tunnel runs on top.
 	SpoofNoCrypt bool `json:"spoof_nocrypt,omitempty"`
+	// SpoofPinhole enables stateful firewall pinhole keepalive on side 0
+	// (client/restricted side): periodically emits minimal real-source-IP
+	// packets with reversed ports to the peer's expected outer source IP.
+	SpoofPinhole bool `json:"spoof_pinhole,omitempty"`
+	// SpoofPinholeInterval is the interval in seconds between pinhole
+	// keepalive packets when SpoofPinhole is enabled (0 = default 15s).
+	SpoofPinholeInterval int `json:"spoof_pinhole_interval,omitempty"`
 	// Padding adds up to this many random bytes to NeoObfs/Spoof packets so their
 	// sizes don't reveal the traffic inside.
 	Padding int `json:"padding,omitempty"`

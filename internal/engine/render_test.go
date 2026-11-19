@@ -396,3 +396,61 @@ func TestLanes(t *testing.T) {
 		t.Error("IPIP on lanes must fail")
 	}
 }
+
+func TestSpoofPinholeRenderAndHash(t *testing.T) {
+	st := peerTunnel(config.KindSpoof, func(tn *config.Tunnel) {
+		tn.Port = 32443
+		tn.SpoofProto = "udp"
+		tn.SpoofMode = "both"
+		tn.SpoofSrc = "auto"
+	})
+	base0, errs := Render(st, fixedSource("198.51.100.1"))
+	if len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	peer := &config.State{Self: "b", Managed: &config.Managed{Self: "b", Tunnels: st.Tunnels}}
+	base1, errs := Render(peer, fixedSource("203.0.113.10"))
+	if len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	baseHash0, baseHash1 := base0[0].Hash(), base1[0].Hash()
+
+	// Enable pinhole: only side 0 renders SpoofPinhole and changes hash; side 1 stays identical.
+	st.Tunnels[0].SpoofPinhole = true
+	st.Tunnels[0].SpoofPinholeInterval = 15
+	pin0, errs := Render(st, fixedSource("198.51.100.1"))
+	if len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	peer.Managed.Tunnels = st.Tunnels
+	pin1, errs := Render(peer, fixedSource("203.0.113.10"))
+	if len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	if !pin0[0].SpoofPinhole || pin0[0].SpoofPinholeInterval != 15 {
+		t.Fatalf("side 0 pinhole not rendered: %+v", pin0[0])
+	}
+	if pin1[0].SpoofPinhole || pin1[0].SpoofPinholeInterval != 0 {
+		t.Fatalf("side 1 must not enable pinhole: %+v", pin1[0])
+	}
+	if pin0[0].Hash() == baseHash0 {
+		t.Error("side 0 hash must change when pinhole is enabled")
+	}
+	if pin1[0].Hash() != baseHash1 {
+		t.Error("side 1 hash must remain unchanged when pinhole is enabled")
+	}
+
+	// Changing pinhole interval changes side 0 hash.
+	st.Tunnels[0].SpoofPinholeInterval = 25
+	pin25, _ := Render(st, fixedSource("198.51.100.1"))
+	if pin25[0].Hash() == pin0[0].Hash() {
+		t.Error("side 0 hash must change when pinhole interval changes")
+	}
+
+	// Disabling pinhole restores original hash.
+	st.Tunnels[0].SpoofPinhole = false
+	off0, _ := Render(st, fixedSource("198.51.100.1"))
+	if off0[0].Hash() != baseHash0 {
+		t.Error("disabling pinhole must restore original side 0 hash")
+	}
+}

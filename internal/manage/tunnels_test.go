@@ -84,3 +84,54 @@ func TestRandomPortAvoidsUsedPorts(t *testing.T) {
 		}
 	}
 }
+
+func TestSpoofPinholePlanningAndValidation(t *testing.T) {
+	st := testState()
+
+	// Valid combinations.
+	for _, tc := range []struct {
+		name string
+		req  TunnelRequest
+	}{
+		{"auto", TunnelRequest{Peer: "edge", Mode: "spoof", Settings: Settings{SpoofProto: "udp", SpoofSrc: "auto", SpoofPinhole: true, SpoofPinholeInterval: 15}}},
+		{"out_iran", TunnelRequest{Peer: "edge", Mode: "spoof", Settings: Settings{SpoofMode: "out", SpoofSrc: "iran", SpoofPinhole: true}}},
+		{"pair_static_remote", TunnelRequest{Peer: "edge", Mode: "spoof", Settings: Settings{SpoofSrc: "iran,8.8.8.8", SpoofPinhole: true, SpoofPinholeInterval: 20}}},
+		{"stacked_6to4", TunnelRequest{Peer: "edge", Mode: "6to4", Spoof: true, Settings: Settings{SpoofProto: "tcp", SpoofSrc: "auto", SpoofPinhole: true, SpoofPinholeInterval: 12}}},
+	} {
+		t.Run("valid_"+tc.name, func(t *testing.T) {
+			_, defs, err := PlanTunnel(st, tc.req)
+			if err != nil {
+				t.Fatalf("PlanTunnel(%s) unexpected error: %v", tc.name, err)
+			}
+			bottom := defs[0]
+			if bottom.Kind != config.KindSpoof || !bottom.SpoofPinhole || bottom.SpoofPinholeInterval != tc.req.SpoofPinholeInterval {
+				t.Fatalf("unexpected bottom tunnel: %+v", bottom)
+			}
+			tmp := *st
+			tmp.Tunnels = defs
+			topName := defs[len(defs)-1].Name
+			got, _ := SettingsOf(&tmp, topName)
+			if !got.SpoofPinhole || got.SpoofPinholeInterval != tc.req.SpoofPinholeInterval {
+				t.Fatalf("SettingsOf mismatch: %+v", got)
+			}
+		})
+	}
+
+	// Invalid combinations.
+	for _, tc := range []struct {
+		name string
+		s    Settings
+	}{
+		{"both_iran", Settings{SpoofMode: "both", SpoofSrc: "iran", SpoofPinhole: true}},
+		{"both_rotate", Settings{SpoofMode: "both", SpoofSrc: "rotate", SpoofPinhole: true}},
+		{"pair_remote_iran", Settings{SpoofSrc: "8.8.8.8,iran", SpoofPinhole: true}},
+		{"neg_interval", Settings{SpoofPinhole: true, SpoofPinholeInterval: -1}},
+		{"huge_interval", Settings{SpoofPinhole: true, SpoofPinholeInterval: 3601}},
+	} {
+		t.Run("invalid_"+tc.name, func(t *testing.T) {
+			if err := tc.s.validate(); err == nil {
+				t.Fatalf("Settings(%s).validate() = nil, want error", tc.name)
+			}
+		})
+	}
+}

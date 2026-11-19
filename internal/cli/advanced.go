@@ -38,6 +38,8 @@ func settingsFlags(f *pflag.FlagSet, s *manage.Settings) {
 	f.StringVar(&s.SpoofProto, "spoof-proto", "", "Spoof outer protocol: udp (default), tcp (FakeTCP), gre, ipip, sit, icmp")
 	f.StringVar(&s.SpoofMode, "spoof-mode", "", "Spoof direction: both (default), out (this server only), in (far server only)")
 	f.StringVar(&s.SpoofSrc, "spoof-src", "", "Spoof forged source IP: auto (default), iran, rotate, or an IPv4 address")
+	f.BoolVar(&s.SpoofPinhole, "spoof-pinhole", false, "Spoof stateful firewall pinhole keepalive: send minimal real-source-IP packets with reversed ports to keep return spoof traffic open")
+	f.IntVar(&s.SpoofPinholeInterval, "spoof-pinhole-interval", 0, "Spoof pinhole keepalive interval in seconds when --spoof-pinhole is enabled (default 15)")
 }
 
 // tunnelID is an optional uint16 flag: unset leaves the id derived.
@@ -118,6 +120,8 @@ func tunnelSetCmd() *cobra.Command {
 			keep("spoof-proto", func() { s.SpoofProto = cur.SpoofProto })
 			keep("spoof-mode", func() { s.SpoofMode = cur.SpoofMode })
 			keep("spoof-src", func() { s.SpoofSrc = cur.SpoofSrc })
+			keep("spoof-pinhole", func() { s.SpoofPinhole = cur.SpoofPinhole })
+			keep("spoof-pinhole-interval", func() { s.SpoofPinholeInterval = cur.SpoofPinholeInterval })
 			if f.Changed("no-encrypt") {
 				s.Encrypt = ""
 			}

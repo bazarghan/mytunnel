@@ -1850,6 +1850,17 @@
   const PMTU_KINDS = ["sit", "ipip", "gre", "gretap", "eoip"], IGNORE_DF_KINDS = ["gre", "gretap"];
   const pmtuKind = (kind, st) => st.underlay === "ipv6" ? "" : { "6to4": "sit", "6to4-gre": "sit" }[kind] || kind;
 
+  function spoofPinholeFields(path, st) {
+    const ph = !!st.spoof_pinhole;
+    return html`<div class="field"><span class="lbl">حفظ حفره فایروال (Stateful Pinhole)</span>
+      <div class="seg" role="radiogroup">
+        <button type="button" role="radio" aria-checked="${!ph}" class="${!ph ? "on" : ""}" data-act="set" data-path="${path}.spoof_pinhole" data-value="">خاموش</button>
+        <button type="button" role="radio" aria-checked="${ph}" class="${ph ? "on" : ""}" data-act="set" data-path="${path}.spoof_pinhole" data-value="1">روشن</button>
+      </div>
+      <span class="help">برای عبور از فایروال وضعیت‌مند (Stateful): بسته‌ی کوچک با IP واقعی و پورت برعکس می‌فرستد تا مسیر برگشت Spoof باز بماند. در طرف مقابل نباید <span class="ltr">iran</span> یا <span class="ltr">rotate</span> باشد مگر با <span class="ltr">spoof_mode=out</span>.</span></div>
+      ${ph ? html`<div class="field"><label>بازهٔ Pinhole (ثانیه)</label><input class="input ltr" type="number" min="1" max="3600" data-bind="${path}.spoof_pinhole_interval" value="${st.spoof_pinhole_interval || ""}" placeholder="15"><span class="help">فاصله‌ی ارسال بسته‌ی نگه‌دارنده‌ی فایروال به ثانیه (پیش‌فرض ۱۵).</span></div>` : ""}`;
+  }
+
   // The advanced options, shared by the wizard and the tunnel editor.
   // kind is the bottom layer's (it owns the outer packets), top the tunnel's own.
   function advancedFields(path, st, kind, editing, noPort, top) {
@@ -1869,7 +1880,8 @@
         ${["obfs", "spoof", "wireguard", "eoip"].includes(kind) ? html`<div class="field"><label>Keepalive (ثانیه)</label><input class="input ltr" type="number" min="-1" max="3600" data-bind="${path}.keepalive" value="${st.keepalive || ""}" placeholder="25"><span class="help">نگه‌داشتن مسیر NAT باز؛ ‎-1 یعنی خاموش.</span></div>` : ""}
         ${kind === "spoof" ? html`<div class="field"><label>پروتکل حامل Spoof</label><select class="input" data-bind="${path}.spoof_proto">${[["udp", "UDP (پیشنهادی)"], ["tcp", "FakeTCP / TCP خام"], ["gre", "GRE (پروتکل 47)"], ["ipip", "IPIP (پروتکل 4)"], ["sit", "6to4 / SIT (پروتکل 41)"], ["icmp", "ICMP (پینگ)"]].map(([v, l]) => html`<option value="${v}" ${(st.spoof_proto || "udp") === v ? "selected" : ""}>${l}</option>`)}</select></div>
         <div class="field"><label>جهت Spoof</label><select class="input" data-bind="${path}.spoof_mode">${[["both", "دوطرفه (هر دو سرور با IP جعلی)"], ["out", "فقط ارسال این سرور با IP جعلی"], ["in", "فقط ارسال سرور مقابل با IP جعلی"]].map(([v, l]) => html`<option value="${v}" ${(st.spoof_mode || "both") === v ? "selected" : ""}>${l}</option>`)}</select></div>
-        <div class="field full"><label>آدرس IP مبدأ جعلی (Spoof Source)</label><input class="input ltr" data-bind="${path}.spoof_src" value="${st.spoof_src || ""}" placeholder="auto | iran | rotate | 185.143.233.10"><span class="help">مقادیر مجاز: <b class="ltr">auto</b> (IP عمومی ثابت)، <b class="ltr">iran</b> (رنج IP ایران)، <b class="ltr">rotate</b> (تغییر مداوم IP)، یا یک آدرس IPv4 دلخواه.</span></div>` : ""}
+        <div class="field full"><label>آدرس IP مبدأ جعلی (Spoof Source)</label><input class="input ltr" data-bind="${path}.spoof_src" value="${st.spoof_src || ""}" placeholder="auto | iran | rotate | 185.143.233.10"><span class="help">مقادیر مجاز: <b class="ltr">auto</b> (IP عمومی ثابت)، <b class="ltr">iran</b> (رنج IP ایران)، <b class="ltr">rotate</b> (تغییر مداوم IP)، یا یک آدرس IPv4 دلخواه.</span></div>
+        ${spoofPinholeFields(path, st)}` : ""}
         ${kind === "tcp" ? html`<div class="field"><label>Keepalive (ثانیه)</label><input class="input ltr" type="number" min="-1" max="3600" data-bind="${path}.keepalive" value="${st.keepalive || ""}" placeholder="15"><span class="help">اتصالی که سه برابر این مدت ساکت بماند قطع و دوباره برقرار می‌شود؛ ‎-1 یعنی فقط keepalive خود TCP.</span></div>` : ""}
         ${kind === "wireguard" ? html`<div class="field full"><label>کلید عمومی طرف مقابل</label><input class="input ltr" data-bind="${path}.peer_key" value="${st.peer_key || ""}" placeholder="فقط وقتی آن طرف NeoTunnel ندارد"><span class="help">برای میکروتیک یا هر WireGuard دیگر؛ بین دو سرور NeoTunnel کلیدها خودکار ساخته می‌شوند.</span></div>` : ""}
         ${top === "eoip" ? html`<div class="field"><label>شناسه‌ی تانل (Tunnel ID)</label><input class="input ltr" type="number" min="0" max="65535" data-bind="${path}.tunnel_id" value="${st.tunnel_id ?? ""}" placeholder="خودکار"><span class="help">همان tunnel-id میکروتیک؛ دو سر باید یکی باشند. ۰ تا ۶۵۵۳۵، و روی EoIPv6 بدون پورت ۰ تا ۴۰۹۵. خالی = از نام تانل ساخته می‌شود.</span></div>` : ""}
@@ -1889,6 +1901,10 @@
     if (st.spoof_proto) out.spoof_proto = st.spoof_proto;
     if (st.spoof_mode) out.spoof_mode = st.spoof_mode;
     if (st.spoof_src !== undefined) out.spoof_src = String(st.spoof_src || "").trim();
+    if (st.spoof_pinhole !== undefined) {
+      out.spoof_pinhole = !!st.spoof_pinhole;
+      out.spoof_pinhole_interval = out.spoof_pinhole ? (+st.spoof_pinhole_interval || 0) : 0;
+    }
     const id = st.tunnel_id ?? "";
     if (String(id).trim() !== "") {
       const n = Number(id);
@@ -3040,6 +3056,7 @@
           <input class="input ltr" style="margin-top:6px;max-width:340px" data-bind="wiz.spoof_src" value="${ss}" placeholder="auto | iran | rotate | 185.143.233.10">
           <span class="help">می‌توانید یکی از حالت‌های بالا را بزنید یا یک IP دلخواه (یا دو IP با کاما برای دو طرف مثل <span class="ltr">185.143.233.10,8.8.8.8</span>) وارد کنید.</span>
         </div>
+        ${spoofPinholeFields("wiz", w)}
       </div>
       ${canCheck(w) ? html`<div style="margin-top:10px">
         <button type="button" class="btn sm" data-act="wiz-spoof-test" ${w.spoofTesting ? "disabled" : ""}>${w.spoofTesting ? html`<i class="spin"></i> در حال تست ۶ پروتکل Spoof در هر دو جهت…` : html`${I.gauge(14)} تست مسیر Spoof روی همه‌ی پروتکل‌ها`}</button>
@@ -3227,12 +3244,15 @@
   function wizRequest(w, peerName) {
     const set = settingsBody(w);
     const prot = wizProt(w, S.ov.modes.find((m) => m.name === w.mode) || {});
+    const spoofOn = w.mode === "spoof" || !!w.spoof;
     const req = Object.assign(set, {
       mode: w.mode, name: w.name.trim(), port: +w.port || 0, forward: w.fwd.trim(), forward_to: +w.fwdTo || 0, proto: fwdProto(wizFmode(w), w.proto),
       forward_mode: wizFmode(w), proxy_version: fwdVersion(wizFmode(w), w), forward_public: w.dest !== "remote" && toPublicOf(wizFmode(w), w),
       queue_mbit: w.gaming ? gameQueue(w) : 0,
       obfs: prot === "obfs", spoof: w.mode !== "spoof" && !!w.spoof, wireguard: prot === "wg", encrypt: prot === "ipsec" ? w.encrypt : prot === "auto" ? "auto" : "",
       spoof_proto: w.spoof_proto || "udp", spoof_mode: w.spoof_mode || "both", spoof_src: (w.spoof_src || "auto").trim(),
+      spoof_pinhole: spoofOn && !!w.spoof_pinhole,
+      spoof_pinhole_interval: spoofOn && w.spoof_pinhole ? (+w.spoof_pinhole_interval || 0) : 0,
     });
     if (w.pool === "manual") Object.assign(req, { pool4: (w.pool4 || "").trim(), pool6: (w.pool6 || "").trim() });
     else req.pool = w.pool || "";
@@ -3350,7 +3370,8 @@
       protect: d.obfs ? "obfs" : d.encrypt === "auto" ? "auto" : d.encrypt ? "ipsec" : "none", encrypt: d.encrypt && d.encrypt !== "auto" ? d.encrypt : "aes-gcm-128",
       pool: d.pool || "default", pool4: "", pool6: "", poolName: "",
       fmode: d.forward_mode || "nat", reverse: false, sni: "", conns: "", pver: 2, profile: "balanced", lanes: 1, mtuMode: d.mtu_probe ? "probe" : "auto", mtu: "", ttl: "", dscp: "", pmtud: "on", padding: d.padding || "", keepalive: "", peer_key: "", adv: false,
-      spoof: !!d.spoof, spoof_proto: d.spoof_proto || "udp", spoof_mode: d.spoof_mode || "both", spoof_src: d.spoof_src || "auto", spoofTesting: false, spoofRep: null,
+      spoof: !!d.spoof, spoof_proto: d.spoof_proto || "udp", spoof_mode: d.spoof_mode || "both", spoof_src: d.spoof_src || "auto",
+      spoof_pinhole: !!d.spoof_pinhole, spoof_pinhole_interval: d.spoof_pinhole_interval || "", spoofTesting: false, spoofRep: null,
     }, preset);
     if (preset.peer) { S.wiz.dest = "peer"; S.wiz.step = preset.mode ? 3 : 2; }
     const p = wizPeer(S.wiz); if (p && p.address6) S.wiz.remote6 = p.address6;

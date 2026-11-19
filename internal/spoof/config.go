@@ -189,24 +189,43 @@ func ValidateSrc(src string) error {
 	return nil
 }
 
+// DefaultPinholeInterval is the default interval between stateful firewall
+// pinhole keepalive packets when pinhole mode is enabled.
+const DefaultPinholeInterval = 15 * time.Second
+
+// ValidatePinhole verifies that stateful firewall pinhole keepalive can work
+// with the configured spoof direction and source IP specification for side.
+func ValidatePinhole(dir, spoofSrc string, side int) error {
+	peerSide := 1 - side
+	if !ShouldSpoof(dir, peerSide) {
+		return nil
+	}
+	spec := strings.ToLower(spoofSrcSpecForSide(spoofSrc, peerSide))
+	if spec == SrcRotate || spec == SrcIran {
+		return fmt.Errorf("spoof pinhole requires a predictable remote source IP, but remote side uses %q (which rotates per packet); use --spoof-mode out, --spoof-src auto, or a pair like --spoof-src \"iran,8.8.8.8\"", spec)
+	}
+	return nil
+}
+
 // Config describes this node's end of a running Spoof tunnel.
 type Config struct {
-	Name      string // TUN interface name (e.g. "nt-t1" or "nt-t1-s")
-	Tunnel    string // tunnel key name shared by both ends
-	Secret    string // base64 shared secret
-	Side      int    // 0 or 1
-	Local     netip.Addr
-	Remote    netip.Addr
-	Port      uint16
-	Key       uint32
-	Proto     string // "udp", "tcp", "gre", "ipip", "sit", "icmp"
-	Dir       string // "both", "out", "in"
-	SpoofSrc  string // "", "auto", "iran", "rotate", or custom IPv4(s)
-	TTL       uint8
-	DSCP      uint8
-	NoDF      bool
-	Padding   int
-	Keepalive time.Duration
-	AES       bool // use AES-128-GCM when both ends support it
-	NoCrypt   bool // authenticate only (used when an encrypted tunnel is stacked on top)
+	Name            string // TUN interface name (e.g. "nt-t1" or "nt-t1-s")
+	Tunnel          string // tunnel key name shared by both ends
+	Secret          string // base64 shared secret
+	Side            int    // 0 or 1
+	Local           netip.Addr
+	Remote          netip.Addr
+	Port            uint16
+	Key             uint32
+	Proto           string // "udp", "tcp", "gre", "ipip", "sit", "icmp"
+	Dir             string // "both", "out", "in"
+	SpoofSrc        string // "", "auto", "iran", "rotate", or custom IPv4(s)
+	TTL             uint8
+	DSCP            uint8
+	NoDF            bool
+	Padding         int
+	Keepalive       time.Duration
+	PinholeInterval time.Duration // >0: emit minimal real-source-IP pinhole keepalives to peer's expected outer src
+	AES             bool          // use AES-128-GCM when both ends support it
+	NoCrypt         bool          // authenticate only (used when an encrypted tunnel is stacked on top)
 }
