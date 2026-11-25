@@ -6,10 +6,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/firewall"
-	"neotunnel/internal/service"
-	"neotunnel/internal/web"
+	"hltunnel/internal/config"
+	"hltunnel/internal/firewall"
+	"hltunnel/internal/service"
+	"hltunnel/internal/web"
 )
 
 func panelCmd() *cobra.Command {
@@ -49,10 +49,10 @@ func panelCmd() *cobra.Command {
 				return err
 			}
 			if st.Panel == nil {
-				return fmt.Errorf("panel is not set up: sudo neotunnel panel setup")
+				return fmt.Errorf("panel is not set up: sudo hltunnel panel setup")
 			}
 			printCredentials(web.Credentials{URL: web.PanelURL(st), User: st.Panel.User})
-			fmt.Println(dim("  Forgot the password? sudo neotunnel panel password"))
+			fmt.Println(dim("  Forgot the password? sudo hltunnel panel password"))
 			return nil
 		},
 	}
@@ -95,7 +95,7 @@ func panelCmd() *cobra.Command {
 				return err
 			}
 			if st.Panel == nil {
-				return fmt.Errorf("panel is not set up: sudo neotunnel panel setup --port %d", p)
+				return fmt.Errorf("panel is not set up: sudo hltunnel panel setup --port %d", p)
 			}
 			if !web.PortFree(p) {
 				return fmt.Errorf("port %d is in use or reserved", p)
@@ -137,7 +137,7 @@ func restartIfRunning() {
 }
 
 func printCredentials(c web.Credentials) {
-	title("NeoTunnel panel")
+	title("HLTunnel panel")
 	fmt.Printf("  %s  %s\n", dim("address "), bold(c.URL))
 	fmt.Printf("  %s  %s\n", dim("username"), bold(c.User))
 	if c.Password != "" {

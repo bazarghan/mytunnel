@@ -6,8 +6,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
 )
 
 // MaxLabel is the longest display name, in characters.

@@ -11,13 +11,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/mmsg"
-	"neotunnel/internal/offload"
-	"neotunnel/internal/tun"
+	"hltunnel/internal/config"
+	"hltunnel/internal/mmsg"
+	"hltunnel/internal/offload"
+	"hltunnel/internal/tun"
 )
 
-// Config describes this node's end of a NeoObfs tunnel.
+// Config describes this node's end of a HLObfs tunnel.
 type Config struct {
 	Name      string // interface name
 	Tunnel    string // tunnel name (keys are bound to it)
@@ -332,7 +332,7 @@ func (l *Link) keepalive() {
 	}
 }
 
-// Manager runs the NeoObfs links of the daemon.
+// Manager runs the HLObfs links of the daemon.
 type Manager struct {
 	mu    sync.Mutex
 	links map[string]*Link

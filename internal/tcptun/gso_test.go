@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // startVnet starts two ends whose devices say whether they put a

@@ -188,7 +188,7 @@ func PublicIfaces(address string) []string {
 	}
 	var out []string
 	for n := range set {
-		if !strings.HasPrefix(n, "nt-") && n != "lo" {
+		if !strings.HasPrefix(n, "hl-") && n != "lo" {
 			out = append(out, n)
 		}
 	}

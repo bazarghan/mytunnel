@@ -129,7 +129,7 @@ func (p *pinger) echo(ctx context.Context, addr netip.Addr, timeout time.Duratio
 	}
 	binary.BigEndian.PutUint16(msg[4:], p.id)
 	binary.BigEndian.PutUint16(msg[6:], seq)
-	copy(msg[8:], "neotunnel-health")
+	copy(msg[8:], "hltunnel-health")
 	if !p.v6 {
 		binary.BigEndian.PutUint16(msg[2:], checksum(msg))
 	}

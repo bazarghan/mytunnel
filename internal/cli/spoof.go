@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/identity"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/manage"
 )
 
 func spoofTestCmd() *cobra.Command {
@@ -48,7 +48,7 @@ func spoofTestCmd() *cobra.Command {
 			info("%s", rep.Summary)
 			if rep.RecommendedProto != "" {
 				fmt.Println()
-				info("run any protocol over Spoof: sudo neotunnel quick %s --mode 6to4 --spoof --spoof-proto %s --spoof-mode %s",
+				info("run any protocol over Spoof: sudo hltunnel quick %s --mode 6to4 --spoof --spoof-proto %s --spoof-mode %s",
 					rep.Peer, rep.RecommendedProto, rep.RecommendedDir)
 			}
 			return nil

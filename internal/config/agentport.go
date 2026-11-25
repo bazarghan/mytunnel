@@ -37,7 +37,7 @@ func (s *State) AgentPorts() []int {
 }
 
 // EnsureAgentPort gives a node without one its own random agent port, not
-// used by anything NeoTunnel knows of and free right now (free reports
+// used by anything HLTunnel knows of and free right now (free reports
 // that); it reports whether it changed s. A node already paired on 7710
 // keeps listening there as well (AgentLegacy).
 func EnsureAgentPort(s *State, free func(port int) bool) bool {

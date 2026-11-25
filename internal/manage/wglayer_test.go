@@ -3,7 +3,7 @@ package manage
 import (
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // An Ethernet tunnel over WireGuard: kernel encryption inside UDP, for a
@@ -29,7 +29,7 @@ func TestPlanL2OverWireGuard(t *testing.T) {
 	for _, r := range []TunnelRequest{
 		{Peer: "edge", Mode: "6to4", WireGuard: true},               // IP traffic: WireGuard itself
 		{Peer: "edge", Mode: "gretap", WireGuard: true, Obfs: true}, // one layer
-		{Remote: "203.0.113.9", Mode: "gretap", WireGuard: true},    // keys need NeoTunnel there
+		{Remote: "203.0.113.9", Mode: "gretap", WireGuard: true},    // keys need HLTunnel there
 	} {
 		if _, _, err := PlanTunnel(st, r); err == nil {
 			t.Errorf("planned %+v", r)

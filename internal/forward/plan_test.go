@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Sold ports get their own chains in their own table, reached by one lookup
@@ -24,7 +24,7 @@ func TestPlans(t *testing.T) {
 	}
 	SetClosed(map[string]string{"tcp/9443": ClosedQuota})
 	defer SetClosed(nil)
-	rs, errs := Build(st, fs, []Link{{Name: "nt-t1", Tunnel: "t1"}})
+	rs, errs := Build(st, fs, []Link{{Name: "hl-t1", Tunnel: "t1"}})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
@@ -38,7 +38,7 @@ func TestPlans(t *testing.T) {
 	}
 	pt := "inet " + PlansTable + " "
 	for _, want := range []string{
-		"add table inet neotunnel_plans\n",
+		"add table inet hltunnel_plans\n",
 		"flush chain " + pt + "pq" + a + "\n",
 		"delete chain " + pt + "pqdeadbeef\n",
 		"delete set " + pt + "c" + a + "n40\n",
@@ -70,15 +70,15 @@ func TestPlans(t *testing.T) {
 	if strings.Index(s, "delete chain") > strings.Index(s, "delete set") || strings.Index(s, "delete set") > strings.Index(s, "add rule") {
 		t.Errorf("order:\n%s", s)
 	}
-	if got := PlansScript(nil, nil, nil); got != "table inet neotunnel_plans\ndelete table inet neotunnel_plans\n" {
+	if got := PlansScript(nil, nil, nil); got != "table inet hltunnel_plans\ndelete table inet hltunnel_plans\n" {
 		t.Errorf("no plans: %q", got)
 	}
 	// The forwards' own table: relays are counted too, by the
 	// connection's own port.
 	m := Script(rs)
 	for _, want := range []string{
-		"8443 : \"nt" + r + "u\"",
-		"meta l4proto tcp counter name ct original proto-dst map { 443 : \"nt" + a + "d\", 2053-2056 : \"nt" + a + "d\", 8443 : \"nt" + r + "d\"",
+		"8443 : \"hl" + r + "u\"",
+		"meta l4proto tcp counter name ct original proto-dst map { 443 : \"hl" + a + "d\", 2053-2056 : \"hl" + a + "d\", 8443 : \"hl" + r + "d\"",
 	} {
 		if !strings.Contains(m, want) {
 			t.Errorf("script missing %q:\n%s", want, m)
@@ -91,9 +91,9 @@ func TestPlans(t *testing.T) {
 
 // Reloading the forwards' table keeps the counters' values.
 func TestKeepCounts(t *testing.T) {
-	s := "table inet neotunnel {\n  counter nt1u { }\n  counter nt1d { }\n  chain x {\n  }\n}\n"
-	got := keepCounts(s, map[string]Count{"nt1u": {Bytes: 1000, Packets: 3}})
-	if !strings.Contains(got, "  counter nt1u { packets 3 bytes 1000 }\n  counter nt1d { }\n") {
+	s := "table inet hltunnel {\n  counter hl1u { }\n  counter hl1d { }\n  chain x {\n  }\n}\n"
+	got := keepCounts(s, map[string]Count{"hl1u": {Bytes: 1000, Packets: 3}})
+	if !strings.Contains(got, "  counter hl1u { packets 3 bytes 1000 }\n  counter hl1d { }\n") {
 		t.Errorf("got:\n%s", got)
 	}
 }
@@ -103,11 +103,11 @@ func TestKeepCounts(t *testing.T) {
 func TestSeenScript(t *testing.T) {
 	s := SeenScript([]Account{{Key: "both/443", Proto: []string{"tcp", "udp"}, Ports: "443, 2053-2056"}})
 	for _, want := range []string{
-		"add table inet neotunnel_seen\n",
-		"add set inet neotunnel_seen c4 { type ipv4_addr . inet_proto . inet_service; flags dynamic,timeout; timeout 1d; size 262144; }\n",
-		"flush chain inet neotunnel_seen in\n",
-		"add rule inet neotunnel_seen in meta nfproto ipv4 tcp dport { 443, 2053-2056 } update @c4 { ip saddr . meta l4proto . tcp dport }\n",
-		"add rule inet neotunnel_seen in meta nfproto ipv6 udp dport { 443, 2053-2056 } update @c6 { ip6 saddr . meta l4proto . udp dport }\n",
+		"add table inet hltunnel_seen\n",
+		"add set inet hltunnel_seen c4 { type ipv4_addr . inet_proto . inet_service; flags dynamic,timeout; timeout 1d; size 262144; }\n",
+		"flush chain inet hltunnel_seen in\n",
+		"add rule inet hltunnel_seen in meta nfproto ipv4 tcp dport { 443, 2053-2056 } update @c4 { ip saddr . meta l4proto . tcp dport }\n",
+		"add rule inet hltunnel_seen in meta nfproto ipv6 udp dport { 443, 2053-2056 } update @c6 { ip6 saddr . meta l4proto . udp dport }\n",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("seen missing %q:\n%s", want, s)
@@ -116,7 +116,7 @@ func TestSeenScript(t *testing.T) {
 	if strings.Contains(s, "delete") {
 		t.Error("the day's record is deleted")
 	}
-	if !strings.Contains(SeenScript(nil), "delete table inet neotunnel_seen") {
+	if !strings.Contains(SeenScript(nil), "delete table inet hltunnel_seen") {
 		t.Error("no forwards: the record stays")
 	}
 }

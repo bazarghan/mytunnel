@@ -1,4 +1,4 @@
-// Package obfs is NeoObfs, NeoTunnel's user-space tunnel for paths where the
+// Package obfs is HLObfs, HLTunnel's user-space tunnel for paths where the
 // kernel tunnels are filtered or recognized: IP packets travel inside UDP
 // datagrams that are encrypted end to end (XChaCha20-Poly1305) and carry no
 // fixed bytes at all, so to an observer every datagram, its first bytes

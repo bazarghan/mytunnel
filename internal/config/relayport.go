@@ -13,7 +13,7 @@ import (
 // A connection tunnel's listener gets the same, after its own Port.
 
 // NewRelayPorts picks n random TCP ports (20000-59999) for t's relay or
-// sessions, none of them used on this server for anything else NeoTunnel
+// sessions, none of them used on this server for anything else HLTunnel
 // knows of, nor reported taken by t's far server, and none in skip.
 func (s *State) NewRelayPorts(t Tunnel, n int, skip ...uint16) []uint16 {
 	taken := s.usedPorts()

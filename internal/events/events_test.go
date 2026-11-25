@@ -3,7 +3,7 @@ package events
 import (
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 func TestAddOfTrim(t *testing.T) {

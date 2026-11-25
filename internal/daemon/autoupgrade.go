@@ -5,12 +5,12 @@ import (
 	"log"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
-	"neotunnel/internal/fleet"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/version"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
+	"hltunnel/internal/fleet"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/version"
 )
 
 // Automatic upgrades: once this server runs a newer release than a paired

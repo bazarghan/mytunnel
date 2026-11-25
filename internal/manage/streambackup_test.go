@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 func TestStreamBackupCheck(t *testing.T) {

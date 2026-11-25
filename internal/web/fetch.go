@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/relay"
+	"hltunnel/internal/config"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/relay"
 )
 
 // FetchView is the downloads-through-a-tunnel settings page.

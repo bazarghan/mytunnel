@@ -20,6 +20,10 @@ func TestNewer(t *testing.T) {
 		{"v0.8.2", "v0.8.3", false},
 		{"v0.9.0", "dev", false},
 		{"latest", "v0.8.3", false},
+		{"v1.0.0", "v0.9.0-spoof", true},
+		{"v1.0.0", "v1.0.0-beta.1", true},
+		{"v1.0.0-beta.10", "v1.0.0-beta.2", true},
+		{"v1.0.0-rc.1", "v1.0.0-beta.9", true},
 	} {
 		if got := newer(c.a, c.b); got != c.want {
 			t.Errorf("newer(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
@@ -28,13 +32,15 @@ func TestNewer(t *testing.T) {
 }
 
 func TestValidTag(t *testing.T) {
-	for _, s := range []string{"v0.8.4; rm -rf /", "v0.8", "0.8.4", "v0.8.4 ", ""} {
+	for _, s := range []string{"v0.8.4; rm -rf /", "v0.8", "0.8.4", "v0.8.4 ", "v1.0.0-", ""} {
 		if validTag(s) {
 			t.Errorf("validTag(%q) = true", s)
 		}
 	}
-	if !validTag("v12.0.3") {
-		t.Error("validTag(v12.0.3) = false")
+	for _, s := range []string{"v12.0.3", "v1.0.0-beta.1", "v0.9.0-spoof"} {
+		if !validTag(s) {
+			t.Errorf("validTag(%q) = false", s)
+		}
 	}
 }
 

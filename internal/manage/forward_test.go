@@ -3,7 +3,7 @@ package manage
 import (
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Editing a forward can move it to other ports and another tunnel; the

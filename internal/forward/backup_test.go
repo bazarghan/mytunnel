@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/failover"
+	"hltunnel/internal/config"
+	"hltunnel/internal/failover"
 )
 
 // backupState has two tunnels between hub and edge: t1 and its backup t2.
@@ -26,19 +26,19 @@ func backupState(mode string) *config.State {
 // While failed over, the forward's DNAT goes to the backup's far end.
 func TestFailedOverForwardTargetsBackup(t *testing.T) {
 	st := backupState("")
-	links := []Link{{Name: "nt-t1", Tunnel: "t1"}, {Name: "nt-t2", Tunnel: "t2"}}
+	links := []Link{{Name: "hl-t1", Tunnel: "t1"}, {Name: "hl-t2", Tunnel: "t2"}}
 	ts, fs := st.Effective()
 	rs, errs := Build(st, failover.Route(fs, ts, failover.Paths{}), links)
-	if len(errs) > 0 || len(rs.Rules) != 1 || rs.Rules[0].Iface != "nt-t1" {
+	if len(errs) > 0 || len(rs.Rules) != 1 || rs.Rules[0].Iface != "hl-t1" {
 		t.Fatalf("primary: %v %+v", errs, rs.Rules)
 	}
 	ps := failover.Paths{failover.Key(fs[0]): {Active: "t2"}}
 	rs, errs = Build(st, failover.Route(fs, ts, ps), links)
-	if len(errs) > 0 || len(rs.Rules) != 1 || rs.Rules[0].Iface != "nt-t2" {
+	if len(errs) > 0 || len(rs.Rules) != 1 || rs.Rules[0].Iface != "hl-t2" {
 		t.Fatalf("backup: %v %+v", errs, rs.Rules)
 	}
 	s := Script(rs)
-	for _, want := range []string{"tcp dport { 443 } dnat ip to 10.77.0.6", `oifname "nt-t2" ct status dnat masquerade`} {
+	for _, want := range []string{"tcp dport { 443 } dnat ip to 10.77.0.6", `oifname "hl-t2" ct status dnat masquerade`} {
 		if !strings.Contains(s, want) {
 			t.Errorf("script missing %q:\n%s", want, s)
 		}
@@ -60,13 +60,13 @@ func TestFarEndServesBothTunnels(t *testing.T) {
 		}
 		edge := &config.State{Self: "edge", Managed: &config.Managed{Self: "edge", Tunnels: ts, Forwards: fs}}
 		_, own := edge.Effective()
-		rs, errs := Build(edge, own, []Link{{Name: "nt-t1", Tunnel: "t1"}, {Name: "nt-t2", Tunnel: "t2"}})
+		rs, errs := Build(edge, own, []Link{{Name: "hl-t1", Tunnel: "t1"}, {Name: "hl-t2", Tunnel: "t2"}})
 		if len(errs) > 0 {
 			t.Fatalf("%s: %v", mode, errs)
 		}
 		switch mode {
 		case config.ForwardTransparent:
-			if len(rs.Returns) != 2 || rs.Returns[1].Iface != "nt-t2" {
+			if len(rs.Returns) != 2 || rs.Returns[1].Iface != "hl-t2" {
 				t.Errorf("returns %+v", rs.Returns)
 			}
 		case config.ForwardRelay:
@@ -108,7 +108,7 @@ func TestFallbackToConnectionTunnelRelays(t *testing.T) {
 		hub := streamBackupState(c.mode, "both")
 		ts, fs := hub.Effective()
 		ps := failover.Paths{failover.Key(fs[0]): {Active: "t2"}}
-		rs, errs := Build(hub, failover.Route(fs, ts, ps), []Link{{Name: "nt-t1", Tunnel: "t1"}})
+		rs, errs := Build(hub, failover.Route(fs, ts, ps), []Link{{Name: "hl-t1", Tunnel: "t1"}})
 		if len(errs) > 0 || len(rs.Rules) != 0 || len(rs.Relays) != 1 {
 			t.Fatalf("%q: %v, %d rules, %+v", c.mode, errs, len(rs.Rules), rs.Relays)
 		}
@@ -117,7 +117,7 @@ func TestFallbackToConnectionTunnelRelays(t *testing.T) {
 			t.Errorf("%q: relay %+v", c.mode, r)
 		}
 		// Back on t1 it is the kernel's again.
-		rs, errs = Build(hub, failover.Route(fs, ts, failover.Paths{}), []Link{{Name: "nt-t1", Tunnel: "t1"}})
+		rs, errs = Build(hub, failover.Route(fs, ts, failover.Paths{}), []Link{{Name: "hl-t1", Tunnel: "t1"}})
 		// (A proxy forward's relay on t1 goes to the inner address, TCP and UDP.)
 		kernel := len(rs.Rules) == 1 && len(rs.Relays) == 0
 		if c.mode == config.ForwardProxy {
@@ -133,7 +133,7 @@ func TestFallbackToConnectionTunnelRelays(t *testing.T) {
 		}
 		edge := &config.State{Self: "edge", Managed: &config.Managed{Self: "edge", Tunnels: ets, Forwards: efs}}
 		_, own := edge.Effective()
-		rs, _ = Build(edge, own, []Link{{Name: "nt-t1", Tunnel: "t1"}})
+		rs, _ = Build(edge, own, []Link{{Name: "hl-t1", Tunnel: "t1"}})
 		if len(rs.Exits) != 1 || rs.Exits[0].Tunnel != "t2" || !rs.Exits[0].Session || rs.Exits[0].Ports[0] != 443 {
 			t.Errorf("%q: exits %+v", c.mode, rs.Exits)
 		}

@@ -126,7 +126,7 @@ func (s *State) Allocate(t *Tunnel) error {
 	if t.Key == 0 {
 		t.Key = keyFor(t.Name)
 	}
-	if (t.Kind == KindVXLAN || t.Kind == KindGENEVE) && t.VNI == 0 {
+	if ki.HasVNI && t.VNI == 0 {
 		t.VNI = keyFor(t.Name) & 0xffffff
 		if _, _, vni := s.PeerClash(*t); vni {
 			s.NewVNI(t)
@@ -143,7 +143,7 @@ func (s *State) Allocate(t *Tunnel) error {
 
 // keyFor derives a stable non-zero GRE key / VNI from a tunnel name.
 func keyFor(name string) uint32 {
-	h := sha256.Sum256([]byte("neotunnel/" + name))
+	h := sha256.Sum256([]byte("hltunnel/" + name))
 	if k := binary.BigEndian.Uint32(h[:4]); k != 0 {
 		return k
 	}

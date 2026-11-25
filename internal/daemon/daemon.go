@@ -17,22 +17,22 @@ import (
 	"syscall"
 	"time"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/events"
-	"neotunnel/internal/fleet"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/health"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/metrics"
-	"neotunnel/internal/probe"
-	"neotunnel/internal/safe"
-	"neotunnel/internal/telegram"
-	"neotunnel/internal/traffic"
-	"neotunnel/internal/web"
-	"neotunnel/internal/webhook"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/events"
+	"hltunnel/internal/fleet"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/health"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/metrics"
+	"hltunnel/internal/probe"
+	"hltunnel/internal/safe"
+	"hltunnel/internal/telegram"
+	"hltunnel/internal/traffic"
+	"hltunnel/internal/web"
+	"hltunnel/internal/webhook"
 )
 
 const reconcileEvery = 15 * time.Second
@@ -126,7 +126,7 @@ func Run(ctx context.Context) error {
 	signal.Notify(hup, syscall.SIGHUP)
 	term := make(chan os.Signal, 1)
 	signal.Notify(term, syscall.SIGTERM)
-	log.Printf("neotunnel daemon started, key %s", identity.Fingerprint(id.PublicString()))
+	log.Printf("hltunnel daemon started, key %s", identity.Fingerprint(id.PublicString()))
 
 	t := time.NewTicker(reconcileEvery)
 	defer t.Stop()
@@ -248,7 +248,7 @@ func fixClashes() {
 	}
 }
 
-// useObfsAES moves NeoObfs tunnels to AES-128-GCM on the first watch after a
+// useObfsAES moves HLObfs tunnels to AES-128-GCM on the first watch after a
 // peer was upgraded to a version that has it (see manage.UseObfsAES).
 func useObfsAES() {
 	st, err := config.Load()
@@ -262,9 +262,9 @@ func useObfsAES() {
 		moved, ch, err := manage.UseObfsAES(p.Name)
 		switch {
 		case err != nil:
-			log.Printf("NeoObfs tunnels to %s: %v", p.Name, err)
+			log.Printf("HLObfs tunnels to %s: %v", p.Name, err)
 		case len(moved) > 0:
-			log.Printf("NeoObfs tunnels %v to %s now run on AES-GCM (%d error(s))", moved, p.Name, len(ch.Errors))
+			log.Printf("HLObfs tunnels %v to %s now run on AES-GCM (%d error(s))", moved, p.Name, len(ch.Errors))
 		}
 	}
 }
@@ -285,8 +285,8 @@ func useRelayPorts() {
 // panel can tell which servers are reachable and which need an upgrade.
 func watchPeers(ctx context.Context, id *identity.Identity) {
 	every := time.Minute
-	// Tests shorten it (NEOTUNNEL_PEER_WATCH=3s) to see a resync quickly.
-	if d, err := time.ParseDuration(os.Getenv("NEOTUNNEL_PEER_WATCH")); err == nil && d > 0 {
+	// Tests shorten it (HLTUNNEL_PEER_WATCH=3s) to see a resync quickly.
+	if d, err := time.ParseDuration(os.Getenv("HLTUNNEL_PEER_WATCH")); err == nil && d > 0 {
 		every = d
 	}
 	t := time.NewTicker(every)

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 )
 
-// Dir is where NeoTunnel keeps its state. Overridable for tests and dev runs.
-var Dir = envOr("NEOTUNNEL_DIR", "/etc/neotunnel")
+// Dir is where HLTunnel keeps its state. Overridable for tests and dev runs.
+var Dir = envOr("HLTUNNEL_DIR", "/etc/hltunnel")
 
 func envOr(k, def string) string {
 	if v := os.Getenv(k); v != "" {
@@ -35,7 +35,7 @@ func Load() (*State, error) {
 		return nil, fmt.Errorf("parse %s: %w", statePath(), err)
 	}
 	if s.Schema > SchemaVersion {
-		return nil, fmt.Errorf("state schema %d is newer than this binary (%d); upgrade neotunnel", s.Schema, SchemaVersion)
+		return nil, fmt.Errorf("state schema %d is newer than this binary (%d); upgrade hltunnel", s.Schema, SchemaVersion)
 	}
 	return &s, nil
 }

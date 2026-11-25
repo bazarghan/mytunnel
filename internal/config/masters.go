@@ -231,12 +231,8 @@ func claimOf(t Tunnel) claim {
 		}
 		c.port = fmt.Sprintf("%s/%d", proto, t.Port)
 	}
-	if t.Kind == KindVXLAN || t.Kind == KindGENEVE {
-		port := t.Port
-		if port == 0 {
-			port = map[Kind]uint16{KindVXLAN: 4789, KindGENEVE: 6081}[t.Kind]
-		}
-		c.vni = fmt.Sprintf("vni/%s/%d/%d", t.Kind, port, t.VNI)
+	if ki, err := LookupKind(t.Kind); err == nil && ki.HasVNI {
+		c.vni = fmt.Sprintf("vni/%s/%d/%d", t.Kind, ki.EffectivePort(t.Port), t.VNI)
 	}
 	return c
 }

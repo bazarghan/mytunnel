@@ -4,7 +4,7 @@ import (
 	"net/netip"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // sixToFour builds the default quick stack between hub (master) and edge.
@@ -35,7 +35,7 @@ func TestRenderSixToFourBothSides(t *testing.T) {
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
-	if len(master) != 2 || master[0].Name != "nt-t1-6" || master[1].Name != "nt-t1" {
+	if len(master) != 2 || master[0].Name != "hl-t1-6" || master[1].Name != "hl-t1" {
 		t.Fatalf("want carrier then top, got %+v", master)
 	}
 	sit, top := master[0], master[1]
@@ -45,7 +45,7 @@ func TestRenderSixToFourBothSides(t *testing.T) {
 	if sit.Remote.String() != "203.0.113.10" || sit.Local.String() != "198.51.100.1" {
 		t.Errorf("sit endpoints %s -> %s", sit.Local, sit.Remote)
 	}
-	if !top.Local.Is6() || top.Parent != "nt-t1-6" {
+	if !top.Local.Is6() || top.Parent != "hl-t1-6" {
 		t.Errorf("ipip6 must ride on the sit IPv6 addresses: %+v", top)
 	}
 
@@ -218,7 +218,7 @@ func TestGREToRouterIsKeyless(t *testing.T) {
 	managed := peerTunnel(config.KindGRE, nil)
 	ms, _ := Render(managed, fixedSource("198.51.100.1"))
 	if ms[0].Key == 0 || ms[0].MTU != 1472 {
-		t.Errorf("GRE between NeoTunnel servers keeps its key: %+v", ms[0])
+		t.Errorf("GRE between HLTunnel servers keeps its key: %+v", ms[0])
 	}
 }
 

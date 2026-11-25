@@ -4,7 +4,7 @@ import (
 	"net/netip"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // addrState saves a main server on 192.0.2.1 with one tunnel to a peer

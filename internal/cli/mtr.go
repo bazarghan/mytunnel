@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/identity"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/mtr"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/mtr"
 )
 
 func mtrCmd() *cobra.Command {
@@ -16,8 +16,8 @@ func mtrCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mtr <tunnel>",
 		Short: "Trace the path under a tunnel both ways, hop by hop: loss and ping at each router",
-		Example: `  neotunnel mtr t1
-  neotunnel mtr t1 --rounds 30`,
+		Example: `  hltunnel mtr t1
+  hltunnel mtr t1 --rounds 30`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := identity.LoadOrCreate()

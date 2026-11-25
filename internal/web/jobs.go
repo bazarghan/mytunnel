@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/bench"
+	"hltunnel/internal/bench"
 )
 
 // Tests and benchmarks run in the background; the panel polls their log.

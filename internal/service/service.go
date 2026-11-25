@@ -1,4 +1,4 @@
-// Package service installs NeoTunnel as a systemd service.
+// Package service installs HLTunnel as a systemd service.
 package service
 
 import (
@@ -10,12 +10,12 @@ import (
 )
 
 const (
-	Name     = "neotunnel"
-	unitPath = "/etc/systemd/system/neotunnel.service"
+	Name     = "hltunnel"
+	unitPath = "/etc/systemd/system/hltunnel.service"
 )
 
 const unit = `[Unit]
-Description=NeoTunnel tunnel manager
+Description=HLTunnel tunnel manager
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0

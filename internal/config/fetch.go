@@ -110,7 +110,7 @@ func (s *State) FetchActive() (Fetch, bool) {
 }
 
 // fetchForward is how a peer learns that this node's downloads leave
-// through it: a proxy forward on the tunnel, which every NeoTunnel version
+// through it: a proxy forward on the tunnel, which every HLTunnel version
 // with proxies already serves (see forward.relayExits).
 func (s *State) fetchForward(peer string) (Forward, bool) {
 	f, ok := s.FetchActive()

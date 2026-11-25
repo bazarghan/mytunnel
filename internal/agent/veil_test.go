@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/probe"
+	"hltunnel/internal/config"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/probe"
 )
 
 // filter stands in for a path that stalls TLS: it forwards to target, keeps
@@ -115,7 +115,7 @@ func TestVeilGetsPastAPathThatStallsTLS(t *testing.T) {
 	sizes := map[int]bool{}
 	for _, b := range f.first {
 		sizes[len(b)] = true
-		if len(b) < veilNonceSize || bytes.Contains(b, []byte("neotunnel")) {
+		if len(b) < veilNonceSize || bytes.Contains(b, []byte("hltunnel")) {
 			t.Fatalf("first packet %x", b)
 		}
 	}

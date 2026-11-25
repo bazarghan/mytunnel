@@ -6,7 +6,7 @@ import (
 )
 
 // nft 1.0.9's listing of the day's record.
-const listing = `{"nftables": [{"metainfo": {"version": "1.0.9", "release_name": "Old Doc Yak #3", "json_schema_version": 1}}, {"set": {"family": "inet", "name": "c4", "table": "neotunnel_seen", "type": ["ipv4_addr", "inet_proto", "inet_service"], "handle": 1, "size": 262144, "flags": ["timeout", "dynamic"], "timeout": 86400, "elem": [{"elem": {"val": {"concat": ["198.18.0.2", "tcp", 8095]}, "expires": 82799}}, {"elem": {"val": {"concat": ["198.18.0.3", "udp", 443]}, "expires": 86400}}]}}]}`
+const listing = `{"nftables": [{"metainfo": {"version": "1.0.9", "release_name": "Old Doc Yak #3", "json_schema_version": 1}}, {"set": {"family": "inet", "name": "c4", "table": "hltunnel_seen", "type": ["ipv4_addr", "inet_proto", "inet_service"], "handle": 1, "size": 262144, "flags": ["timeout", "dynamic"], "timeout": 86400, "elem": [{"elem": {"val": {"concat": ["198.18.0.2", "tcp", 8095]}, "expires": 82799}}, {"elem": {"val": {"concat": ["198.18.0.3", "udp", 443]}, "expires": 86400}}]}}]}`
 
 func TestParseSeen(t *testing.T) {
 	got := parseSeen([]byte(listing), 1_000_000)

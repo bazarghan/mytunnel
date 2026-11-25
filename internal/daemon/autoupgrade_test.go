@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 func TestUpgradeWanted(t *testing.T) {

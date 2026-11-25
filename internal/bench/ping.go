@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"neotunnel/internal/probe"
+	"hltunnel/internal/probe"
 )
 
 var (
@@ -17,7 +17,7 @@ var (
 )
 
 // PingICMP measures latency with the system ping, for far ends that don't
-// run neotunnel (e.g. a MikroTik). Jitter is ping's mean deviation.
+// run hltunnel (e.g. a MikroTik). Jitter is ping's mean deviation.
 func PingICMP(ctx context.Context, addr string, count int) (probe.LatencyResult, error) {
 	out, _ := exec.CommandContext(ctx, "ping", "-c", strconv.Itoa(count), "-i", "0.2", "-W", "2", "-q", addr).CombinedOutput()
 	r, err := ParsePing(string(out))

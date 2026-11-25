@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/config"
+	"hltunnel/internal/traffic"
 )
 
 // A plan's period starts when it is set and stays through edits; a renewal

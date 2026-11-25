@@ -3,7 +3,7 @@ package manage
 import (
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 func testState() *config.State {
@@ -25,10 +25,10 @@ func TestPlanTCPTunnel(t *testing.T) {
 	}
 
 	if _, _, err := PlanTunnel(st, TunnelRequest{Peer: "edge", Mode: "tcp", Obfs: true}); err == nil {
-		t.Error("TCP over NeoObfs was planned")
+		t.Error("TCP over HLObfs was planned")
 	}
 	if _, _, err := PlanTunnel(st, TunnelRequest{Remote: "203.0.113.9", Mode: "tcp"}); err == nil {
-		t.Error("TCP to a device without NeoTunnel was planned")
+		t.Error("TCP to a device without HLTunnel was planned")
 	}
 	if _, _, err := PlanTunnel(st, TunnelRequest{Peer: "edge", Mode: "tcp", Port: 7710}); err == nil {
 		t.Error("TCP on the agent's port was planned")

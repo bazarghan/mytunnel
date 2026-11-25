@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/probe"
+	"hltunnel/internal/config"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/probe"
 )
 
 func newIdentity(t *testing.T) *identity.Identity {

@@ -8,16 +8,16 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/bench"
-	"neotunnel/internal/clients"
-	"neotunnel/internal/config"
-	"neotunnel/internal/fleet"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/metrics"
-	"neotunnel/internal/safe"
-	"neotunnel/internal/spoof"
-	"neotunnel/internal/traffic"
-	"neotunnel/internal/web"
+	"hltunnel/internal/bench"
+	"hltunnel/internal/clients"
+	"hltunnel/internal/config"
+	"hltunnel/internal/fleet"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/metrics"
+	"hltunnel/internal/safe"
+	"hltunnel/internal/spoof"
+	"hltunnel/internal/traffic"
+	"hltunnel/internal/web"
 )
 
 // stub is a Backend that only knows one login; the tests exercise the HTTP
@@ -158,15 +158,15 @@ func TestAPIRequiresLogin(t *testing.T) {
 	if rec := do(h, "GET", "/secret/api/overview", "", c, nil); rec.Code != 200 {
 		t.Fatalf("overview with session: %d", rec.Code)
 	}
-	// State-changing calls need the X-NeoTunnel header (CSRF guard).
+	// State-changing calls need the X-HLTunnel header (CSRF guard).
 	body := `{"peer":"edge","mode":"6to4"}`
 	if rec := do(h, "POST", "/secret/api/tunnels", body, c, nil); rec.Code != 403 {
 		t.Errorf("POST without header: %d, want 403", rec.Code)
 	}
-	if rec := do(h, "POST", "/secret/api/tunnels", body, c, map[string]string{"X-NeoTunnel": "1"}); rec.Code != 200 {
+	if rec := do(h, "POST", "/secret/api/tunnels", body, c, map[string]string{"X-HLTunnel": "1"}); rec.Code != 200 {
 		t.Errorf("POST with header: %d %s", rec.Code, rec.Body)
 	}
-	do(h, "POST", "/secret/api/logout", "", c, map[string]string{"X-NeoTunnel": "1"})
+	do(h, "POST", "/secret/api/logout", "", c, map[string]string{"X-HLTunnel": "1"})
 	if rec := do(h, "GET", "/secret/api/overview", "", c, nil); rec.Code != 401 {
 		t.Errorf("session survived logout: %d", rec.Code)
 	}
@@ -199,7 +199,7 @@ func TestAPIToken(t *testing.T) {
 	config.Update(func(s *config.State) error { s.Panel = &config.Panel{User: "admin"}; return nil })
 	h := newPanel(t)
 	c := login(t, h)
-	rec := do(h, "POST", "/secret/api/tokens", `{"name":"bot","scope":"ports"}`, c, map[string]string{"X-NeoTunnel": "1"})
+	rec := do(h, "POST", "/secret/api/tokens", `{"name":"bot","scope":"ports"}`, c, map[string]string{"X-HLTunnel": "1"})
 	var made struct{ Token string }
 	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &made) != nil || made.Token == "" {
 		t.Fatalf("make token: %d %s", rec.Code, rec.Body)
@@ -216,7 +216,7 @@ func TestAPIToken(t *testing.T) {
 			t.Errorf("%s %s with a ports token: %d", r[0], r[1], rec.Code)
 		}
 	}
-	if rec := do(h, "GET", "/secret/api/overview", "", nil, map[string]string{"Authorization": "Bearer nt_wrong"}); rec.Code != 401 {
+	if rec := do(h, "GET", "/secret/api/overview", "", nil, map[string]string{"Authorization": "Bearer hl_wrong"}); rec.Code != 401 {
 		t.Errorf("wrong token: %d", rec.Code)
 	}
 }

@@ -7,20 +7,19 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"neotunnel/internal/neoexit"
 	"net"
 	"net/netip"
 	"strconv"
 	"sync"
 	"time"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/safe"
-	"neotunnel/internal/setuplink"
-	"neotunnel/internal/version"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/safe"
+	"hltunnel/internal/setuplink"
+	"hltunnel/internal/version"
 )
 
 const EnrollTTL = 24 * time.Hour
@@ -81,8 +80,8 @@ type Setup struct {
 	Peer    string `json:"peer"`
 	Address string `json:"address"` // the peer's IP, for display
 	Paired  bool   `json:"paired"`
-	Key     string `json:"key"`   // signed setup key (NT1....)
-	Apply   string `json:"apply"` // sudo neotunnel apply '<key>'
+	Key     string `json:"key"`   // signed setup key (HL1....)
+	Apply   string `json:"apply"` // sudo hltunnel apply '<key>'
 	// GitHub installs the public release, then applies (only while the
 	// peer isn't paired).
 	GitHub string `json:"github,omitempty"`
@@ -117,7 +116,7 @@ func MakeSetup(id *identity.Identity, peer string) (Setup, error) {
 		return Setup{}, err
 	}
 	if st.Address == "" {
-		return Setup{}, fmt.Errorf("this node's public address is unknown; set it with: neotunnel node --address <ip>")
+		return Setup{}, fmt.Errorf("this node's public address is unknown; set it with: hltunnel node --address <ip>")
 	}
 	ts, fs := st.ForPeer(peer)
 	key, err := setuplink.Encode(id, setuplink.Payload{
@@ -135,7 +134,7 @@ func MakeSetup(id *identity.Identity, peer string) (Setup, error) {
 	p, _ := st.Peer(peer)
 	s := Setup{
 		Peer: peer, Address: p.Address, Paired: p.Paired(), Key: key,
-		Apply: fmt.Sprintf("sudo neotunnel apply '%s'", key),
+		Apply: fmt.Sprintf("sudo hltunnel apply '%s'", key),
 	}
 	if token != "" {
 		s.GitHub = fmt.Sprintf("curl -fsSL %s | sudo bash -s -- --no-panel --no-menu && %s", version.InstallURL, s.Apply)
@@ -205,7 +204,6 @@ func Refresh(ctx context.Context, id *identity.Identity, st *config.State, peer 
 	if err != nil {
 		return s, err
 	}
-	neoexit.SetPeer(peer, s.NeoExit)
 	behind := false
 	cur, _ := config.Update(func(st *config.State) error {
 		if p, ok := st.Peer(peer); ok {

@@ -19,12 +19,12 @@ import (
 	utls "github.com/refraction-networking/utls"
 	"github.com/xtaci/smux"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/tcptun"
+	"hltunnel/internal/config"
+	"hltunnel/internal/tcptun"
 )
 
 // ekmLabel is the TLS exporter label the session keys are bound to.
-const ekmLabel = "EXPORTER-neotunnel-session"
+const ekmLabel = "EXPORTER-hltunnel-session"
 
 func purpose(kind config.Kind, cipher string, ekm []byte) string {
 	if kind == config.KindStreamTLS {
@@ -114,7 +114,7 @@ func readPreamble(c net.Conn) (tunnel, cipher string, err error) {
 		return "", "", err
 	}
 	if h[0] != version {
-		return "", "", fmt.Errorf("unknown session version %d (update NeoTunnel on both ends)", h[0])
+		return "", "", fmt.Errorf("unknown session version %d (update HLTunnel on both ends)", h[0])
 	}
 	name := make([]byte, int(h[1])+1) // the name, then the cipher's length
 	if _, err := io.ReadFull(c, name); err != nil {
@@ -171,7 +171,7 @@ func newServerConfig() (*tls.Config, error) {
 
 const decoyBody = "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
 
-// Decoy answers a connection that isn't NeoTunnel's like a web server with
+// Decoy answers a connection that isn't HLTunnel's like a web server with
 // nothing at that address, and closes it.
 func Decoy(c net.Conn) {
 	c.SetDeadline(time.Now().Add(5 * time.Second))

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
 )
 
 // contactEvery is how often a master's last contact is written down: often

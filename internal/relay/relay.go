@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"neotunnel/internal/transport"
+	"hltunnel/internal/transport"
 )
 
 // Spec is one port a proxy-mode forward listens on.

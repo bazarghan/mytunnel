@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/relay"
+	"hltunnel/internal/config"
+	"hltunnel/internal/relay"
 )
 
 // Link is a running tunnel interface.
@@ -232,15 +232,15 @@ func account(f config.Forward) (Account, bool) {
 // the rest, and a failure must not take the forwards down.
 func FetchScript(fr *FetchRedirect) string {
 	var b strings.Builder
-	b.WriteString("table inet neotunnel_fetch\ndelete table inet neotunnel_fetch\n")
+	b.WriteString("table inet hltunnel_fetch\ndelete table inet hltunnel_fetch\n")
 	if fr == nil {
 		return b.String()
 	}
-	b.WriteString("table inet neotunnel_fetch {\n  chain output {\n    type nat hook output priority -110; policy accept;\n")
+	b.WriteString("table inet hltunnel_fetch {\n  chain output {\n    type nat hook output priority -110; policy accept;\n")
 	// The daemon's own direct connections, the loopback, the tunnels and
 	// this server's or private networks' addresses are never downloads.
 	fmt.Fprintf(&b, "    meta mark 0x%08x return\n", relay.FetchMark)
-	b.WriteString("    oifname { \"lo\", \"nt-*\" } return\n")
+	b.WriteString("    oifname { \"lo\", \"hl-*\" } return\n")
 	b.WriteString("    fib daddr type local return\n")
 	b.WriteString("    ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16, 224.0.0.0/3 } return\n")
 	b.WriteString("    ip6 daddr { ::1, fc00::/7, fe80::/10, ff00::/8 } return\n")
@@ -310,11 +310,11 @@ func Expand(ports string) []int {
 func Script(rs Ruleset) string {
 	var b strings.Builder
 	// Creating then deleting makes the delete safe when the table doesn't exist.
-	b.WriteString("table inet neotunnel\ndelete table inet neotunnel\n")
+	b.WriteString("table inet hltunnel\ndelete table inet hltunnel\n")
 	if len(rs.Rules) == 0 && len(rs.Ifaces) == 0 && len(rs.Returns) == 0 && len(rs.Inner) == 0 {
 		return b.String()
 	}
-	b.WriteString("table inet neotunnel {\n")
+	b.WriteString("table inet hltunnel {\n")
 	b.WriteString("  chain prerouting {\n    type nat hook prerouting priority dstnat; policy accept;\n")
 	transparent := map[string]bool{}
 	for _, r := range rs.Rules {
@@ -327,7 +327,7 @@ func Script(rs Ruleset) string {
 			mark = fmt.Sprintf("ct mark set 0x%08x ", r.Mark)
 		}
 		for _, p := range r.Proto {
-			fmt.Fprintf(&b, "    meta nfproto %s iifname != \"nt-*\" fib daddr type local %s dport { %s } %sdnat %s to %s\n",
+			fmt.Fprintf(&b, "    meta nfproto %s iifname != \"hl-*\" fib daddr type local %s dport { %s } %sdnat %s to %s\n",
 				fam, p, r.Ports, mark, nat, target)
 		}
 	}
@@ -362,7 +362,7 @@ func Script(rs Ruleset) string {
 		// back. Before NAT those replies are addressed to the tunnel's own
 		// address; anything sent to 127.0.0.0/8 through a tunnel is forged.
 		b.WriteString("  chain localnet {\n    type filter hook prerouting priority raw; policy accept;\n")
-		b.WriteString("    iifname \"nt-*\" ip daddr 127.0.0.0/8 drop\n")
+		b.WriteString("    iifname \"hl-*\" ip daddr 127.0.0.0/8 drop\n")
 		b.WriteString("  }\n")
 	}
 	b.WriteString("  chain postrouting {\n    type nat hook postrouting priority srcnat; policy accept;\n")
@@ -384,8 +384,8 @@ func Script(rs Ruleset) string {
 	// on oversized segments.
 	b.WriteString("  chain forward {\n    type filter hook forward priority mangle; policy accept;\n")
 	// Flag syntax kept compatible with nftables 0.9 (Ubuntu 20.04).
-	b.WriteString("    oifname \"nt-*\" tcp flags & (syn|rst) == syn tcp option maxseg size set rt mtu\n")
-	b.WriteString("    iifname \"nt-*\" tcp flags & (syn|rst) == syn tcp option maxseg size set rt mtu\n")
+	b.WriteString("    oifname \"hl-*\" tcp flags & (syn|rst) == syn tcp option maxseg size set rt mtu\n")
+	b.WriteString("    iifname \"hl-*\" tcp flags & (syn|rst) == syn tcp option maxseg size set rt mtu\n")
 	b.WriteString("  }\n")
 	// Per-forward byte counters, in the client's own bytes (before the
 	// tunnel wraps them): upload is counted on the way in, download on the
@@ -414,11 +414,11 @@ func Script(rs Ruleset) string {
 		}
 		dport := func(p string) (string, string) { return "", p + " dport" }
 		b.WriteString("  chain account_in {\n    type filter hook prerouting priority -150; policy accept;\n")
-		b.WriteString("    iifname \"nt-*\" return\n    ct direction != original return\n")
+		b.WriteString("    iifname \"hl-*\" return\n    ct direction != original return\n")
 		count(dport, "u")
 		b.WriteString("  }\n")
 		b.WriteString("  chain account_out {\n    type filter hook postrouting priority 110; policy accept;\n")
-		b.WriteString("    oifname \"nt-*\" return\n    ct direction != reply return\n")
+		b.WriteString("    oifname \"hl-*\" return\n    ct direction != reply return\n")
 		count(func(p string) (string, string) { return "meta l4proto " + p + " ", "ct original proto-dst" }, "d")
 		b.WriteString("  }\n")
 		// The same for this server's own connections: counted on output
@@ -428,7 +428,7 @@ func Script(rs Ruleset) string {
 		count(dport, "u")
 		b.WriteString("  }\n")
 		b.WriteString("  chain account_local_in {\n    type filter hook input priority 110; policy accept;\n")
-		b.WriteString("    iifname != \"nt-*\" return\n")
+		b.WriteString("    iifname != \"hl-*\" return\n")
 		for _, r := range rs.Rules {
 			for _, p := range r.Proto {
 				fmt.Fprintf(&b, "    iifname %s ct status dnat %s sport { %s } counter name %sd\n", ifMatch(r.Iface, r.Lanes), p, r.Ports, counterName(r.Key))
@@ -455,7 +455,7 @@ func Script(rs Ruleset) string {
 		// into the datacenter's network.
 		for _, ch := range [][2]string{{"leak_forward", "forward"}, {"leak_output", "output"}} {
 			fmt.Fprintf(&b, "  chain %s {\n    type filter hook %s priority filter; policy accept;\n", ch[0], ch[1])
-			b.WriteString("    oifname \"nt-*\" return\n    oifname \"ntx-*\" return\n    oifname \"lo\" return\n")
+			b.WriteString("    oifname \"hl-*\" return\n    oifname \"hlx-*\" return\n    oifname \"lo\" return\n")
 			for _, fam := range []string{"ip", "ip6"} {
 				var ns []string
 				for _, p := range rs.Inner {
@@ -496,11 +496,11 @@ func Script(rs Ruleset) string {
 // can't take the forwards down.
 func ProtectScript(ps []Protect) string {
 	var b strings.Builder
-	b.WriteString("table inet neotunnel_ipsec\ndelete table inet neotunnel_ipsec\n")
+	b.WriteString("table inet hltunnel_ipsec\ndelete table inet hltunnel_ipsec\n")
 	if len(ps) == 0 {
 		return b.String()
 	}
-	b.WriteString("table inet neotunnel_ipsec {\n  chain input {\n    type filter hook input priority filter - 5; policy accept;\n")
+	b.WriteString("table inet hltunnel_ipsec {\n  chain input {\n    type filter hook input priority filter - 5; policy accept;\n")
 	for _, p := range ps {
 		fam := "ip"
 		if p.Remote.Is6() {
@@ -524,27 +524,27 @@ func ProtectScript(ps []Protect) string {
 // on every packet of every tunnel, in both directions.
 func CarrierScript(cs []Protect) string {
 	var b strings.Builder
-	b.WriteString("table inet neotunnel_raw\ndelete table inet neotunnel_raw\n")
+	b.WriteString("table inet hltunnel_raw\ndelete table inet hltunnel_raw\n")
 	if len(cs) == 0 {
 		return b.String()
 	}
-	b.WriteString("table inet neotunnel_raw {\n")
+	b.WriteString("table inet hltunnel_raw {\n")
 	for _, ch := range [][3]string{{"from_far", "prerouting", "saddr"}, {"to_far", "output", "daddr"}} {
 		fmt.Fprintf(&b, "  chain %s {\n    type filter hook %s priority raw; policy accept;\n", ch[0], ch[1])
 		for _, c := range cs {
-			fam := "ip"
+			fam, nfproto := "ip", "ipv4"
 			if c.Remote.Is6() {
-				fam = "ip6"
+				fam, nfproto = "ip6", "ipv6"
 			}
 			if c.Spoof {
 				if ch[0] == "from_far" {
 					switch {
 					case c.Proto == 17 && c.Port != 0:
-						fmt.Fprintf(&b, "    meta nfproto %s udp dport %d notrack\n", fam, c.Port)
+						fmt.Fprintf(&b, "    meta nfproto %s udp dport %d notrack\n", nfproto, c.Port)
 					case c.Proto == 6 && c.Port != 0:
-						fmt.Fprintf(&b, "    meta nfproto %s tcp dport %d notrack\n", fam, c.Port)
+						fmt.Fprintf(&b, "    meta nfproto %s tcp dport %d notrack\n", nfproto, c.Port)
 					case c.Proto != 0:
-						fmt.Fprintf(&b, "    meta nfproto %s meta l4proto %d notrack\n", fam, c.Proto)
+						fmt.Fprintf(&b, "    meta nfproto %s meta l4proto %d notrack\n", nfproto, c.Proto)
 					}
 				} else {
 					switch {
@@ -552,7 +552,7 @@ func CarrierScript(cs []Protect) string {
 						fmt.Fprintf(&b, "    %s daddr %s udp dport %d notrack\n", fam, c.Remote, c.Port)
 					case c.Proto == 6 && c.Port != 0:
 						fmt.Fprintf(&b, "    %s daddr %s tcp dport %d notrack\n", fam, c.Remote, c.Port)
-						fmt.Fprintf(&b, "    meta nfproto %s tcp sport %d tcp flags & rst == rst drop\n", fam, c.Port)
+						fmt.Fprintf(&b, "    meta nfproto %s tcp sport %d tcp flags & rst == rst drop\n", nfproto, c.Port)
 					case c.Proto != 0:
 						fmt.Fprintf(&b, "    %s daddr %s meta l4proto %d notrack\n", fam, c.Remote, c.Proto)
 					}
@@ -573,7 +573,7 @@ func CarrierScript(cs []Protect) string {
 
 // SeenTable keeps, for a day, which client addresses opened connections to
 // which forwarded ports (see SeenScript).
-const SeenTable = "neotunnel_seen"
+const SeenTable = "hltunnel_seen"
 
 // SeenScript records each new client connection to a forwarded port in a
 // set of address, protocol and port that forgets an entry a day after its
@@ -599,7 +599,7 @@ func SeenScript(as []Account) string {
 			continue
 		}
 		if !any {
-			fmt.Fprintf(&b, "add rule %s in iifname \"nt-*\" return\nadd rule %s in ct state != new return\n", t, t)
+			fmt.Fprintf(&b, "add rule %s in iifname \"hl-*\" return\nadd rule %s in ct state != new return\n", t, t)
 			any = true
 		}
 		fmt.Fprintf(&b, "add rule %s in meta nfproto ipv4 %s dport { %s } update @c4 { ip saddr . meta l4proto . %s dport }\n", t, p, set, p)
@@ -613,7 +613,7 @@ func SeenScript(as []Account) string {
 func counterName(key string) string {
 	h := fnv.New32a()
 	h.Write([]byte(key))
-	return fmt.Sprintf("nt%08x", h.Sum32())
+	return fmt.Sprintf("hl%08x", h.Sum32())
 }
 
 // portMap is the body of a map from a protocol's forwarded ports to what
@@ -661,7 +661,7 @@ func counterNames(as []Account) []string {
 }
 
 // PlansTable holds the sold ports' limits (see PlansScript).
-const PlansTable = "neotunnel_plans"
+const PlansTable = "hltunnel_plans"
 
 // PlansScript renders the sold ports' limits. Each port's packets reach its
 // own chains through one map lookup per direction and protocol, before the
@@ -778,13 +778,13 @@ func PlansScript(ps []Plan, chains, sets []string) string {
 	vmap := func(m map[string]string, proto string) string {
 		return portMap(accountsOf(ps, m), proto, func(a Account) string { return "jump " + m[a.Key] })
 	}
-	fmt.Fprintf(&b, "add rule %s plan_in iifname \"nt-*\" return\nadd rule %s plan_in ct direction != original return\n", t, t)
+	fmt.Fprintf(&b, "add rule %s plan_in iifname \"hl-*\" return\nadd rule %s plan_in ct direction != original return\n", t, t)
 	for _, p := range []string{"tcp", "udp"} {
 		if m := vmap(in, p); m != "" {
 			fmt.Fprintf(&b, "add rule %s plan_in %s dport vmap { %s }\n", t, p, m)
 		}
 	}
-	fmt.Fprintf(&b, "add rule %s plan_out oifname \"nt-*\" return\nadd rule %s plan_out ct direction != reply return\n", t, t)
+	fmt.Fprintf(&b, "add rule %s plan_out oifname \"hl-*\" return\nadd rule %s plan_out ct direction != reply return\n", t, t)
 	for _, p := range []string{"tcp", "udp"} {
 		if m := vmap(out, p); m != "" {
 			fmt.Fprintf(&b, "add rule %s plan_out meta l4proto %s ct original proto-dst vmap { %s }\n", t, p, m)

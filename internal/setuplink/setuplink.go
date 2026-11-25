@@ -1,5 +1,5 @@
 // Package setuplink encodes the signed setup keys a master hands to its
-// peers ("NT1.<gzip json>.<ed25519 signature>"). One key both pairs a peer and
+// peers ("HL1.<gzip json>.<ed25519 signature>"). One key both pairs a peer and
 // carries its full configuration, so applying it again later is how an
 // unreachable peer catches up.
 package setuplink
@@ -15,12 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/identity"
+	"hltunnel/internal/config"
+	"hltunnel/internal/identity"
 )
 
 // Prefix marks a setup key and its format version.
-const Prefix = "NT1."
+const Prefix = "HL1."
 
 type Payload struct {
 	V           int              `json:"v"`
@@ -81,7 +81,7 @@ func Decode(setupKey string) (*Payload, error) {
 		return nil, fmt.Errorf("malformed setup key: %w", err)
 	}
 	if p.V != 1 {
-		return nil, fmt.Errorf("setup key version %d not supported; upgrade neotunnel", p.V)
+		return nil, fmt.Errorf("setup key version %d not supported; upgrade hltunnel", p.V)
 	}
 	key, err := identity.DecodeKey(p.Master.PublicKey)
 	if err != nil {

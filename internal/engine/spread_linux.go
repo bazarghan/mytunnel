@@ -19,13 +19,13 @@ package engine
 //     out the core its own interrupt runs on, so that core keeps only the
 //     driver and GRO and everything after them is spread.
 //   - UDP hashing on the card (rx-flow-hash udp4/udp6 with ports): tunnels
-//     carried in UDP (FOU ports, VXLAN, GENEVE, WireGuard, NeoObfs) get a
+//     carried in UDP (FOU ports, VXLAN, GENEVE, WireGuard, HLObfs) get a
 //     source port per inner flow, so the card itself puts them in
 //     different queues, the way separate TCP connections are spread.
 //   - A larger softirq budget, so a busy core finishes a burst instead of
 //     deferring the rest to the next round.
 //
-// Masks NeoTunnel wrote are remembered in /run (which, like the masks
+// Masks HLTunnel wrote are remembered in /run (which, like the masks
 // themselves, does not survive a reboot), so they follow an interrupt that
 // moved; a mask an admin set is never changed.
 
@@ -45,10 +45,10 @@ import (
 
 	"github.com/vishvananda/netlink"
 
-	"neotunnel/internal/sysctl"
+	"hltunnel/internal/sysctl"
 )
 
-const rpsStateFile = "/run/neotunnel/rps.json"
+const rpsStateFile = "/run/hltunnel/rps.json"
 
 // softirq budget for the max profile: packets per round, and its time.
 var spreadSysctls = [][2]string{

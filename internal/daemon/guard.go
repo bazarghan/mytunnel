@@ -5,10 +5,10 @@ import (
 	"log"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/events"
-	"neotunnel/internal/guard"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/events"
+	"hltunnel/internal/guard"
 )
 
 // guardEvery is how soon a port a program starts listening on (a new 3x-ui

@@ -10,36 +10,19 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"neotunnel/internal/bench"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/service"
-	"neotunnel/internal/setuplink"
-	"neotunnel/internal/sysctl"
-	"neotunnel/internal/version"
-	"neotunnel/internal/web"
+	"hltunnel/internal/bench"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/service"
+	"hltunnel/internal/setuplink"
+	"hltunnel/internal/sysctl"
+	"hltunnel/internal/version"
+	"hltunnel/internal/web"
 )
 
 // The interactive menu: everything the panel does, from the terminal.
-
-var modeHints = map[string]string{
-	"6to4":      "SIT + IPIP6: light and fast (recommended)",
-	"6to4-gre":  "SIT + GRE6: carries both IPv4 and IPv6",
-	"ipip":      "plain IPv4 in IPv4, the lowest overhead",
-	"gre":       "standard GRE, works with MikroTik and most routers",
-	"sit":       "IPv6 only, over IPv4",
-	"gretap":    "layer 2 (Ethernet) over GRE",
-	"vxlan":     "layer 2 over UDP",
-	"geneve":    "layer 2 over UDP, newer than VXLAN",
-	"wireguard": "encrypted in the kernel; also talks to MikroTik v7",
-	"obfs":      "NeoObfs: encrypted UDP that looks like random noise",
-	"tcp":       "packets over TCP: a last resort when UDP and GRE/SIT are blocked",
-	"l2tpv3":    "layer 2 pseudowire over IP or UDP, MikroTik compatible",
-	"eoip":      "MikroTik EoIP / EoIPv6: layer 2 over GRE, IPv6 or UDP",
-	"spoof":     "forged-source-IP carrier over UDP, FakeTCP, GRE, IPIP, SIT or ICMP",
-}
 
 type session struct {
 	t    *tui
@@ -68,7 +51,7 @@ func menu() error {
 	}
 	t, err := openTUI()
 	if err != nil {
-		fmt.Println("No terminal for the interactive menu; see: neotunnel --help")
+		fmt.Println("No terminal for the interactive menu; see: hltunnel --help")
 		return nil
 	}
 	defer t.close()
@@ -78,7 +61,7 @@ func menu() error {
 	(&session{t: t}).main()
 	t.cooked()
 	fmt.Print(clearScreen())
-	fmt.Println(dim("  NeoTunnel menu closed. Open it again with: ") + bold("neotunnel"))
+	fmt.Println(dim("  HLTunnel menu closed. Open it again with: ") + bold("hltunnel"))
 	return nil
 }
 
@@ -108,7 +91,7 @@ func (s *session) header() string {
 	}
 	pad := func(s string, n int) string { return s + strings.Repeat(" ", max(1, n-len(s))) }
 	var b strings.Builder
-	b.WriteString("\n " + accent("◆ NeoTunnel") + " " + dim(version.Version) + "   " + dim(strings.TrimPrefix(version.Channel, "https://")) + "\n")
+	b.WriteString("\n " + accent("◆ HLTunnel") + " " + dim(version.Version) + "   " + dim(strings.TrimPrefix(version.RepoURL, "https://")) + "\n")
 	b.WriteString(line + "\n")
 	self := shown(st.Label, st.Self)
 	b.WriteString(" " + dim("server ") + "  " + bold(self) + "  " + pad(st.Address, 22-utf8.RuneCountInString(self)) + dim("service ") + " " + svc + "\n")
@@ -170,8 +153,8 @@ func (s *session) main() {
 			{"Main servers", mastersLine(st), false},
 			{"Web panel", "address, password, port", false},
 			{"System", "name & IP, network boost, re-apply, restart the service", false},
-			{"Update NeoTunnel", "install the latest release; tunnels and settings stay", false},
-			{"Uninstall NeoTunnel", "remove tunnels, rules, settings and the program", false},
+			{"Update HLTunnel", "install the latest release; tunnels and settings stay", false},
+			{"Uninstall HLTunnel", "remove tunnels, rules, settings and the program", false},
 		}
 		sel = s.choose("Main menu", items, sel)
 		if s.quit {
@@ -210,16 +193,16 @@ func (s *session) main() {
 
 // update installs the latest release over this one; settings are kept.
 func (s *session) update() {
-	if !s.t.confirm("Download and install the latest NeoTunnel release? (tunnels and settings are kept)", true) {
+	if !s.t.confirm("Download and install the latest HLTunnel release? (tunnels and settings are kept)", true) {
 		return
 	}
-	s.page("Update NeoTunnel", func() error { return selfUpdate("") })
+	s.page("Update HLTunnel", func() error { return selfUpdate("") })
 }
 
-// uninstall removes NeoTunnel after two questions; it reports whether the
+// uninstall removes HLTunnel after two questions; it reports whether the
 // menu must close.
 func (s *session) uninstall() bool {
-	if !s.t.confirm(red("Remove NeoTunnel completely: tunnels, service and the program?"), false) {
+	if !s.t.confirm(red("Remove HLTunnel completely: tunnels, service and the program?"), false) {
 		return false
 	}
 	keep := s.t.confirm("Keep the configuration and keys for a later reinstall?", false)
@@ -297,7 +280,7 @@ func (s *session) createTunnel(peer string) {
 			items = append(items, item{shown(p.Label, p.Name), p.Address + " · " + state, false})
 		}
 		items = append(items,
-			item{"New server", "NeoTunnel gets installed on it with one command", false},
+			item{"New server", "HLTunnel gets installed on it with one command", false},
 			item{"Other device", "MikroTik or any router: only this side is created", false})
 		c := s.choose("Create a tunnel · step 1 of 6 · where should it go?", items, 0)
 		switch {
@@ -347,7 +330,7 @@ func (s *session) createTunnel(peer string) {
 	modes := manage.Modes()
 	items := make([]item, len(modes))
 	for i, m := range modes {
-		items[i] = item{m.Name, modeHints[m.Name], false}
+		items[i] = item{m.Name, m.Hint, false}
 	}
 	c := s.choose("Create a tunnel · step 2 of 6 · tunnel kind", items, 0)
 	if c < 0 {
@@ -357,7 +340,7 @@ func (s *session) createTunnel(peer string) {
 	req.Mode = mode.Name
 	done = append(done, "kind         "+mode.Title)
 
-	// 3. Protection: kernel IPsec or a NeoObfs layer (both need NeoTunnel
+	// 3. Protection: kernel IPsec or a HLObfs layer (both need HLTunnel
 	// on the far end; encrypted kinds need neither).
 	d := st.D()
 	req.MTUProbe = d.MTUProbe
@@ -372,10 +355,10 @@ func (s *session) createTunnel(peer string) {
 		choices := []item{
 			{"None", "plain tunnel, the fastest", false},
 			{"Encrypt (IPsec)", "AES-GCM in the kernel, keys from the tunnel secret", false},
-			{"Obfuscate (NeoObfs)", "encrypted UDP that looks like random noise; needs a port", false},
+			{"Obfuscate (HLObfs)", "encrypted UDP that looks like random noise; needs a port", false},
 		}
 		if mode.TCP {
-			// The TCP transport seals its own frames; NeoObfs is UDP.
+			// The TCP transport seals its own frames; HLObfs is UDP.
 			choices = choices[:2]
 			choices[1] = item{"Encrypt", "AES-GCM on the TCP stream, keys from the tunnel secret", false}
 			def = min(def, 1)
@@ -412,7 +395,7 @@ func (s *session) createTunnel(peer string) {
 			}
 		case 2:
 			req.Obfs, req.Padding = true, d.Padding
-			done = append(done, "protection   NeoObfs")
+			done = append(done, "protection   HLObfs")
 		default:
 			done = append(done, "protection   none")
 		}
@@ -459,7 +442,7 @@ func (s *session) createTunnel(peer string) {
 	portQ := "UDP port for the tunnel (empty = native protocol, fastest)"
 	switch {
 	case req.Obfs:
-		portQ = "UDP port for NeoObfs (empty = a free port)"
+		portQ = "UDP port for HLObfs (empty = a free port)"
 	case req.WireGuard:
 		portQ = "UDP port for WireGuard (empty = a free port)"
 	case mode.UDP:
@@ -782,7 +765,7 @@ func (s *session) servers() {
 }
 
 func (s *session) addServer() {
-	s.form("Add a server", "   The next screen shows a command to run on that server; it installs\n   NeoTunnel there and connects it to this one.")
+	s.form("Add a server", "   The next screen shows a command to run on that server; it installs\n   HLTunnel there and connects it to this one.")
 	st, _ := loadNode()
 	name, ok := s.t.input("Name (e.g. germany)", "", func(v string) error {
 		if err := manage.ValidNodeName(v); err != nil {
@@ -1016,7 +999,7 @@ func (s *session) speed() {
 // ---------- join a main server ----------
 
 func (s *session) join() {
-	s.form("Join a main server", "   On the main server open Destination servers → Connect command (menu or\n   panel), then paste the setup key that starts with NT1. here.")
+	s.form("Join a main server", "   On the main server open Destination servers → Connect command (menu or\n   panel), then paste the setup key that starts with HL1. here.")
 	key, ok := s.t.input("Setup key", "", func(v string) error {
 		_, err := setuplink.Decode(v)
 		return err
@@ -1219,7 +1202,7 @@ func (s *session) system() {
 			{"Network boost", "BBR, fq and larger buffers (persistent)", false},
 			{"Re-apply all tunnels now", "", false},
 			{"Restart the service", "", false},
-			{"Update NeoTunnel", "download and install the latest release", false},
+			{"Update HLTunnel", "download and install the latest release", false},
 			{"Uninstall", "remove tunnels, service, settings and the program", false},
 		}
 		sel = s.choose("System", items, sel)

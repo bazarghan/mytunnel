@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/config"
+	"hltunnel/internal/manage"
 )
 
 func historyCmd() *cobra.Command {
@@ -35,7 +35,7 @@ func historyCmd() *cobra.Command {
 			}
 			if len(h) > 0 {
 				fmt.Println()
-				info("put it back as before a change: neotunnel rollback <id>")
+				info("put it back as before a change: hltunnel rollback <id>")
 			}
 			return nil
 		},
@@ -47,7 +47,7 @@ func historyCmd() *cobra.Command {
 func rollbackCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "rollback <id>",
-		Short: "Put tunnels and ports back as they were before a change (see: neotunnel history), here and on the peers",
+		Short: "Put tunnels and ports back as they were before a change (see: hltunnel history), here and on the peers",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ch, err := manage.Rollback(args[0])

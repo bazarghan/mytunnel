@@ -3,7 +3,7 @@ package manage
 import (
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Every change to the network is kept with what it did; a rollback puts

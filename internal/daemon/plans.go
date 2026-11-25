@@ -4,10 +4,10 @@ import (
 	"log"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/traffic"
 )
 
 // enforcePlans keeps each sold port's quota period counting from its start,

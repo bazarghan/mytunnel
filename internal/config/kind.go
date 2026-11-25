@@ -53,36 +53,71 @@ type KindInfo struct {
 	Encrypted bool
 	// Userspace kinds are served by the daemon's own data plane.
 	Userspace bool
-	// Managed kinds need NeoTunnel on both ends (keys are derived from the
+	// Managed kinds need HLTunnel on both ends (keys are derived from the
 	// tunnel's shared secret).
 	NeedsPeer bool
 	// Stream kinds are connection tunnels: no interface and no inner
 	// addresses; their forwards are relays over the tunnel's sessions.
 	Stream bool
+	// PMTU reports whether the kind honors a tunnel's path MTU discovery flag
+	// (kinds that set a DF bit on outer IPv4 packets).
+	PMTU bool
+	// IgnoreDF reports whether the kind can ignore the inner DF bit.
+	IgnoreDF bool
+	// Lanes reports whether the kind supports multi-lane spreading (GRE family).
+	Lanes bool
+	// DefaultPort is the fallback port when no port is configured.
+	DefaultPort uint16
+	// AutoPort reports whether creating a tunnel automatically picks a free port.
+	AutoPort bool
+	// HasVNI reports whether the kind carries a 24-bit VNI identifier.
+	HasVNI bool
+	// HasPadding reports whether packets support random per-packet padding.
+	HasPadding bool
+	// HasObfsAES reports whether the userspace cipher can upgrade to AES-GCM.
+	HasObfsAES bool
+	// Modules lists kernel modules required for this kind before link creation.
+	Modules []string
+	// IPv6Kind is the IPv6-underlay counterpart for IPv4-only underlay kinds.
+	IPv6Kind Kind
+	// CarrierSuffix is appended to stacked carrier tunnel names (e.g. "-o", "-s").
+	CarrierSuffix string
+	// ConflictGroup identifies keyless kernel tunnels sharing an endpoint pair.
+	ConflictGroup string
+	// Hint is the short terminal UI hint shown when selecting a tunnel kind.
+	Hint string
 }
 
 var kinds = []KindInfo{
-	{Kind: KindSIT, Title: "SIT / 6to4 (IPv6 in IPv4)", Layer: 3, Carry6: true, Overhead: 20, IPProto: 41, FOU: true},
-	{Kind: KindIPIP, Title: "IPIP (IPv4 in IPv4)", Layer: 3, Carry4: true, Overhead: 20, IPProto: 4, FOU: true},
-	{Kind: KindGRE, Title: "GRE", Layer: 3, Carry4: true, Carry6: true, Overhead: 24, IPProto: 47, FOU: true},
-	{Kind: KindGRETAP, Title: "GRETAP (Ethernet over GRE)", Layer: 2, Carry4: true, Carry6: true, Overhead: 38, IPProto: 47, FOU: true},
-	{Kind: KindIP6GRE, Title: "GRE over IPv6", Layer: 3, Under6: true, Carry4: true, Carry6: true, Overhead: 44, IPProto: 47},
-	{Kind: KindIP6GRETAP, Title: "GRETAP over IPv6", Layer: 2, Under6: true, Carry4: true, Carry6: true, Overhead: 58, IPProto: 47},
-	{Kind: KindIPIP6, Title: "IPIP6 (IPv4 in IPv6)", Layer: 3, Under6: true, Carry4: true, Overhead: 40, IPProto: 4},
-	{Kind: KindIP6IP6, Title: "IP6IP6 (IPv6 in IPv6)", Layer: 3, Under6: true, Carry6: true, Overhead: 40, IPProto: 41},
-	{Kind: KindVXLAN, Title: "VXLAN", Layer: 2, UnderAny: true, Carry4: true, Carry6: true, Overhead: 50, UDP: true},
-	{Kind: KindGENEVE, Title: "GENEVE", Layer: 2, UnderAny: true, Carry4: true, Carry6: true, Overhead: 50, UDP: true},
-	{Kind: KindL2TPv3, Title: "L2TPv3 (Ethernet pseudowire)", Layer: 2, UnderAny: true, Carry4: true, Carry6: true, Overhead: 38, IPProto: 115, PortEncap: true},
-	{Kind: KindWireGuard, Title: "WireGuard", Layer: 3, UnderAny: true, Carry4: true, Carry6: true, Overhead: 60, UDP: true, Encrypted: true, NeedsPeer: false},
-	{Kind: KindEoIP, Title: "EoIP / EoIPv6 (MikroTik Ethernet over IP)", Layer: 2, UnderAny: true, Carry4: true, Carry6: true, Overhead: 42, IPProto: 47, PortEncap: true, Userspace: true},
-	{Kind: KindObfs, Title: "NeoObfs (encrypted, obfuscated UDP)", Layer: 3, UnderAny: true, Carry4: true, Carry6: true, Overhead: ObfsOverhead, UDP: true, Encrypted: true, Userspace: true, NeedsPeer: true},
-	{Kind: KindSpoof, Title: "Spoof (forged source IP tunnel)", Layer: 3, Carry4: true, Carry6: true, Overhead: SpoofOverhead, UDP: true, Encrypted: true, Userspace: true, NeedsPeer: true},
-	{Kind: KindTCP, Title: "TCP (packets over a TCP connection)", Layer: 3, UnderAny: true, Carry4: true, Carry6: true, Overhead: TCPOverhead, TCP: true, Userspace: true, NeedsPeer: true},
-	{Kind: KindStreamTCP, Title: "TCP + mux (connection tunnel)", UnderAny: true, TCP: true, Userspace: true, NeedsPeer: true, Stream: true},
-	{Kind: KindStreamTLS, Title: "TLS + mux (connection tunnel)", UnderAny: true, TCP: true, Encrypted: true, Userspace: true, NeedsPeer: true, Stream: true},
+	{Kind: KindSIT, Title: "SIT / 6to4 (IPv6 in IPv4)", Layer: 3, Carry6: true, Overhead: 20, IPProto: 41, FOU: true, PMTU: true, IPv6Kind: KindIP6IP6, CarrierSuffix: "-6", ConflictGroup: "sit", Modules: []string{"sit"}, Hint: "IPv6 only, over IPv4"},
+	{Kind: KindIPIP, Title: "IPIP (IPv4 in IPv4)", Layer: 3, Carry4: true, Overhead: 20, IPProto: 4, FOU: true, PMTU: true, IPv6Kind: KindIPIP6, ConflictGroup: "ipip", Modules: []string{"ipip"}, Hint: "plain IPv4 in IPv4, the lowest overhead"},
+	{Kind: KindGRE, Title: "GRE", Layer: 3, Carry4: true, Carry6: true, Overhead: 24, IPProto: 47, FOU: true, PMTU: true, IgnoreDF: true, Lanes: true, IPv6Kind: KindIP6GRE, Modules: []string{"ip_gre"}, Hint: "standard GRE, works with MikroTik and most routers"},
+	{Kind: KindGRETAP, Title: "GRETAP (Ethernet over GRE)", Layer: 2, Carry4: true, Carry6: true, Overhead: 38, IPProto: 47, FOU: true, PMTU: true, IgnoreDF: true, Lanes: true, IPv6Kind: KindIP6GRETAP, Modules: []string{"ip_gre"}, Hint: "layer 2 (Ethernet) over GRE"},
+	{Kind: KindIP6GRE, Title: "GRE over IPv6", Layer: 3, Under6: true, Carry4: true, Carry6: true, Overhead: 44, IPProto: 47, Lanes: true, Modules: []string{"ip6_gre"}},
+	{Kind: KindIP6GRETAP, Title: "GRETAP over IPv6", Layer: 2, Under6: true, Carry4: true, Carry6: true, Overhead: 58, IPProto: 47, Lanes: true, Modules: []string{"ip6_gre"}},
+	{Kind: KindIPIP6, Title: "IPIP6 (IPv4 in IPv6)", Layer: 3, Under6: true, Carry4: true, Overhead: 40, IPProto: 4, ConflictGroup: "ip6tnl", Modules: []string{"ip6_tunnel"}},
+	{Kind: KindIP6IP6, Title: "IP6IP6 (IPv6 in IPv6)", Layer: 3, Under6: true, Carry6: true, Overhead: 40, IPProto: 41, ConflictGroup: "ip6tnl", Modules: []string{"ip6_tunnel"}},
+	{Kind: KindVXLAN, Title: "VXLAN", Layer: 2, UnderAny: true, Carry4: true, Carry6: true, Overhead: 50, UDP: true, DefaultPort: 4789, HasVNI: true, Modules: []string{"vxlan"}, Hint: "layer 2 over UDP"},
+	{Kind: KindGENEVE, Title: "GENEVE", Layer: 2, UnderAny: true, Carry4: true, Carry6: true, Overhead: 50, UDP: true, DefaultPort: 6081, HasVNI: true, Modules: []string{"geneve"}, Hint: "layer 2 over UDP, newer than VXLAN"},
+	{Kind: KindL2TPv3, Title: "L2TPv3 (Ethernet pseudowire)", Layer: 2, UnderAny: true, Carry4: true, Carry6: true, Overhead: 38, IPProto: 115, PortEncap: true, Modules: []string{"l2tp_eth", "l2tp_netlink", "l2tp_ip", "l2tp_ip6"}, Hint: "layer 2 pseudowire over IP or UDP, MikroTik compatible"},
+	{Kind: KindWireGuard, Title: "WireGuard", Layer: 3, UnderAny: true, Carry4: true, Carry6: true, Overhead: 60, UDP: true, Encrypted: true, NeedsPeer: false, DefaultPort: 51820, AutoPort: true, CarrierSuffix: "-w", Modules: []string{"wireguard"}, Hint: "encrypted in the kernel; also talks to MikroTik v7"},
+	{Kind: KindEoIP, Title: "EoIP / EoIPv6 (MikroTik Ethernet over IP)", Layer: 2, UnderAny: true, Carry4: true, Carry6: true, Overhead: 42, IPProto: 47, PortEncap: true, Userspace: true, PMTU: true, Modules: []string{"tun"}, Hint: "MikroTik EoIP / EoIPv6: layer 2 over GRE, IPv6 or UDP"},
+	{Kind: KindObfs, Title: "HLObfs (encrypted, obfuscated UDP)", Layer: 3, UnderAny: true, Carry4: true, Carry6: true, Overhead: ObfsOverhead, UDP: true, Encrypted: true, Userspace: true, NeedsPeer: true, AutoPort: true, HasPadding: true, HasObfsAES: true, CarrierSuffix: "-o", Modules: []string{"tun"}, Hint: "HLObfs: encrypted UDP that looks like random noise"},
+	{Kind: KindSpoof, Title: "Spoof (forged source IP tunnel)", Layer: 3, Carry4: true, Carry6: true, Overhead: SpoofOverhead, UDP: true, Encrypted: true, Userspace: true, NeedsPeer: true, PMTU: true, DefaultPort: 32443, AutoPort: true, HasPadding: true, HasObfsAES: true, CarrierSuffix: "-s", Modules: []string{"tun"}, Hint: "forged-source-IP carrier over UDP, FakeTCP, GRE, IPIP, SIT or ICMP"},
+	{Kind: KindTCP, Title: "TCP (packets over a TCP connection)", Layer: 3, UnderAny: true, Carry4: true, Carry6: true, Overhead: TCPOverhead, TCP: true, Userspace: true, NeedsPeer: true, AutoPort: true, Modules: []string{"tun"}, Hint: "packets over TCP: a last resort when UDP and GRE/SIT are blocked"},
+	{Kind: KindStreamTCP, Title: "TCP + mux (connection tunnel)", UnderAny: true, TCP: true, Userspace: true, NeedsPeer: true, Stream: true, AutoPort: true, Hint: "TCP + mux: multiplexed connection tunnel over TCP"},
+	{Kind: KindStreamTLS, Title: "TLS + mux (connection tunnel)", UnderAny: true, TCP: true, Encrypted: true, Userspace: true, NeedsPeer: true, Stream: true, AutoPort: true, Hint: "TLS + mux: multiplexed connection tunnel inside TLS"},
 }
 
-// ObfsOverhead is NeoObfs' per-packet cost over IPv4 without padding:
+var kindByID = make(map[Kind]KindInfo, len(kinds))
+
+func init() {
+	for _, ki := range kinds {
+		kindByID[ki.Kind] = ki
+	}
+}
+
+// ObfsOverhead is HLObfs' per-packet cost over IPv4 without padding:
 // IP 20 + UDP 8 + nonce 24 + tag 16 + header 14.
 const ObfsOverhead = 82
 
@@ -119,24 +154,76 @@ const (
 func Kinds() []KindInfo { return kinds }
 
 func LookupKind(k Kind) (KindInfo, error) {
-	for _, ki := range kinds {
-		if ki.Kind == k {
-			return ki, nil
-		}
+	if ki, ok := kindByID[k]; ok {
+		return ki, nil
 	}
 	return KindInfo{}, fmt.Errorf("unknown tunnel kind %q", k)
 }
 
-// CanUsePort reports whether the kind can run on a chosen UDP port.
+// CanUsePort reports whether the kind can run on a chosen UDP/TCP port.
 func (ki KindInfo) CanUsePort() bool { return ki.UDP || ki.TCP || ki.FOU || ki.PortEncap }
 
 // IsGRE reports whether the kind carries a GRE key field.
-func (ki KindInfo) IsGRE() bool {
-	switch ki.Kind {
-	case KindGRE, KindGRETAP, KindIP6GRE, KindIP6GRETAP:
-		return true
+func (ki KindInfo) IsGRE() bool { return ki.Lanes }
+
+// EffectivePort returns p if non-zero, otherwise the kind's default port.
+func (ki KindInfo) EffectivePort(p uint16) uint16 {
+	if p != 0 {
+		return p
 	}
-	return false
+	return ki.DefaultPort
+}
+
+// PacketOverhead returns the per-packet encapsulation overhead of t alone.
+// For MTU sizing, avgPad should be false (worst-case padding); for traffic
+// estimation, avgPad may be true (mean padding).
+func (t Tunnel) PacketOverhead(under6, keyless, avgPad bool) int {
+	ki, err := LookupKind(t.Kind)
+	if err != nil {
+		return 0
+	}
+	var o int
+	if t.Kind == KindSpoof {
+		o = SpoofOverheadFor(t.SpoofProto, t.SpoofNoCrypt)
+	} else {
+		port := t.Port != 0 && t.Over == ""
+		o = ki.OverheadFor(under6, port)
+		if keyless && ki.IsGRE() {
+			o -= 4
+		}
+		if t.Encrypt != "" {
+			if ki.TCP {
+				o += TCPTagOverhead
+			} else {
+				o += ESPOverhead
+			}
+		}
+	}
+	if ki.HasPadding {
+		if avgPad {
+			o += t.Padding / 2
+		} else {
+			o += t.Padding
+		}
+	}
+	return o
+}
+
+// EffectiveEncrypt returns the encryption suite protecting a tunnel layer,
+// covering both explicit IPsec/TCP ciphers and built-in kind encryption.
+func (t Tunnel) EffectiveEncrypt() string {
+	switch {
+	case t.Encrypt != "":
+		return t.Encrypt
+	case t.Kind == KindWireGuard:
+		return "wireguard"
+	case t.Kind == KindObfs, t.Kind == KindSpoof && !t.SpoofNoCrypt:
+		if t.ObfsAES {
+			return "aes-gcm-128"
+		}
+		return "xchacha20-poly1305"
+	}
+	return ""
 }
 
 // OverheadFor returns the encapsulation cost given the underlay family and

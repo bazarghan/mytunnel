@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/pmtu"
-	"neotunnel/internal/spoof"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/pmtu"
+	"hltunnel/internal/spoof"
 )
 
 // Mode is a ready-made tunnel stack. The last kind carries the traffic.
@@ -27,30 +27,45 @@ type Mode struct {
 	UDP   bool          `json:"udp"`   // always runs on a UDP port
 	TCP   bool          `json:"tcp"`   // always runs on a TCP port
 	Crypt bool          `json:"crypt"` // encrypted by itself
-	Peer  bool          `json:"peer"`  // needs NeoTunnel on the far end
+	Peer  bool          `json:"peer"`  // needs HLTunnel on the far end
 	// Stream modes are connection tunnels (like FRP): each user connection
 	// rides a stream of a few long-lived sessions; forwards are relays.
-	Stream bool `json:"stream,omitempty"`
+	Stream bool   `json:"stream,omitempty"`
+	Hint   string `json:"hint,omitempty"`
+}
+
+func modeOf(name, title, hint string, kinds ...config.Kind) Mode {
+	bottom, _ := config.LookupKind(kinds[0])
+	top, _ := config.LookupKind(kinds[len(kinds)-1])
+	if hint == "" {
+		hint = top.Hint
+	}
+	return Mode{
+		Name: name, Title: title, Kinds: kinds,
+		Layer: top.Layer, Port: bottom.CanUsePort(),
+		UDP: top.UDP, TCP: top.TCP, Crypt: top.Encrypted,
+		Peer: top.NeedsPeer, Stream: top.Stream, Hint: hint,
+	}
 }
 
 var modes = []Mode{
-	{Name: "6to4", Title: "6to4 (SIT + IPIP6)", Kinds: []config.Kind{config.KindSIT, config.KindIPIP6}, Layer: 3, Port: true},
-	{Name: "6to4-gre", Title: "6to4 (SIT + GRE6)", Kinds: []config.Kind{config.KindSIT, config.KindIP6GRE}, Layer: 3, Port: true},
-	{Name: "ipip", Title: "IPIP", Kinds: []config.Kind{config.KindIPIP}, Layer: 3, Port: true},
-	{Name: "gre", Title: "GRE", Kinds: []config.Kind{config.KindGRE}, Layer: 3, Port: true},
-	{Name: "sit", Title: "SIT (IPv6 only)", Kinds: []config.Kind{config.KindSIT}, Layer: 3, Port: true},
-	{Name: "wireguard", Title: "WireGuard", Kinds: []config.Kind{config.KindWireGuard}, Layer: 3, Port: true, UDP: true, Crypt: true},
-	{Name: "obfs", Title: "NeoObfs", Kinds: []config.Kind{config.KindObfs}, Layer: 3, Port: true, UDP: true, Crypt: true, Peer: true},
-	{Name: "gretap", Title: "GRETAP (L2)", Kinds: []config.Kind{config.KindGRETAP}, Layer: 2, Port: true},
-	{Name: "vxlan", Title: "VXLAN (L2)", Kinds: []config.Kind{config.KindVXLAN}, Layer: 2, Port: true, UDP: true},
-	{Name: "geneve", Title: "GENEVE (L2)", Kinds: []config.Kind{config.KindGENEVE}, Layer: 2, Port: true, UDP: true},
-	{Name: "l2tpv3", Title: "L2TPv3 (L2)", Kinds: []config.Kind{config.KindL2TPv3}, Layer: 2, Port: true},
+	modeOf("6to4", "6to4 (SIT + IPIP6)", "SIT + IPIP6: light and fast (recommended)", config.KindSIT, config.KindIPIP6),
+	modeOf("6to4-gre", "6to4 (SIT + GRE6)", "SIT + GRE6: carries both IPv4 and IPv6", config.KindSIT, config.KindIP6GRE),
+	modeOf("ipip", "IPIP", "", config.KindIPIP),
+	modeOf("gre", "GRE", "", config.KindGRE),
+	modeOf("sit", "SIT (IPv6 only)", "", config.KindSIT),
+	modeOf("wireguard", "WireGuard", "", config.KindWireGuard),
+	modeOf("obfs", "HLObfs", "", config.KindObfs),
+	modeOf("gretap", "GRETAP (L2)", "", config.KindGRETAP),
+	modeOf("vxlan", "VXLAN (L2)", "", config.KindVXLAN),
+	modeOf("geneve", "GENEVE (L2)", "", config.KindGENEVE),
+	modeOf("l2tpv3", "L2TPv3 (L2)", "", config.KindL2TPv3),
 	// TCP is the last resort for paths that pass neither UDP nor raw IP.
-	{Name: "tcp", Title: "TCP", Kinds: []config.Kind{config.KindTCP}, Layer: 3, Port: true, TCP: true, Peer: true},
-	{Name: "eoip", Title: "EoIP (L2)", Kinds: []config.Kind{config.KindEoIP}, Layer: 2, Port: true},
-	{Name: "tcpmux", Title: "TCP + mux", Kinds: []config.Kind{config.KindStreamTCP}, Port: true, TCP: true, Peer: true, Stream: true},
-	{Name: "tlsmux", Title: "TLS + mux", Kinds: []config.Kind{config.KindStreamTLS}, Port: true, TCP: true, Crypt: true, Peer: true, Stream: true},
-	{Name: "spoof", Title: "Spoof (مبدأ جعلی)", Kinds: []config.Kind{config.KindSpoof}, Layer: 3, Port: true, UDP: true, Crypt: true, Peer: true},
+	modeOf("tcp", "TCP", "", config.KindTCP),
+	modeOf("eoip", "EoIP (L2)", "", config.KindEoIP),
+	modeOf("tcpmux", "TCP + mux", "", config.KindStreamTCP),
+	modeOf("tlsmux", "TLS + mux", "", config.KindStreamTLS),
+	modeOf("spoof", "Spoof (مبدأ جعلی)", "", config.KindSpoof),
 }
 
 func Modes() []Mode { return modes }
@@ -81,9 +96,9 @@ type Settings struct {
 	IgnoreDF  bool   `json:"ignore_df,omitempty"` // GRE, GRETAP: fragment them even when the inner packet sets DF
 	DSCP      uint8  `json:"dscp,omitempty"`      // outer DSCP class, 0 = inherit
 	Encrypt   string `json:"encrypt,omitempty"`   // IPsec cipher on the bottom tunnel, or config.EncryptAuto
-	Padding   int    `json:"padding,omitempty"`   // NeoObfs
-	Keepalive int    `json:"keepalive,omitempty"` // WireGuard / NeoObfs
-	PeerKey   string `json:"peer_key,omitempty"`  // WireGuard far end not run by NeoTunnel
+	Padding   int    `json:"padding,omitempty"`   // HLObfs
+	Keepalive int    `json:"keepalive,omitempty"` // WireGuard / HLObfs
+	PeerKey   string `json:"peer_key,omitempty"`  // WireGuard far end not run by HLTunnel
 	// TunnelID is EoIP's tunnel id (nil = derived from the name); it must
 	// match a MikroTik far end's tunnel-id.
 	TunnelID *uint16 `json:"tunnel_id,omitempty"`
@@ -186,7 +201,7 @@ type TunnelRequest struct {
 	// Port is the UDP port the tunnel runs on (0 = native protocol; UDP
 	// kinds then use their standard or a free port).
 	Port uint16 `json:"port,omitempty"`
-	// Obfs runs the tunnel over a NeoObfs layer (encrypted, obfuscated UDP).
+	// Obfs runs the tunnel over a HLObfs layer (encrypted, obfuscated UDP).
 	Obfs bool `json:"obfs,omitempty"`
 	// Spoof runs the tunnel (any protocol) over a Spoof carrier layer that
 	// forges outer source IPv4 addresses.
@@ -297,15 +312,8 @@ func under6(kinds []config.Kind) ([]config.Kind, error) {
 		return nil, fmt.Errorf("6to4 is IPv6 carried over IPv4; over IPv6 pick GRE, IPIP or a UDP kind")
 	}
 	out := append([]config.Kind(nil), kinds...)
-	switch out[0] {
-	case config.KindGRE:
-		out[0] = config.KindIP6GRE
-	case config.KindGRETAP:
-		out[0] = config.KindIP6GRETAP
-	case config.KindIPIP:
-		out[0] = config.KindIPIP6
-	case config.KindSIT:
-		out[0] = config.KindIP6IP6
+	if ki, err := config.LookupKind(out[0]); err == nil && ki.IPv6Kind != "" {
+		out[0] = ki.IPv6Kind
 	}
 	return out, nil
 }
@@ -341,33 +349,33 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 		case mode.Peer || req.Obfs || req.Spoof || req.WireGuard:
 			what := mode.Title
 			if req.Obfs {
-				what = "NeoObfs"
+				what = "HLObfs"
 			} else if req.Spoof {
 				what = "Spoof"
 			} else if req.WireGuard {
 				what = "a WireGuard layer"
 			}
-			return "", nil, fmt.Errorf("%s needs NeoTunnel on the far end; choose a managed server", what)
+			return "", nil, fmt.Errorf("%s needs HLTunnel on the far end; choose a managed server", what)
 		case req.Encrypt != "":
-			return "", nil, fmt.Errorf("IPsec keys come from NeoTunnel on both ends; for a router use WireGuard instead")
+			return "", nil, fmt.Errorf("IPsec keys come from HLTunnel on both ends; for a router use WireGuard instead")
 		case mode.Name == "wireguard" && req.PeerKey == "":
 			return "", nil, fmt.Errorf("give the far end's WireGuard public key (peer key)")
 		case req.ForwardMode == config.ForwardTransparent:
-			return "", nil, fmt.Errorf("transparent forwarding needs NeoTunnel on the far end to route replies back")
+			return "", nil, fmt.Errorf("transparent forwarding needs HLTunnel on the far end to route replies back")
 		case req.ForwardMode == config.ForwardRelay:
-			return "", nil, fmt.Errorf("relay mode needs NeoTunnel on the far end to accept the connections")
+			return "", nil, fmt.Errorf("relay mode needs HLTunnel on the far end to accept the connections")
 		}
 	}
 	if (req.Spoof || mode.Name == "spoof") && local6.IsValid() {
 		return "", nil, fmt.Errorf("Spoof carrier forges IPv4 source addresses; use an IPv4 underlay")
 	}
 	if req.Obfs && mode.TCP {
-		return "", nil, fmt.Errorf("NeoObfs is UDP; it can't run under a TCP tunnel")
+		return "", nil, fmt.Errorf("HLObfs is UDP; it can't run under a TCP tunnel")
 	}
 	if req.WireGuard {
 		switch {
 		case req.Obfs:
-			return "", nil, fmt.Errorf("choose one layer: NeoObfs or WireGuard")
+			return "", nil, fmt.Errorf("choose one layer: HLObfs or WireGuard")
 		case mode.Layer != 2:
 			return "", nil, fmt.Errorf("a WireGuard layer is for Ethernet (layer 2) tunnels; for IP traffic use WireGuard itself")
 		}
@@ -375,10 +383,10 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	}
 	if mode.Stream {
 		if req.Peer == "" {
-			return "", nil, fmt.Errorf("%s needs NeoTunnel on the far end; choose a managed server", mode.Title)
+			return "", nil, fmt.Errorf("%s needs HLTunnel on the far end; choose a managed server", mode.Title)
 		}
 		if p, ok := st.Peer(req.Peer); ok && p.Paired() && !p.StreamTunnels {
-			return "", nil, fmt.Errorf("%s runs an older NeoTunnel without connection tunnels; update it first", req.Peer)
+			return "", nil, fmt.Errorf("%s runs an older HLTunnel without connection tunnels; update it first", req.Peer)
 		}
 		if req.Encrypt == config.EncryptAuto {
 			req.Encrypt = "" // a connection tunnel's cipher doesn't step
@@ -415,7 +423,7 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	}
 	bottomKind, _ := config.LookupKind(kinds[0])
 	port := req.Port
-	if port == 0 && (bottomKind.UDP || bottomKind.TCP) && bottomKind.Kind != config.KindVXLAN && bottomKind.Kind != config.KindGENEVE {
+	if port == 0 && bottomKind.AutoPort {
 		port = FreePort(st, bottomKind.Kind, req.Peer)
 	}
 
@@ -423,16 +431,12 @@ func PlanTunnel(st *config.State, req TunnelRequest) (string, []config.Tunnel, e
 	over := ""
 	for i, k := range kinds {
 		n := name
-		switch {
-		case i == len(kinds)-1:
-		case k == config.KindSpoof:
-			n = name + "-s"
-		case k == config.KindObfs:
-			n = name + "-o"
-		case k == config.KindWireGuard:
-			n = name + "-w"
-		default:
-			n = name + "-6" // carrier
+		if i < len(kinds)-1 {
+			if ki, _ := config.LookupKind(k); ki.CarrierSuffix != "" {
+				n = name + ki.CarrierSuffix
+			} else {
+				n = name + "-6" // carrier
+			}
 		}
 		opts := TunnelOpts{Kind: string(k), Peer: req.Peer, Remote: req.Remote, PoolChoice: req.PoolChoice, stacked: i > 0, Settings: req.Settings}
 		if i == 0 {
@@ -526,7 +530,7 @@ func UpdateTunnel(name string, set Settings, port uint16) (Change, error) {
 	}
 	stack := Stack(st, name)
 	bottom, _ := st.Tunnel(stack[0])
-	// Automatic encryption's NeoObfs layer goes away with it: what the choice
+	// Automatic encryption's HLObfs layer goes away with it: what the choice
 	// lands on is the tunnel above the layer.
 	auto := set.Encrypt == config.EncryptAuto
 	dropLayer := !auto && bottom.AutoLayer && len(stack) > 1
@@ -545,7 +549,7 @@ func UpdateTunnel(name string, set Settings, port uint16) (Change, error) {
 		set.Encrypt = ""
 	}
 	if set.Encrypt != "" && bottom.Sides[1].Node == "" && !dropLayer {
-		return Change{}, fmt.Errorf("IPsec needs NeoTunnel on the far end")
+		return Change{}, fmt.Errorf("IPsec needs HLTunnel on the far end")
 	}
 	noDF, ignoreDF, err := pmtuFlags(bottom.Kind, set.NoDF, set.IgnoreDF)
 	if err != nil {
@@ -687,7 +691,7 @@ type TunnelOpts struct {
 }
 
 // reservedPorts can't be used as tunnel ports.
-var reservedPorts = map[uint16]string{7710: "neotunnel agent", 7711: "neotunnel tests", 22: "SSH"}
+var reservedPorts = map[uint16]string{7710: "hltunnel agent", 7711: "hltunnel tests", 22: "SSH"}
 
 func portAvailable(st *config.State, port uint16, self string) error {
 	if what, bad := reservedPorts[port]; bad {
@@ -698,7 +702,7 @@ func portAvailable(st *config.State, port uint16, self string) error {
 	}
 	for _, p := range st.AgentPorts() {
 		if int(port) == p {
-			return fmt.Errorf("port %d is reserved for neotunnel agent", port)
+			return fmt.Errorf("port %d is reserved for hltunnel agent", port)
 		}
 	}
 	if other := portUser(st, port); other != "" && other != self {
@@ -735,7 +739,7 @@ func NewTunnel(st *config.State, name string, o TunnelOpts) (config.Tunnel, erro
 	if t.Encrypt == config.EncryptAuto {
 		t.Encrypt, t.AutoEncrypt = "", !ki.Encrypted
 	}
-	if kind == config.KindObfs || kind == config.KindSpoof {
+	if ki.HasObfsAES {
 		t.ObfsAES = obfsAES(st, o.Peer)
 	}
 	if kind == config.KindSpoof {
@@ -762,7 +766,7 @@ func NewTunnel(st *config.State, name string, o TunnelOpts) (config.Tunnel, erro
 		if err := portAvailable(st, o.Port, ""); err != nil {
 			return t, err
 		}
-	} else if (ki.UDP || ki.TCP) && kind != config.KindVXLAN && kind != config.KindGENEVE && o.Over == "" {
+	} else if ki.AutoPort && o.Over == "" {
 		t.Port = FreePort(st, kind, o.Peer)
 	}
 	self := config.Side{Node: st.Self, Endpoint: st.Address}
@@ -780,10 +784,10 @@ func NewTunnel(st *config.State, name string, o TunnelOpts) (config.Tunnel, erro
 			return t, fmt.Errorf("remote must be an IP: %w", err)
 		}
 		if ki.NeedsPeer {
-			return t, fmt.Errorf("%s needs NeoTunnel on the far end", kind)
+			return t, fmt.Errorf("%s needs HLTunnel on the far end", kind)
 		}
 		if t.Encrypt != "" || t.AutoEncrypt {
-			return t, fmt.Errorf("IPsec needs NeoTunnel on the far end")
+			return t, fmt.Errorf("IPsec needs HLTunnel on the far end")
 		}
 		if kind == config.KindWireGuard && t.PeerKey == "" {
 			return t, fmt.Errorf("give the far end's WireGuard public key (--peer-key)")
@@ -814,10 +818,10 @@ func NewTunnel(st *config.State, name string, o TunnelOpts) (config.Tunnel, erro
 			t.SNI = o.SNI
 		}
 		if o.Remote != "" {
-			return t, fmt.Errorf("%s needs NeoTunnel on the far end", kind)
+			return t, fmt.Errorf("%s needs HLTunnel on the far end", kind)
 		}
 		if p, ok := st.Peer(o.Peer); ok && p.Paired() && !p.StreamTunnels {
-			return t, fmt.Errorf("%s runs an older NeoTunnel without connection tunnels; update it first", o.Peer)
+			return t, fmt.Errorf("%s runs an older HLTunnel without connection tunnels; update it first", o.Peer)
 		}
 	}
 	if ki.Stream && o.Over != "" {
@@ -860,13 +864,8 @@ func checkTunnelID(t config.Tunnel) error {
 // between the same two addresses, whether or not it runs on a UDP port.
 func keylessConflict(st *config.State, t config.Tunnel) string {
 	group := func(k config.Kind) string {
-		switch k {
-		case config.KindSIT, config.KindIPIP:
-			return string(k)
-		case config.KindIPIP6, config.KindIP6IP6:
-			return "ip6tnl"
-		}
-		return ""
+		ki, _ := config.LookupKind(k)
+		return ki.ConflictGroup
 	}
 	g := group(t.Kind)
 	if g == "" || t.Over != "" {
@@ -1151,7 +1150,7 @@ func lanesOf(n int) int {
 }
 
 // checkLanes allows several lanes only where they work: kernel GRE kinds
-// (each lane is a GRE key) to a far end that runs NeoTunnel.
+// (each lane is a GRE key) to a far end that runs HLTunnel.
 func checkLanes(t config.Tunnel) error {
 	if t.LaneCount() < 2 {
 		return nil
@@ -1160,7 +1159,7 @@ func checkLanes(t config.Tunnel) error {
 		return fmt.Errorf("%s cannot run on several lanes; GRE and GRETAP can", t.Kind)
 	}
 	if t.Sides[0].Node == "" || t.Sides[1].Node == "" {
-		return fmt.Errorf("lanes need NeoTunnel on the far end (toward a MikroTik, bond several EoIP tunnels there)")
+		return fmt.Errorf("lanes need HLTunnel on the far end (toward a MikroTik, bond several EoIP tunnels there)")
 	}
 	return nil
 }

@@ -54,7 +54,7 @@ func TestStreamCandidates(t *testing.T) {
 		if top.Secret == "" || top.Port == 0 || top.Listener() != 1 {
 			t.Errorf("%s: secret %t, port %d, listener %d", c.Name, top.Secret != "", top.Port, top.Listener())
 		}
-		if tg := candidateTarget(c); tg.stream != "ntx-"+top.Name {
+		if tg := candidateTarget(c); tg.stream != "hlx-"+top.Name {
 			t.Errorf("%s: probes go to %+v", c.Name, tg)
 		}
 	}

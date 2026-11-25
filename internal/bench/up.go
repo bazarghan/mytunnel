@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
 )
 
 // up is a candidate running on both ends: the interfaces to remove after

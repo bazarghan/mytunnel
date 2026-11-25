@@ -3,7 +3,7 @@ package manage
 import (
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 func TestPlanConnectionTunnel(t *testing.T) {
@@ -32,10 +32,10 @@ func TestPlanConnectionTunnel(t *testing.T) {
 		}
 	}
 	if _, _, err := PlanTunnel(st, TunnelRequest{Peer: "edge", Mode: "tcpmux", Obfs: true}); err == nil {
-		t.Error("a connection tunnel over NeoObfs was planned")
+		t.Error("a connection tunnel over HLObfs was planned")
 	}
 	if _, _, err := PlanTunnel(st, TunnelRequest{Remote: "203.0.113.9", Mode: "tcpmux"}); err == nil {
-		t.Error("a connection tunnel to a device without NeoTunnel was planned")
+		t.Error("a connection tunnel to a device without HLTunnel was planned")
 	}
 	st.Peers[0].StreamTunnels, st.Peers[0].PublicKey = false, "key"
 	if _, _, err := PlanTunnel(st, TunnelRequest{Peer: "edge", Mode: "tlsmux"}); err == nil {

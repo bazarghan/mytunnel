@@ -1,4 +1,4 @@
-// Package sysctl applies kernel settings NeoTunnel depends on or recommends.
+// Package sysctl applies kernel settings HLTunnel depends on or recommends.
 package sysctl
 
 import (
@@ -66,7 +66,7 @@ func EnsureForwarding() error { return set(forwarding) }
 func Set(key, value string) error { return set(map[string]string{key: value}) }
 
 // SetIface changes an interface's IPv4 value (net.ipv4.conf.<iface>.<key>)
-// now. Interface names may hold dots ("nt-g1.1"), which a key can't.
+// now. Interface names may hold dots ("hl-g1.1"), which a key can't.
 func SetIface(iface, key, value string) error {
 	p := filepath.Join(root, "net", "ipv4", "conf", iface, key)
 	if b, err := os.ReadFile(p); err == nil && strings.TrimSpace(string(b)) == value {
@@ -90,11 +90,11 @@ func ApplyBoost() error {
 	}
 	sort.Strings(keys)
 	var b strings.Builder
-	b.WriteString("# Managed by neotunnel (neotunnel boost)\n")
+	b.WriteString("# Managed by hltunnel (hltunnel boost)\n")
 	for _, k := range keys {
 		fmt.Fprintf(&b, "%s = %s\n", k, all[k])
 	}
-	if err := os.WriteFile("/etc/sysctl.d/90-neotunnel.conf", []byte(b.String()), 0o644); err != nil {
+	if err := os.WriteFile("/etc/sysctl.d/90-hltunnel.conf", []byte(b.String()), 0o644); err != nil {
 		return err
 	}
 	return set(all)

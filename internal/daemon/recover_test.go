@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/health"
-	"neotunnel/internal/identity"
+	"hltunnel/internal/config"
+	"hltunnel/internal/health"
+	"hltunnel/internal/identity"
 )
 
 func TestRecoveryRestartsOncePerGap(t *testing.T) {

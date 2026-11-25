@@ -16,7 +16,7 @@ type Count struct {
 // ReadCounters returns the per-forward named counters, keyed by their nft
 // name (counterName(key) + "u" or "d"). Missing nft or table yields nil.
 func ReadCounters() map[string]Count {
-	out, err := exec.Command("nft", "-j", "list", "counters", "table", "inet", "neotunnel").Output()
+	out, err := exec.Command("nft", "-j", "list", "counters", "table", "inet", "hltunnel").Output()
 	if err != nil {
 		return nil
 	}
@@ -34,7 +34,7 @@ func ReadCounters() map[string]Count {
 	}
 	m := map[string]Count{}
 	for _, e := range doc.Nftables {
-		if c := e.Counter; c != nil && strings.HasPrefix(c.Name, "nt") {
+		if c := e.Counter; c != nil && strings.HasPrefix(c.Name, "hl") {
 			m[c.Name] = Count{Bytes: c.Bytes, Packets: c.Packets}
 		}
 	}

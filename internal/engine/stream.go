@@ -6,8 +6,8 @@ import (
 	"net/netip"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/transport"
+	"hltunnel/internal/config"
+	"hltunnel/internal/transport"
 )
 
 // Connection tunnels (the stream-* kinds) have no interface: the daemon's

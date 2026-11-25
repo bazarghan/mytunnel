@@ -5,11 +5,11 @@ import (
 	"log"
 	"time"
 
-	"neotunnel/internal/bench"
-	"neotunnel/internal/config"
-	"neotunnel/internal/failover"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/speedlog"
+	"hltunnel/internal/bench"
+	"hltunnel/internal/config"
+	"hltunnel/internal/failover"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/speedlog"
 )
 
 // The nightly test: once a night, at a quiet hour in Iran, every tunnel this

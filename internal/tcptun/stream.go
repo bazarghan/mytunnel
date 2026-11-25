@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// StreamKeys let another part of NeoTunnel (the relay) run this package's
+// StreamKeys let another part of HLTunnel (the relay) run this package's
 // handshake on its own connections and, with a cipher, carry a byte stream
 // in sealed frames. Keys are derived under their own purpose label, so they
 // never match a TCP tunnel's.

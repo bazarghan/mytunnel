@@ -10,16 +10,16 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/engine"
-	"neotunnel/internal/metrics"
-	"neotunnel/internal/sysctl"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/metrics"
+	"hltunnel/internal/sysctl"
 )
 
 func doctorCmd() *cobra.Command {
 	var fix bool
 	cmd := &cobra.Command{
 		Use:   "doctor",
-		Short: "Check the system and clean up anything NeoTunnel left behind",
+		Short: "Check the system and clean up anything HLTunnel left behind",
 		Long: "Looks for leftover interfaces, IPsec state, routing rules and UDP\n" +
 			"ports that no current tunnel needs, and checks kernel modules and\n" +
 			"network tuning. With --fix it removes the leftovers.",
@@ -31,7 +31,7 @@ func doctorCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			title("NeoTunnel doctor")
+			title("HLTunnel doctor")
 			ok, warn := 0, 0
 			show := func(fs []engine.Finding) {
 				for _, f := range fs {
@@ -65,7 +65,7 @@ func doctorCmd() *cobra.Command {
 				success("BBR is on")
 			} else {
 				warn++
-				bad("BBR is off; run: sudo neotunnel boost")
+				bad("BBR is off; run: sudo hltunnel boost")
 			}
 			if v, _ := sysctl.Get("net.ipv4.ip_forward"); v == "1" {
 				success("IP forwarding is on")
@@ -111,7 +111,7 @@ func doctorCmd() *cobra.Command {
 			if warn == 0 {
 				success("everything looks healthy")
 			} else if !fix {
-				info("%d issue(s); run 'sudo neotunnel doctor --fix' to clean up what can be removed", warn)
+				info("%d issue(s); run 'sudo hltunnel doctor --fix' to clean up what can be removed", warn)
 			} else {
 				info("%d issue(s) remain (modules or tuning may need attention)", warn)
 			}

@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/probe"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/probe"
 )
 
 // target is where a test's probes go: the far server's probe port at an
@@ -62,18 +62,24 @@ func (r *Runner) latency(ctx context.Context, t target, count int, interval time
 	return probe.Latency(ctx, t.hostPort(), r.token, count, interval, 64)
 }
 
-// bandwidth measures one direction for the run's length on its connections.
+// bandwidth measures one direction for the run's length (or byte limit) on its connections.
 func (r *Runner) bandwidth(ctx context.Context, t target, dir probe.Direction) (float64, error) {
 	phase := "upload"
 	if dir == probe.Download {
 		phase = "download"
 	}
-	live := func(bps float64) { r.live(phase, bps) }
+	opts := probe.BandwidthOptions{
+		Duration:    r.Opts.Duration,
+		Streams:     r.Opts.Streams,
+		MaxBytes:    r.Opts.Bytes,
+		ServerLimit: r.byteLimit,
+		Report:      func(bps float64) { r.live(phase, bps) },
+	}
 	if t.stream != "" {
 		dial := func(context.Context) (net.Conn, error) { return engine.StreamProbe(t.stream) }
-		return probe.BandwidthOver(ctx, dial, r.token, dir, r.Opts.Duration, r.Opts.Streams, live)
+		return probe.BandwidthOverLimit(ctx, dial, r.token, dir, opts)
 	}
-	return probe.BandwidthLive(ctx, t.hostPort(), r.token, dir, r.Opts.Duration, r.Opts.Streams, live)
+	return probe.BandwidthLimit(ctx, t.hostPort(), r.token, dir, opts)
 }
 
 // reaches reports whether a probe gets an answer within moments. On a

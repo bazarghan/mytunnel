@@ -10,13 +10,13 @@ import (
 
 	"github.com/vishvananda/netlink"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/failover"
-	"neotunnel/internal/firewall"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/guard"
-	"neotunnel/internal/relay"
-	"neotunnel/internal/sysctl"
+	"hltunnel/internal/config"
+	"hltunnel/internal/failover"
+	"hltunnel/internal/firewall"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/guard"
+	"hltunnel/internal/relay"
+	"hltunnel/internal/sysctl"
 )
 
 // mu serializes kernel changes within a process (daemon loop vs API calls).
@@ -301,27 +301,8 @@ func loadModules(specs []LinkSpec) {
 
 func modulesFor(s LinkSpec) []string {
 	var ms []string
-	switch s.Kind {
-	case config.KindSIT:
-		ms = []string{"sit"}
-	case config.KindIPIP:
-		ms = []string{"ipip"}
-	case config.KindGRE, config.KindGRETAP:
-		ms = []string{"ip_gre"}
-	case config.KindIP6GRE, config.KindIP6GRETAP:
-		ms = []string{"ip6_gre"}
-	case config.KindIPIP6, config.KindIP6IP6:
-		ms = []string{"ip6_tunnel"}
-	case config.KindVXLAN:
-		ms = []string{"vxlan"}
-	case config.KindGENEVE:
-		ms = []string{"geneve"}
-	case config.KindL2TPv3:
-		ms = []string{"l2tp_eth", "l2tp_netlink", "l2tp_ip", "l2tp_ip6"}
-	case config.KindWireGuard:
-		ms = []string{"wireguard"}
-	case config.KindObfs, config.KindSpoof, config.KindTCP, config.KindEoIP:
-		ms = []string{"tun"}
+	if ki, err := config.LookupKind(s.Kind); err == nil {
+		ms = append(ms, ki.Modules...)
 	}
 	if s.FOU {
 		ms = append(ms, "fou")
@@ -372,7 +353,7 @@ func RemoveBench(names []string) {
 	}
 }
 
-// Down removes every interface NeoTunnel owns, its IPsec, return paths and
+// Down removes every interface HLTunnel owns, its IPsec, return paths and
 // forward rules. User-space tunnels go away with the daemon.
 func Down() error {
 	mu.Lock()

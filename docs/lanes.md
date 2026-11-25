@@ -5,21 +5,21 @@
 یک تانل GRE یا GRETAP می‌تواند به جای یک تانل، روی چند تانل موازی بین همان دو سرور کار کند (۱ تا ۸). هر جریان ترافیک (یک اتصال TCP یا یک جریان UDP) همیشه روی یکی از آن‌ها می‌ماند و جریان‌های مختلف بین آن‌ها پخش می‌شوند؛ مثل چند اتصال هم‌زمان تانل TCP.
 
 ```bash
-neotunnel tunnel add g1 --kind gre --peer germany --lanes 4
-neotunnel tunnel set g1 --lanes 1        # برگشت به یک تانل
+hltunnel tunnel add g1 --kind gre --peer germany --lanes 4
+hltunnel tunnel set g1 --lanes 1        # برگشت به یک تانل
 ```
 
 در پنل: ویزارد (مرحله‌ی محافظت، برای GRE و GRETAP) و زبانه‌ی «تنظیمات» هر تانل → «مسیرهای موازی».
 
 ## چطور کار می‌کند
 
-- هر lane یک تانل کرنلی جداست: `nt-g1`، `nt-g1.1`، `nt-g1.2`، … با کلید GRE متفاوت (key، key+1، …). روی FOU هم همه روی همان پورت UDP می‌روند و کرنل با کلید جدایشان می‌کند.
+- هر lane یک تانل کرنلی جداست: `hl-g1`، `hl-g1.1`، `hl-g1.2`، … با کلید GRE متفاوت (key، key+1، …). روی FOU هم همه روی همان پورت UDP می‌روند و کرنل با کلید جدایشان می‌کند.
 - آدرس داخلی تانل (همان `10.77.x.1` و `.2`) روی همه‌ی laneها به شکل `/32` (و IPv6 به شکل `/128`) گذاشته می‌شود و آدرس طرف مقابل با یک route چندمسیره (ECMP) روی همه‌ی laneها رسیده می‌شود:
 
   ```
   10.77.0.2 proto 77 src 10.77.0.1
-      nexthop dev nt-g1 weight 1
-      nexthop dev nt-g1.1 weight 1 ...
+      nexthop dev hl-g1 weight 1
+      nexthop dev hl-g1.1 weight 1 ...
   ```
 
 - `net.ipv4.fib_multipath_hash_policy=1` (و همین برای IPv6) هش را روی پورت‌ها هم می‌گیرد، پس جریان‌های یک جفت سرور روی laneهای مختلف می‌افتند.
@@ -49,10 +49,10 @@ neotunnel tunnel set g1 --lanes 1        # برگشت به یک تانل
 
 ## سمت میکروتیک
 
-بین دو سرور NeoTunnel همه‌چیز خودکار است. برای میکروتیک:
+بین دو سرور HLTunnel همه‌چیز خودکار است. برای میکروتیک:
 
-- **GRE**: RouterOS برای GRE کلید ندارد، پس چند تانل GRE بین همان دو آدرس ممکن نیست. NeoTunnel اجازه نمی‌دهد تانل GRE به سمت دستگاهی بدون NeoTunnel چند lane داشته باشد.
-- **EoIP**: در RouterOS می‌شود چند EoIP با tunnel-idهای مختلف ساخت و آن‌ها را در یک bonding گذاشت. NeoTunnel هنوز EoIP را روی چند lane اجرا نمی‌کند (در این نمونه‌ی اولیه هر EoIP یک carrier جدا در user space دارد و چند lane روی یک پورت یا یک سوکت خام با هم کار نمی‌کنند)؛ این بخش برای وقتی است که آن طرف را خودتان با bonding لینوکس بسازید یا این قابلیت اضافه شود. تنظیم RouterOS v7 برای ۴ lane با tunnel-id های 100 تا 103:
+- **GRE**: RouterOS برای GRE کلید ندارد، پس چند تانل GRE بین همان دو آدرس ممکن نیست. HLTunnel اجازه نمی‌دهد تانل GRE به سمت دستگاهی بدون HLTunnel چند lane داشته باشد.
+- **EoIP**: در RouterOS می‌شود چند EoIP با tunnel-idهای مختلف ساخت و آن‌ها را در یک bonding گذاشت. HLTunnel هنوز EoIP را روی چند lane اجرا نمی‌کند (در این نمونه‌ی اولیه هر EoIP یک carrier جدا در user space دارد و چند lane روی یک پورت یا یک سوکت خام با هم کار نمی‌کنند)؛ این بخش برای وقتی است که آن طرف را خودتان با bonding لینوکس بسازید یا این قابلیت اضافه شود. تنظیم RouterOS v7 برای ۴ lane با tunnel-id های 100 تا 103:
 
 ```
 /interface eoip
@@ -61,10 +61,10 @@ add name=eoip-l1 remote-address=203.0.113.10 tunnel-id=101 mtu=1458
 add name=eoip-l2 remote-address=203.0.113.10 tunnel-id=102 mtu=1458
 add name=eoip-l3 remote-address=203.0.113.10 tunnel-id=103 mtu=1458
 /interface bonding
-add name=bond-nt slaves=eoip-l0,eoip-l1,eoip-l2,eoip-l3 mode=balance-xor \
+add name=bond-hl slaves=eoip-l0,eoip-l1,eoip-l2,eoip-l3 mode=balance-xor \
     transmit-hash-policy=layer-3-and-4 link-monitoring=arp arp-ip-targets=10.77.0.1
 /ip address
-add address=10.77.0.2/30 interface=bond-nt
+add address=10.77.0.2/30 interface=bond-hl
 ```
 
 `link-monitoring=arp` لازم است چون یک EoIP حتی وقتی مسیر قطع است «running» می‌ماند؛ با پایش ARP، laneی که جواب ندهد از bond بیرون می‌رود. طرف لینوکس باید همان tunnel-idها و یک bond با `mode balance-xor xmit_hash_policy layer3+4` داشته باشد.

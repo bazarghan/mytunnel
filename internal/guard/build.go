@@ -4,8 +4,8 @@ import (
 	"net"
 	"net/netip"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/forward"
+	"hltunnel/internal/config"
+	"hltunnel/internal/forward"
 )
 
 // Peers are the addresses let in whole: this server's peers, the far ends

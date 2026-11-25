@@ -10,7 +10,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-// policyPriority marks NeoTunnel's IPsec policies.
+// policyPriority marks HLTunnel's IPsec policies.
 const policyPriority = 0x4e54
 
 // rekeyAt: an outbound SA is replaced before its 32-bit sequence number
@@ -131,7 +131,7 @@ func hasPolicy(want []*netlink.XfrmPolicy, p netlink.XfrmPolicy) bool {
 	return false
 }
 
-// removeIPsec deletes every SA and policy NeoTunnel installed.
+// removeIPsec deletes every SA and policy HLTunnel installed.
 func removeIPsec() { syncIPsec(nil) }
 
 func firstErr(errs ...error) error {

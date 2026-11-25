@@ -13,19 +13,19 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Interface aliases mark what we own:
 //
-//	neotunnel:<hash>                 persistent tunnel
-//	neotunnel-bench:<expiry>:<hash>  temporary test tunnel, removed after expiry
-//	neotunnel-user:<hash>            user-space tunnel (NeoObfs, EoIP), owned by the
-//	                                 daemon process that holds its TUN/TAP device
+//	hltunnel:<hash>                 persistent tunnel
+//	hltunnel-bench:<expiry>:<hash>  temporary test tunnel, removed after expiry
+//	hltunnel-user:<hash>            user-space tunnel (HLObfs, EoIP), owned by the
+//	                                daemon process that holds its TUN/TAP device
 const (
-	aliasPersistent = "neotunnel:"
-	aliasBench      = "neotunnel-bench:"
-	aliasUser       = "neotunnel-user:"
+	aliasPersistent = "hltunnel:"
+	aliasBench      = "hltunnel-bench:"
+	aliasUser       = "hltunnel-user:"
 )
 
 // ip6tnl flag: don't insert the 8-byte encapsulation-limit option header.
@@ -238,8 +238,8 @@ var (
 	straySeen = map[string]time.Time{}
 )
 
-// ourName reports whether an interface name is in NeoTunnel's own space:
-// nt-<tunnel> and ntx-<test tunnel>.
+// ourName reports whether an interface name is in HLTunnel's own space:
+// hl-<tunnel> and hlx-<test tunnel>.
 func ourName(n string) bool {
 	return strings.HasPrefix(n, IfPrefix) || strings.HasPrefix(n, BenchPrefix)
 }

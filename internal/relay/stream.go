@@ -46,9 +46,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/tcptun"
-	"neotunnel/internal/transport"
+	"hltunnel/internal/config"
+	"hltunnel/internal/tcptun"
+	"hltunnel/internal/transport"
 )
 
 // RelayPort is where nodes accepted relay connections before each tunnel

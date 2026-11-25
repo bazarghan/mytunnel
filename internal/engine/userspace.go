@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/relay"
-	"neotunnel/internal/transport"
+	"hltunnel/internal/relay"
+	"hltunnel/internal/transport"
 )
 
 // Userspace is the daemon's own data plane for what the kernel can't do:
-// NeoObfs, TCP and EoIP tunnels and PROXY protocol relays. Only the daemon
+// HLObfs, TCP and EoIP tunnels and PROXY protocol relays. Only the daemon
 // has one; other processes (the CLI) leave those parts alone and nudge the
 // daemon instead.
 type Userspace interface {
@@ -38,7 +38,7 @@ type Userspace interface {
 
 // ErrNeedsDaemon: a user-space tunnel was asked of a process without the
 // data plane.
-var ErrNeedsDaemon = errors.New("this tunnel runs inside the NeoTunnel service; test it from the panel or with the service running")
+var ErrNeedsDaemon = errors.New("this tunnel runs inside the HLTunnel service; test it from the panel or with the service running")
 
 var (
 	usMu      sync.Mutex

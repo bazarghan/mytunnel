@@ -8,11 +8,11 @@ import (
 	"slices"
 	"sync"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/guard"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/mtr"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/guard"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/mtr"
 )
 
 // MTRReport is the path under a tunnel both ways: from this server to the

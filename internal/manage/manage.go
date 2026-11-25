@@ -16,14 +16,14 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/fleet"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/service"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/fleet"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/service"
+	"hltunnel/internal/traffic"
 )
 
 // PeerSync is the outcome of pushing a change to one peer.
@@ -102,7 +102,7 @@ func commit(peers []string, fn func(*config.State) error, rollback string) (*con
 		ch.Errors = append(ch.Errors, e.Error())
 	}
 	if !engine.InDaemon() {
-		// NeoObfs and EoIP tunnels and PROXY protocol relays live in the daemon.
+		// HLObfs and EoIP tunnels and PROXY protocol relays live in the daemon.
 		service.Reload()
 	}
 	ch.Peers = Sync(st, peers)
@@ -265,7 +265,7 @@ func RemovePeer(name string) (Change, error) {
 		return nil
 	})
 	if err == nil && peer.Paired() && left != nil {
-		ch.Cleanup = &Cleanup{Peer: name, Command: "neotunnel master forget " + st.Self, Error: left.Error()}
+		ch.Cleanup = &Cleanup{Peer: name, Command: "hltunnel master forget " + st.Self, Error: left.Error()}
 	}
 	return ch, err
 }
@@ -318,7 +318,7 @@ func (r *ForwardRequest) check(st *config.State) error {
 	for _, port := range forward.Expand(r.Ports) {
 		for _, p := range st.AgentPorts() {
 			if port == p {
-				return fmt.Errorf("port %d is reserved for neotunnel agent", p)
+				return fmt.Errorf("port %d is reserved for hltunnel agent", p)
 			}
 		}
 	}
@@ -342,10 +342,10 @@ func (r *ForwardRequest) check(st *config.State) error {
 		return fmt.Errorf("%s is a connection tunnel: it carries relay and proxy forwards only (no inner address for nat)", t.Name)
 	}
 	if r.Mode == config.ForwardTransparent && t.Sides[1].Node == "" {
-		return fmt.Errorf("transparent forwarding needs NeoTunnel on the far end to route replies back")
+		return fmt.Errorf("transparent forwarding needs HLTunnel on the far end to route replies back")
 	}
 	if r.Mode == config.ForwardRelay && t.Sides[1].Node == "" {
-		return fmt.Errorf("relay mode needs NeoTunnel on the far end to accept the connections")
+		return fmt.Errorf("relay mode needs HLTunnel on the far end to accept the connections")
 	}
 	if r.Mode == config.ForwardSocks {
 		if err := checkSocks(r, *t); err != nil {
@@ -410,20 +410,20 @@ func checkStreamBackup(st *config.State, r ForwardRequest, b config.Tunnel) erro
 	}
 	if far := farOf(st, b); far != "" {
 		if p, ok := st.Peer(far); ok && p.Paired() && !p.StreamFallback {
-			return fmt.Errorf("%s runs an older NeoTunnel that takes only relay forwards over a connection tunnel; update it first, or use relay mode", far)
+			return fmt.Errorf("%s runs an older HLTunnel that takes only relay forwards over a connection tunnel; update it first, or use relay mode", far)
 		}
 	}
 	return checkOwnPorts(st, r, b)
 }
 
-// checkOwnPorts keeps a forward off the ports NeoTunnel itself listens on
+// checkOwnPorts keeps a forward off the ports HLTunnel itself listens on
 // for its tunnel: the relay listener of either end, and a connection
 // tunnel's sessions on the side that listens. A forward to one of them on
 // the far end reaches that listener instead of the service there, and one
 // on this server's side can't listen.
 func checkOwnPorts(st *config.State, r ForwardRequest, t config.Tunnel) error {
 	if t.Sides[1].Node == "" {
-		return nil // nothing of NeoTunnel listens at a router's end
+		return nil // nothing of HLTunnel listens at a router's end
 	}
 	me := 0
 	if st.IsSelf(t.Sides[1].Node) {
@@ -482,7 +482,7 @@ func checkPublic(st *config.State, mode string, t config.Tunnel) error {
 	return nil
 }
 
-// checkSocks checks a SOCKS/HTTP proxy: one port, NeoTunnel on the far end
+// checkSocks checks a SOCKS/HTTP proxy: one port, HLTunnel on the far end
 // (its connections leave from there), and a password unless only programs
 // on this server can reach it.
 func checkSocks(r *ForwardRequest, t config.Tunnel) error {
@@ -490,7 +490,7 @@ func checkSocks(r *ForwardRequest, t config.Tunnel) error {
 		return fmt.Errorf("a proxy listens on one port")
 	}
 	if t.Sides[1].Node == "" {
-		return fmt.Errorf("a proxy needs NeoTunnel on the far end: its connections leave from there")
+		return fmt.Errorf("a proxy needs HLTunnel on the far end: its connections leave from there")
 	}
 	if r.Listen != "" {
 		a, err := netip.ParseAddr(r.Listen)
@@ -531,7 +531,7 @@ func checkBackup(st *config.State, t config.Tunnel, backup string) error {
 }
 
 // farOf names the tunnel's far server: its node, or its address when it
-// doesn't run NeoTunnel.
+// doesn't run HLTunnel.
 func farOf(st *config.State, t config.Tunnel) string {
 	me, _ := t.SideOf(st.Self)
 	if far := t.Sides[1-me]; far.Node != "" {

@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Every is how often the daemon records a sample.

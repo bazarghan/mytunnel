@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"slices"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/sysinfo"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/sysinfo"
 )
 
 // Automatic encryption walks a tunnel up a ladder, from the plainest step to
-// the most disguised: no encryption, each IPsec cipher, then a NeoObfs layer
+// the most disguised: no encryption, each IPsec cipher, then a HLObfs layer
 // under the stack. The daemon decides when (see daemon/autocrypt.go); this is
 // what a step does to the configuration.
 
@@ -29,7 +29,7 @@ func CryptoRung(st *config.State, name string) string {
 	return b.Encrypt
 }
 
-// CryptoRungs lists the steps a tunnel can take, plainest first. A NeoObfs
+// CryptoRungs lists the steps a tunnel can take, plainest first. A HLObfs
 // layer needs room in the tunnel's name for "-o" and can't go under TCP.
 func CryptoRungs(st *config.State, name string) []string {
 	out := []string{""}
@@ -64,14 +64,14 @@ func bothAES(st *config.State, t config.Tunnel) bool {
 	return !ok || p.AESNI == nil || *p.AESNI
 }
 
-// obfsAES decides whether a NeoObfs tunnel to peer runs on AES-128-GCM: both
+// obfsAES decides whether a HLObfs tunnel to peer runs on AES-128-GCM: both
 // servers have the instructions, and the far one has told us it understands it.
 func obfsAES(st *config.State, peer string) bool {
 	p, ok := st.Peer(peer)
 	return ok && hasAES() && p.ObfsAES && p.AESNI != nil && *p.AESNI
 }
 
-// applyRung puts a tunnel's stack on a step, adding or removing the NeoObfs
+// applyRung puts a tunnel's stack on a step, adding or removing the HLObfs
 // layer as needed.
 func applyRung(s *config.State, name, rung string) error {
 	stack := Stack(s, name)
@@ -87,7 +87,7 @@ func applyRung(s *config.State, name, rung string) error {
 	}
 	if b.Kind == config.KindObfs {
 		if !b.AutoLayer || len(stack) < 2 {
-			return fmt.Errorf("%s runs over NeoObfs by itself", name)
+			return fmt.Errorf("%s runs over HLObfs by itself", name)
 		}
 		if b, ok = dropAutoLayer(s, stack[0], stack[1]); !ok {
 			return fmt.Errorf("tunnel %q changed meanwhile", name)
@@ -100,7 +100,7 @@ func applyRung(s *config.State, name, rung string) error {
 	return nil
 }
 
-// addAutoLayer puts a NeoObfs tunnel under b, the bottom of name's stack: the
+// addAutoLayer puts a HLObfs tunnel under b, the bottom of name's stack: the
 // layer takes over the public addresses and b runs on its inner ones.
 func addAutoLayer(s *config.State, name string, b *config.Tunnel) error {
 	l := config.Tunnel{Name: name + "-o", Kind: config.KindObfs, AutoLayer: true, Sides: b.Sides, MTUProbe: b.MTUProbe,
@@ -162,7 +162,7 @@ func SetCryptoRung(ctx context.Context, id *identity.Identity, name, rung string
 	return RestartTunnel(ctx, id, name)
 }
 
-// UseObfsAES moves this server's NeoObfs tunnels to peer onto AES-128-GCM once
+// UseObfsAES moves this server's HLObfs tunnels to peer onto AES-128-GCM once
 // both ends can run it: the far server was upgraded, and both have AES
 // instructions. Both ends change together (the change is pushed), and their
 // links start again on the new cipher. It returns the tunnels it moved.
@@ -192,7 +192,7 @@ func UseObfsAES(peer string) ([]string, Change, error) {
 	return moved, ch, err
 }
 
-// obfsToAES lists this server's NeoObfs tunnels to peer still on XChaCha20 that
+// obfsToAES lists this server's HLObfs tunnels to peer still on XChaCha20 that
 // can move to AES-128-GCM.
 func obfsToAES(s *config.State, peer string) []int {
 	if !obfsAES(s, peer) {

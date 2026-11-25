@@ -9,8 +9,8 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
-	"neotunnel/internal/mmsg"
-	"neotunnel/internal/tun"
+	"hltunnel/internal/mmsg"
+	"hltunnel/internal/tun"
 )
 
 // openTAP creates (or attaches to) a layer-2 TAP interface without packet

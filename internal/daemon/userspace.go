@@ -12,32 +12,30 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/eoip"
-	"neotunnel/internal/events"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/health"
-	"neotunnel/internal/metrics"
-	"neotunnel/internal/obfs"
-	"neotunnel/internal/pmtu"
-	"neotunnel/internal/probe"
-	"neotunnel/internal/relay"
-	"neotunnel/internal/spoof"
-	"neotunnel/internal/tcptun"
-	"neotunnel/internal/traffic"
-	"neotunnel/internal/transport"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/eoip"
+	"hltunnel/internal/events"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/health"
+	"hltunnel/internal/metrics"
+	"hltunnel/internal/obfs"
+	"hltunnel/internal/pmtu"
+	"hltunnel/internal/probe"
+	"hltunnel/internal/relay"
+	"hltunnel/internal/spoof"
+	"hltunnel/internal/tcptun"
+	"hltunnel/internal/traffic"
+	"hltunnel/internal/transport"
 )
 
-// dataPlane is the daemon's engine.Userspace: NeoObfs, Spoof, TCP and EoIP
+// dataPlane is the daemon's engine.Userspace: HLObfs, Spoof, TCP and EoIP
 // tunnels, connection tunnels and PROXY protocol relays.
 type dataPlane struct {
-	obfs  *obfs.Manager
-	spoof *spoof.Manager
-	tcp   *tcptun.Manager
-	eoip  *eoip.Manager
-	relay *relay.Manager
-	hub   *transport.Hub
+	driverOrder []config.Kind
+	drivers     map[config.Kind]linkDriver
+	relay       *relay.Manager
+	hub         *transport.Hub
 
 	benchMu sync.Mutex
 	bench   map[string]closer // temporary tunnels of speed tests
@@ -45,9 +43,76 @@ type dataPlane struct {
 
 type closer interface{ Close() }
 
+type linkDriver interface {
+	SyncSpecs(specs []engine.LinkSpec) []error
+	StartBench(s engine.LinkSpec) (closer, error)
+	Close()
+}
+
+type specDriver[C any] struct {
+	build func(engine.LinkSpec) C
+	sync  func([]C) []error
+	bench func(C) (closer, error)
+	close func()
+}
+
+func (d specDriver[C]) SyncSpecs(specs []engine.LinkSpec) []error {
+	cfgs := make([]C, len(specs))
+	for i, s := range specs {
+		cfgs[i] = d.build(s)
+	}
+	return d.sync(cfgs)
+}
+
+func (d specDriver[C]) StartBench(s engine.LinkSpec) (closer, error) {
+	return d.bench(d.build(s))
+}
+
+func (d specDriver[C]) Close() { d.close() }
+
 func newDataPlane() *dataPlane {
-	d := &dataPlane{obfs: obfs.NewManager(), spoof: spoof.NewManager(), tcp: tcptun.NewManager(), eoip: eoip.NewManager(), relay: relay.NewManager(),
-		hub: transport.NewHub(), bench: map[string]closer{}}
+	obfsMgr := obfs.NewManager()
+	spoofMgr := spoof.NewManager()
+	tcpMgr := tcptun.NewManager()
+	eoipMgr := eoip.NewManager()
+
+	d := &dataPlane{
+		relay: relay.NewManager(),
+		hub:   transport.NewHub(),
+		driverOrder: []config.Kind{
+			config.KindObfs,
+			config.KindSpoof,
+			config.KindTCP,
+			config.KindEoIP,
+		},
+		drivers: map[config.Kind]linkDriver{
+			config.KindObfs: specDriver[obfs.Config]{
+				build: obfsConfig,
+				sync:  obfsMgr.Sync,
+				bench: func(c obfs.Config) (closer, error) { return obfs.Start(c) },
+				close: obfsMgr.Close,
+			},
+			config.KindSpoof: specDriver[spoof.Config]{
+				build: spoofConfig,
+				sync:  spoofMgr.Sync,
+				bench: func(c spoof.Config) (closer, error) { return spoof.Start(c) },
+				close: spoofMgr.Close,
+			},
+			config.KindTCP: specDriver[tcptun.Config]{
+				build: tcpConfig,
+				sync:  tcpMgr.Sync,
+				bench: func(c tcptun.Config) (closer, error) { return tcptun.Start(c) },
+				close: tcpMgr.Close,
+			},
+			config.KindEoIP: specDriver[eoip.Config]{
+				build: eoipConfig,
+				sync:  eoipMgr.Sync,
+				bench: func(c eoip.Config) (closer, error) { return eoip.Start(c) },
+				close: eoipMgr.Close,
+			},
+		},
+		bench: map[string]closer{},
+	}
 	d.relay.SetHub(d.hub)
 	d.hub.SetProbe(net.JoinHostPort("127.0.0.1", strconv.Itoa(probe.DefaultPort)))
 	return d
@@ -111,41 +176,28 @@ func spoofConfig(s engine.LinkSpec) spoof.Config {
 }
 
 func (d *dataPlane) SyncLinks(specs []engine.LinkSpec) []error {
-	var oc []obfs.Config
-	var sc []spoof.Config
-	var tc []tcptun.Config
-	var ec []eoip.Config
+	byKind := make(map[config.Kind][]engine.LinkSpec, len(d.driverOrder))
+	var errs []error
 	for _, s := range specs {
-		switch s.Kind {
-		case config.KindTCP:
-			tc = append(tc, tcpConfig(s))
-		case config.KindEoIP:
-			ec = append(ec, eoipConfig(s))
-		case config.KindSpoof:
-			sc = append(sc, spoofConfig(s))
-		default:
-			oc = append(oc, obfsConfig(s))
+		if _, ok := d.drivers[s.Kind]; !ok {
+			errs = append(errs, fmt.Errorf("no userspace driver registered for %s", s.Kind))
+			continue
 		}
+		byKind[s.Kind] = append(byKind[s.Kind], s)
 	}
-	errs := append(d.obfs.Sync(oc), d.spoof.Sync(sc)...)
-	errs = append(errs, d.tcp.Sync(tc)...)
-	return append(errs, d.eoip.Sync(ec)...)
+	for _, k := range d.driverOrder {
+		errs = append(errs, d.drivers[k].SyncSpecs(byKind[k])...)
+	}
+	return errs
 }
 
 func (d *dataPlane) StartBench(s engine.LinkSpec, expiry time.Time) error {
 	d.StopBench([]string{s.Name})
-	var l closer
-	var err error
-	switch s.Kind {
-	case config.KindTCP:
-		l, err = tcptun.Start(tcpConfig(s))
-	case config.KindEoIP:
-		l, err = eoip.Start(eoipConfig(s))
-	case config.KindSpoof:
-		l, err = spoof.Start(spoofConfig(s))
-	default:
-		l, err = obfs.Start(obfsConfig(s))
+	drv, ok := d.drivers[s.Kind]
+	if !ok {
+		return fmt.Errorf("no userspace bench driver registered for %s", s.Kind)
 	}
+	l, err := drv.StartBench(s)
 	if err != nil {
 		return err
 	}
@@ -257,10 +309,9 @@ func (b *streamBench) Close() {
 func (d *dataPlane) Close() {
 	d.hub.Close()
 	d.relay.Close()
-	d.eoip.Close()
-	d.obfs.Close()
-	d.spoof.Close()
-	d.tcp.Close()
+	for _, k := range d.driverOrder {
+		d.drivers[k].Close()
+	}
 	d.StopBench(d.benchNames())
 }
 

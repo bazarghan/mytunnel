@@ -98,7 +98,7 @@ func dayRecord() []seen {
 	var out []seen
 	now := time.Now().Unix()
 	for _, set := range []string{"c4", "c6"} {
-		b, err := exec.Command("nft", "-j", "list", "set", "inet", "neotunnel_seen", set).Output()
+		b, err := exec.Command("nft", "-j", "list", "set", "inet", "hltunnel_seen", set).Output()
 		if err != nil {
 			continue
 		}

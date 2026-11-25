@@ -11,13 +11,13 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/pmtu"
+	"hltunnel/internal/config"
+	"hltunnel/internal/pmtu"
 )
 
 const (
-	IfPrefix      = "nt-"
-	BenchPrefix   = "ntx-" // temporary test tunnels
+	IfPrefix      = "hl-"
+	BenchPrefix   = "hlx-" // temporary test tunnels
 	DefaultMTU    = 1500
 	DefaultTTL    = 255
 	DefaultPort   = 4789 // VXLAN
@@ -127,7 +127,7 @@ func (l LinkSpec) Hash() string {
 func Ifname(tunnel string) string { return IfPrefix + tunnel }
 
 // LaneName is the interface of a tunnel's lane: lane 0 is the tunnel's own
-// interface, the others are nt-<name>.<n> ('.' never appears in names).
+// interface, the others are hl-<name>.<n> ('.' never appears in names).
 func LaneName(tunnel string, lane int) string {
 	if lane == 0 {
 		return Ifname(tunnel)
@@ -430,27 +430,16 @@ func renderOne(isSelf func(string) bool, t config.Tunnel, byName map[string]conf
 	case t.Port != 0 && !ki.CanUsePort():
 		return nil, fmt.Errorf("%s cannot run on a port", t.Kind)
 	}
-	overhead := ki.OverheadFor(under6, t.Port != 0)
 	// Routers like MikroTik send GRE without a key, and Linux only matches
 	// keyless packets to a keyless tunnel: toward a far end that doesn't run
-	// NeoTunnel, GRE goes without one.
+	// HLTunnel, GRE goes without one.
 	keyless := ki.IsGRE() && t.Sides[other].Node == ""
-	if keyless {
-		overhead -= 4
-	}
-	if t.Kind == config.KindObfs {
-		overhead += t.Padding
-	}
-	if t.Kind == config.KindSpoof {
-		overhead = config.SpoofOverheadFor(t.SpoofProto, t.SpoofNoCrypt) + t.Padding
-	}
 	if t.Kind == config.KindTCP && t.Encrypt != "" {
 		// The TCP transport seals its own frames; no IPsec underneath.
 		if _, err := config.LookupCipher(t.Encrypt); err != nil {
 			return nil, err
 		}
 		s.Cipher = t.Encrypt
-		overhead += config.TCPTagOverhead
 	} else if t.Encrypt != "" {
 		if ki.Encrypted {
 			return nil, fmt.Errorf("%s is already encrypted; IPsec is not needed", t.Kind)
@@ -462,8 +451,8 @@ func renderOne(isSelf func(string) bool, t config.Tunnel, byName map[string]conf
 			return nil, err
 		}
 		s.Encrypt = t.Encrypt
-		overhead += config.ESPOverhead
 	}
+	overhead := t.PacketOverhead(under6, keyless, false)
 	if s.MTU == 0 {
 		s.MTU = underMTU - overhead
 	}
@@ -477,24 +466,18 @@ func renderOne(isSelf func(string) bool, t config.Tunnel, byName map[string]conf
 			s.Key = t.Key
 		}
 	case config.KindVXLAN, config.KindGENEVE:
-		s.VNI, s.Port = t.VNI, t.Port
-		if s.Port == 0 {
-			s.Port = map[config.Kind]uint16{config.KindVXLAN: DefaultPort, config.KindGENEVE: GenevePort}[t.Kind]
-		}
+		s.VNI, s.Port = t.VNI, ki.EffectivePort(t.Port)
 	case config.KindWireGuard:
-		s.Port = t.Port
-		if s.Port == 0 {
-			s.Port = WireGuardPort
-		}
+		s.Port = ki.EffectivePort(t.Port)
 	case config.KindObfs:
 		if t.Port == 0 {
-			return nil, fmt.Errorf("NeoObfs needs a UDP port")
+			return nil, fmt.Errorf("HLObfs needs a UDP port")
 		}
 		s.Port = t.Port
 	case config.KindSpoof:
 		s.Port = t.Port
 		if s.Port == 0 && (t.SpoofProto == "" || t.SpoofProto == "udp" || t.SpoofProto == "tcp" || t.SpoofProto == "icmp") {
-			s.Port = 32443
+			s.Port = ki.DefaultPort
 		}
 		s.Key = t.Key
 		if s.Key == 0 {
@@ -551,7 +534,7 @@ func setLanes(s *LinkSpec, t config.Tunnel, n int, keyless bool) error {
 	case !config.LaneKinds(t.Kind):
 		return fmt.Errorf("%s cannot run on several lanes (GRE and GRETAP can)", t.Kind)
 	case keyless:
-		return fmt.Errorf("lanes need NeoTunnel on the far end (each lane is a GRE key)")
+		return fmt.Errorf("lanes need HLTunnel on the far end (each lane is a GRE key)")
 	}
 	s.Lanes = n
 	if s.RateMbit > 0 {

@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/transport"
+	"hltunnel/internal/config"
+	"hltunnel/internal/transport"
 )
 
 var lo = netip.MustParseAddr("127.0.0.1")
@@ -114,7 +114,7 @@ func TestSessionWrongSecret(t *testing.T) {
 	}
 }
 
-// Whoever doesn't speak NeoTunnel on a relay port, plain or TLS, meets a
+// Whoever doesn't speak HLTunnel on a relay port, plain or TLS, meets a
 // web server.
 func TestRelayPortDecoy(t *testing.T) {
 	m := newManager(int(freeTCP(t)))

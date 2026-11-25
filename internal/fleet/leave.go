@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/identity"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/identity"
 )
 
 // Leave tells a peer to forget this node and remove the tunnels it set up

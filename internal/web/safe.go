@@ -3,7 +3,7 @@ package web
 import (
 	"net/http"
 
-	"neotunnel/internal/manage"
+	"hltunnel/internal/manage"
 )
 
 // changing is authed for the routes that change tunnels, forwards or

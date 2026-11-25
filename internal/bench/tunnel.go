@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/identity"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/identity"
 )
 
 // TestTunnel measures an existing tunnel defined on this node: full test
@@ -32,7 +32,7 @@ func TestTunnel(ctx context.Context, id *identity.Identity, st *config.State, na
 			return res, fmt.Errorf("tunnel %s: its far end is not a connected server", name)
 		}
 		if progress != nil {
-			progress("far end does not run neotunnel: ICMP ping only")
+			progress("far end does not run hltunnel: ICMP ping only")
 		}
 		lat, err := PingICMP(ctx, tg.addr.String(), o.Pings)
 		res.Latency = lat
@@ -40,10 +40,10 @@ func TestTunnel(ctx context.Context, id *identity.Identity, st *config.State, na
 	}
 	if t.IsStream() {
 		if !p.StreamTests {
-			return res, fmt.Errorf("%s runs an older NeoTunnel that can't take speed tests over connection tunnels; update it first", p.Name)
+			return res, fmt.Errorf("%s runs an older HLTunnel that can't take speed tests over connection tunnels; update it first", p.Name)
 		}
 		if !engine.InDaemon() {
-			return res, fmt.Errorf("tunnel %s is a connection tunnel: its sessions run inside the NeoTunnel service, so test it from the panel", name)
+			return res, fmt.Errorf("tunnel %s is a connection tunnel: its sessions run inside the HLTunnel service, so test it from the panel", name)
 		}
 	}
 	r := &Runner{ID: id, State: st, Peer: *p, Opts: o, Progress: progress}

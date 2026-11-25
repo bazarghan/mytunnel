@@ -3,8 +3,8 @@ package forward
 import (
 	"testing"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/relay"
+	"hltunnel/internal/config"
+	"hltunnel/internal/relay"
 )
 
 // A relay forward runs without the tunnel's interface: the entry relays to

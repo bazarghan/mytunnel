@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"neotunnel/internal/tun"
+	"hltunnel/internal/tun"
 )
 
 // Config describes this node's end of a TCP tunnel.
@@ -42,7 +42,7 @@ const (
 	// dials itself.
 	dialGrace  = 3 * time.Second
 	maxBackoff = 30 * time.Second
-	// bufSize holds the largest inner MTU NeoTunnel allows (9000).
+	// bufSize holds the largest inner MTU HLTunnel allows (9000).
 	bufSize    = 9216
 	queueLen   = 512     // packets waiting per connection
 	queueBytes = 1 << 20 // and their bytes (a super-packet is up to 64 KiB)

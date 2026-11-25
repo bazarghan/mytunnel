@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 func TestClassify(t *testing.T) {
@@ -14,10 +14,10 @@ func TestClassify(t *testing.T) {
 		{Proto: "tcp", Port: 31234, Process: "xray-linux-amd64"}, // a 3x-ui inbound
 		{Proto: "tcp", Port: 2053, Process: "x-ui"},              // 3x-ui's own panel
 		{Proto: "tcp", Port: 80, Process: "nginx"},
-		{Proto: "tcp", Port: 41485, Process: "neotunnel"}, // agent: peers only
-		{Proto: "udp", Port: 4789},                        // kernel (VXLAN)
+		{Proto: "tcp", Port: 41485, Process: "hltunnel"}, // agent: peers only
+		{Proto: "udp", Port: 4789},                       // kernel (VXLAN)
 		{Proto: "tcp", Port: 22, Process: "sshd"},
-		{Proto: "tcp", Port: 10400, Process: "neotunnel"}, // a relay forward's listener
+		{Proto: "tcp", Port: 10400, Process: "hltunnel"}, // a relay forward's listener
 	}
 	always := map[string]bool{"tcp/22": true, "tcp/2096": true}
 

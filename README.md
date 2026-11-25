@@ -1,6 +1,6 @@
 <div dir="rtl">
 
-<p align="center"><img src="docs/icon.png" width="240" alt="MyTunnel"></p>
+<p align="center"><img src="docs/icon.png" width="240" alt="HLTunnel"></p>
 <p align="center"><b>تانل‌های کرنلی + تانل Spoof (مبدأ جعلی) روی همه‌ی پروتکل‌ها، با پنل فارسی و نصب یک‌خطی</b></p>
 <p align="center">
 <a href="https://github.com/bazarghan/mytunnel/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/bazarghan/mytunnel/ci.yml?branch=main&style=flat-square&label=tests&labelColor=111111" alt="tests"></a>
@@ -54,8 +54,8 @@ curl -fsSL https://raw.githubusercontent.com/bazarghan/mytunnel/main/install.sh 
 ```bash
 TOKEN="YOUR_GITHUB_TOKEN"
 curl -fsSL -H "Authorization: Bearer $TOKEN" https://raw.githubusercontent.com/bazarghan/mytunnel/main/install.sh -o /tmp/install.sh
-curl -fsSL -H "Authorization: Bearer $TOKEN" https://raw.githubusercontent.com/bazarghan/mytunnel/main/neotunnel-linux-$(dpkg --print-architecture) -o /tmp/neotunnel-linux-$(dpkg --print-architecture)
-sudo bash /tmp/install.sh --binary /tmp/neotunnel-linux-$(dpkg --print-architecture)
+curl -fsSL -H "Authorization: Bearer $TOKEN" https://raw.githubusercontent.com/bazarghan/mytunnel/main/hltunnel-linux-$(dpkg --print-architecture) -o /tmp/hltunnel-linux-$(dpkg --print-architecture)
+sudo bash /tmp/install.sh --binary /tmp/hltunnel-linux-$(dpkg --print-architecture)
 ```
 
 <div dir="rtl">
@@ -90,16 +90,16 @@ curl -fsSL https://raw.githubusercontent.com/bazarghan/mytunnel/main/install.sh 
 
 ### روش ۲: نصب آفلاین با باینری آماده (ساده‌ترین روش بدون نیاز به اینترنت گیت‌هاب)
 
-فایل `neotunnel-linux-amd64` و `SHA256SUMS` از قبل کامپایل‌شده و داخل همین مخزن قرار دارند:
+فایل `hltunnel-linux-amd64` و `SHA256SUMS` از قبل کامپایل‌شده و داخل همین مخزن قرار دارند:
 
-۱. فایل `neotunnel-linux-amd64` (و در صورت تمایل `SHA256SUMS`) را در پوشه‌ی `/root` سرور ایران بگذارید (با `scp`، WinSCP یا FileZilla).
+۱. فایل `hltunnel-linux-amd64` (و در صورت تمایل `SHA256SUMS`) را در پوشه‌ی `/root` سرور ایران بگذارید (با `scp`، WinSCP یا FileZilla).
 
 ۲. روی سرور ایران با کاربر `root` این دستور را بزنید:
 
 </div>
 
 ```bash
-chmod +x /root/neotunnel-linux-amd64 && sudo /root/neotunnel-linux-amd64 setup
+chmod +x /root/hltunnel-linux-amd64 && sudo /root/hltunnel-linux-amd64 setup
 ```
 
 <div dir="rtl">
@@ -113,7 +113,7 @@ chmod +x /root/neotunnel-linux-amd64 && sudo /root/neotunnel-linux-amd64 setup
 ```bash
 git clone https://github.com/bazarghan/mytunnel.git
 cd mytunnel
-sudo ./neotunnel-linux-amd64 setup
+sudo ./hltunnel-linux-amd64 setup
 ```
 
 <div dir="rtl">
@@ -132,7 +132,7 @@ sudo ./neotunnel-linux-amd64 setup
 
 این قابلیت برای عبور از محدودیت‌ها و فیلترینگ‌های شدید طراحی شده و هم به‌صورت **تانل مستقل (`spoof`)** و هم به‌عنوان **لایه‌ی حامل زیرِ تمام پروتکل‌ها** قابل استفاده است:
 
-- **سوار شدن زیر تمام پروتکل‌ها**: هر پروتکلی را انتخاب کنید (`6to4`، `6to4-gre`، `IPIP`، `GRE`، `SIT`، `WireGuard`، `NeoObfs`، `GRETAP`، `VXLAN`، `GENEVE`، `L2TPv3`، `EoIP`، `TCP`، `TCP+mux`، `TLS+mux`)، می‌توانید گزینه‌ی **«حمل با تانل Spoof»** را در پنل (یا `--spoof` در CLI) روشن کنید تا کل ترافیک آن پروتکل با IP مبدأ جعلی منتقل شود.
+- **سوار شدن زیر تمام پروتکل‌ها**: هر پروتکلی را انتخاب کنید (`6to4`، `6to4-gre`، `IPIP`، `GRE`، `SIT`، `WireGuard`، `HLObfs`، `GRETAP`، `VXLAN`، `GENEVE`، `L2TPv3`، `EoIP`، `TCP`، `TCP+mux`، `TLS+mux`)، می‌توانید گزینه‌ی **«حمل با تانل Spoof»** را در پنل (یا `--spoof` در CLI) روشن کنید تا کل ترافیک آن پروتکل با IP مبدأ جعلی منتقل شود.
 - **۶ حامل روی سیم (`spoof_proto` / `--spoof-proto`)**:
   - `udp`: بسته‌های UDP با IP مبدأ جعلی (سریع‌ترین، همراه با `recvmmsg` و `GRO`)
   - `tcp`: بسته‌های FakeTCP / TCP خام (`PSH-ACK`) با فیلتر BPF کرنل و مسدودسازی خودکار `RST` کرنل در `nftables`
@@ -149,7 +149,7 @@ sudo ./neotunnel-linux-amd64 setup
   - `iran`: انتخاب و چرخش از رنج IPهای عمومی ایران
   - `rotate`: چرخش پویا و مداوم IP مبدأ در بسته‌ها
   - یا وارد کردن یک IPv4 دلخواه (یا دو IP با کاما برای دو طرف، مثل `185.143.233.10,8.8.8.8`)
-- **تست زنده‌ی مسیر Spoof**: پیش از ساخت تانل، با دکمه‌ی **«تست مسیر Spoof روی همه‌ی پروتکل‌ها»** در ویزارد یا دستور `sudo neotunnel spoof-test <peer>`، هر ۶ حامل در هر دو جهت (`ایران ⇄ خارج`) تست می‌شوند و بهترین حامل و جهت به‌صورت خودکار انتخاب می‌گردد.
+- **تست زنده‌ی مسیر Spoof**: پیش از ساخت تانل، با دکمه‌ی **«تست مسیر Spoof روی همه‌ی پروتکل‌ها»** در ویزارد یا دستور `sudo hltunnel spoof-test <peer>`، هر ۶ حامل در هر دو جهت (`ایران ⇄ خارج`) تست می‌شوند و بهترین حامل و جهت به‌صورت خودکار انتخاب می‌گردد.
 
 ---
 
@@ -165,7 +165,7 @@ sudo ./neotunnel-linux-amd64 setup
 | VXLAN / GENEVE | 2 | IPv4 یا IPv6 | همیشه UDP | ✅ (`--spoof`) |
 | L2TPv3 | 2 | IPv4 یا IPv6 | UDP یا IP 115 | ✅ (`--spoof`) |
 | **WireGuard** (رمزدار) | 3 | IPv4 یا IPv6 | همیشه UDP | ✅ (`--spoof`) |
-| **NeoObfs** (رمزدار، مبهم) | 3 | IPv4 یا IPv6 | همیشه UDP | ✅ (`--spoof`) |
+| **HLObfs** (رمزدار، مبهم) | 3 | IPv4 یا IPv6 | همیشه UDP | ✅ (`--spoof`) |
 | **TCP** | 3 | IPv4 یا IPv6 | همیشه TCP | ✅ (`--spoof`) |
 | **TCP + mux / TLS + mux** | 4 | IPv4 یا IPv6 | همیشه TCP | ✅ (`--spoof`) |
 | **Spoof** (مستقل، رمزدار) | 3 | IPv4 | UDP / FakeTCP / GRE / IPIP / SIT / ICMP | بومی |
@@ -181,26 +181,26 @@ sudo ./neotunnel-linux-amd64 setup
 
 ## دستورات خط فرمان (CLI)
 
-همه‌ی امکانات پنل در ترمینال هم در دسترس است (`sudo neotunnel` منوی تعاملی را باز می‌کند):
+همه‌ی امکانات پنل در ترمینال هم در دسترس است (`sudo hltunnel` منوی تعاملی را باز می‌کند):
 
 </div>
 
 ```bash
 # تست مسیر Spoof در هر دو جهت روی هر ۶ پروتکل حامل
-sudo neotunnel spoof-test germany --src iran
+sudo hltunnel spoof-test germany --src iran
 
 # تانل Spoof مستقل با حامل FakeTCP و IP مبدأ ایران + فوروارد پورت 443
-sudo neotunnel quick germany --address 198.51.100.24 --mode spoof --spoof-proto tcp --spoof-src iran --forward 443
+sudo hltunnel quick germany --address 198.51.100.24 --mode spoof --spoof-proto tcp --spoof-src iran --forward 443
 
 # اجرای هر پروتکلی (مثلاً 6to4، GRE یا WireGuard) روی لایه‌ی Spoof
-sudo neotunnel quick germany --mode 6to4 --spoof --spoof-proto udp --spoof-mode both --forward 443
-sudo neotunnel quick germany --mode wireguard --spoof --spoof-proto tcp --spoof-src rotate --forward 8443
+sudo hltunnel quick germany --mode 6to4 --spoof --spoof-proto udp --spoof-mode both --forward 443
+sudo hltunnel quick germany --mode wireguard --spoof --spoof-proto tcp --spoof-src rotate --forward 8443
 
 # سایر دستورات پرکاربرد
-sudo neotunnel quick germany --address 198.51.100.24 --forward 443          # 6to4 + فوروارد در یک مرحله
-sudo neotunnel tunnel add mk1 --kind eoip --remote 203.0.113.99 --tunnel-id 10
-sudo neotunnel tunnel limit t1 --rate 200 --quota 500
-sudo neotunnel bench germany
+sudo hltunnel quick germany --address 198.51.100.24 --forward 443          # 6to4 + فوروارد در یک مرحله
+sudo hltunnel tunnel add mk1 --kind eoip --remote 203.0.113.99 --tunnel-id 10
+sudo hltunnel tunnel limit t1 --rate 200 --quota 500
+sudo hltunnel bench germany
 ```
 
 <div dir="rtl">
@@ -224,8 +224,8 @@ sudo neotunnel bench germany
 
 ```bash
 go test ./...
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X neotunnel/internal/version.Version=v0.9.0-spoof" -o neotunnel-linux-amd64 ./cmd/neotunnel
-sudo test/e2e.sh neotunnel-linux-amd64   # تست کامل روی کرنل واقعی
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X hltunnel/internal/version.Version=v1.0.0" -o hltunnel-linux-amd64 ./cmd/hltunnel
+sudo test/e2e.sh hltunnel-linux-amd64   # تست کامل روی کرنل واقعی
 ```
 
 <div dir="rtl">

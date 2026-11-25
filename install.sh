@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# NeoTunnel installer for Ubuntu / Debian.
+# HLTunnel installer for Ubuntu / Debian.
 #
-#   curl -fsSL https://raw.githubusercontent.com/neoauroraproject/neotunnel/main/install.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/bazarghan/mytunnel/main/install.sh | sudo bash
 #
 # Options (after "bash -s --" when piping):
 #   --no-panel        install without the web panel (destination servers)
 #   --port N          panel port (default: a random free port)
 #   --version vX.Y.Z  install a specific release (default: latest)
 #   --binary PATH     offline install from a downloaded binary (the binary
-#                     does this itself: ./neotunnel-linux-amd64 setup)
+#                     does this itself: ./hltunnel-linux-amd64 setup)
 #   --no-boost        skip the network boost (BBR, fq, buffers)
 #   --no-menu         don't open the menu when done
 #
-# Re-running it upgrades NeoTunnel and keeps the configuration and password.
+# Re-running it upgrades HLTunnel and keeps the configuration and password.
 set -euo pipefail
 
 REPO="bazarghan/mytunnel"
@@ -49,39 +49,60 @@ fetch() {
   curl "${opts[@]}" --noproxy '*' "$1" -o "$2"
 }
 
+probe() {
+  curl -fsSLI --connect-timeout 10 "$1" >/dev/null 2>&1 && return 0
+  curl -fsSLI --connect-timeout 10 --noproxy '*' "$1" >/dev/null 2>&1
+}
+
+extract_checksum() {
+  # Handles CRLF, "sha256sum -b" ("*name"), or "./name" prefixes cleanly.
+  tr -d '\r' < "$1" | awk -v name="$NAME" '
+    NF >= 2 {
+      f = $2
+      sub(/^[*]/, "", f)
+      sub(/^\.\//, "", f)
+      if (f == name) print $1 "  " name
+    }
+  ' > "$2"
+}
+
 [ "$(id -u)" -eq 0 ] || die "run as root: curl -fsSL ... | sudo bash"
-[ "$(uname -s)" = "Linux" ] || die "NeoTunnel runs on Linux"
+[ "$(uname -s)" = "Linux" ] || die "HLTunnel runs on Linux"
 case "$(uname -m)" in
   x86_64|amd64) ARCH=amd64 ;;
   aarch64|arm64) ARCH=arm64 ;;
   *) die "unsupported CPU $(uname -m) (amd64 and arm64 only)" ;;
 esac
-NAME="neotunnel-linux-$ARCH"
+NAME="hltunnel-linux-$ARCH"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-printf '\n%s◆ NeoTunnel%s %sinstaller%s\n\n' "$c_acc" "$c_0" "$c_dim" "$c_0"
+printf '\n%s◆ HLTunnel%s %sinstaller%s\n\n' "$c_acc" "$c_0" "$c_dim" "$c_0"
 
 # 1. Binary ---------------------------------------------------------------
 if [ -n "$BINARY" ]; then
   step "using local binary $BINARY"
   cp "$BINARY" "$TMP/$NAME"
-  # The checksums may have been saved on Windows (CRLF) or written by
-  # "sha256sum -b" ("*name"): read them either way.
-  [ -f "$(dirname "$BINARY")/SHA256SUMS" ] && tr -d '\r' < "$(dirname "$BINARY")/SHA256SUMS" | sed 's/ \*/  /' | grep " $NAME\$" > "$TMP/SHA256SUMS" || true
+  [ -f "$(dirname "$BINARY")/SHA256SUMS" ] && extract_checksum "$(dirname "$BINARY")/SHA256SUMS" "$TMP/SHA256SUMS" || true
 else
+  command -v curl >/dev/null || { apt-get update -qq && apt-get install -y -qq curl >/dev/null; }
   if [ "$VERSION" = "latest" ]; then
-    BASE="https://raw.githubusercontent.com/$REPO/main"
+    RELEASE_BASE="https://github.com/$REPO/releases/latest/download"
+    MAIN_BASE="https://raw.githubusercontent.com/$REPO/main"
+    if probe "$RELEASE_BASE/$NAME"; then
+      BASE="$RELEASE_BASE"
+    else
+      BASE="$MAIN_BASE"
+    fi
   else
     BASE="https://github.com/$REPO/releases/download/$VERSION"
   fi
-  command -v curl >/dev/null || { apt-get update -qq && apt-get install -y -qq curl >/dev/null; }
   step "downloading $NAME ($VERSION)"
   fetch "$BASE/$NAME" "$TMP/$NAME" progress || die "download failed: $BASE/$NAME
   No access to GitHub from this server? Download the file elsewhere, copy it here and run:
   chmod +x ./$NAME && sudo ./$NAME setup"
   if fetch "$BASE/SHA256SUMS" "$TMP/SHA256SUMS.all" 2>/dev/null; then
-    grep " $NAME\$" "$TMP/SHA256SUMS.all" > "$TMP/SHA256SUMS" || true
+    extract_checksum "$TMP/SHA256SUMS.all" "$TMP/SHA256SUMS" || true
   fi
 fi
 if [ -s "$TMP/SHA256SUMS" ]; then
@@ -97,34 +118,34 @@ chmod +x "$TMP/$NAME"
 step "loading kernel modules"
 MODULES="sit ipip ip6_tunnel ip_gre ip6_gre vxlan geneve fou wireguard tun l2tp_eth l2tp_ip l2tp_ip6 xfrm_user esp4 esp6"
 for m in $MODULES; do modprobe "$m" 2>/dev/null || true; done
-printf '%s\n' $MODULES > /etc/modules-load.d/neotunnel.conf
+printf '%s\n' $MODULES > /etc/modules-load.d/hltunnel.conf
 if ! command -v nft >/dev/null; then
   step "installing nftables"
   (apt-get update -qq && apt-get install -y -qq nftables) >/dev/null 2>&1 || warn "could not install nftables (no package mirror?); port forwarding needs it: apt install nftables"
 fi
 
 UPGRADE=0
-[ -x /usr/local/bin/neotunnel ] && UPGRADE=1
-install -m 755 "$TMP/$NAME" /usr/local/bin/neotunnel
-ok "neotunnel $(neotunnel version) installed"
+[ -x /usr/local/bin/hltunnel ] && UPGRADE=1
+install -m 755 "$TMP/$NAME" /usr/local/bin/hltunnel
+ok "hltunnel $(hltunnel version) installed"
 
-[ "$BOOST" = 1 ] && { neotunnel boost >/dev/null 2>&1 && ok "network boost applied (BBR, fq, buffers)" || true; }
+[ "$BOOST" = 1 ] && { hltunnel boost >/dev/null 2>&1 && ok "network boost applied (BBR, fq, buffers)" || true; }
 
 # 3. Panel ----------------------------------------------------------------
 CREDS=""
 if [ "$PANEL" = 1 ]; then
-  if neotunnel panel info >/dev/null 2>&1 && [ -z "$PORT" ]; then
+  if hltunnel panel info >/dev/null 2>&1 && [ -z "$PORT" ]; then
     ok "panel already set up; keeping its port and password"
   else
     ARGS=()
     [ -n "$PORT" ] && ARGS+=(--port "$PORT")
-    CREDS=$(NO_COLOR=1 neotunnel panel setup "${ARGS[@]}") || die "panel setup failed"
+    CREDS=$(NO_COLOR=1 hltunnel panel setup "${ARGS[@]}") || die "panel setup failed"
   fi
 fi
 
 # 4. Service --------------------------------------------------------------
-neotunnel install >/dev/null
-ok "service running (systemd unit: neotunnel)"
+hltunnel install >/dev/null
+ok "service running (systemd unit: hltunnel)"
 [ "$UPGRADE" = 1 ] && ok "upgrade complete; configuration kept"
 
 echo
@@ -133,20 +154,20 @@ if [ "$PANEL" = 1 ]; then
   if [ -n "$CREDS" ]; then
     printf '%s\n' "$CREDS" | sed -n '/address\|username\|password/p'
     echo
-    printf '  %sSave the password now: it is shown only once (reset: neotunnel panel password).%s\n' "$c_warn" "$c_0"
+    printf '  %sSave the password now: it is shown only once (reset: hltunnel panel password).%s\n' "$c_warn" "$c_0"
   else
-    NO_COLOR=1 neotunnel panel info | sed -n '/address\|username/p'
+    NO_COLOR=1 hltunnel panel info | sed -n '/address\|username/p'
   fi
   printf '  %sThe certificate is self-signed: accept the browser warning once.%s\n\n' "$c_dim" "$c_0"
 fi
-printf '  Manage everything from the terminal with: %sneotunnel%s\n' "$c_b" "$c_0"
-printf '  News and releases: %shttps://t.me/neoaurora%s\n\n' "$c_b" "$c_0"
+printf '  Manage everything from the terminal with: %shltunnel%s\n' "$c_b" "$c_0"
+printf '  Repository and releases: %shttps://github.com/%s%s\n\n' "$c_b" "$REPO" "$c_0"
 
 # 5. Menu -----------------------------------------------------------------
 # Open the menu on the user's terminal (stdin is this script when piped).
 if [ "$MENU" = 1 ] && [ -t 1 ] && { : </dev/tty; } 2>/dev/null; then
   printf '  %sPress Enter to open the menu (Ctrl+C to skip)…%s ' "$c_acc" "$c_0"
   if read -r _ </dev/tty; then
-    exec /usr/local/bin/neotunnel </dev/tty
+    exec /usr/local/bin/hltunnel </dev/tty
   fi
 fi

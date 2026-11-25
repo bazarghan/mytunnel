@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/forward"
+	"hltunnel/internal/config"
+	"hltunnel/internal/forward"
 )
 
 // IPsec for kernel tunnels works like MikroTik's ipsec-secret: the tunnel's
@@ -13,7 +13,7 @@ import (
 // mode. Keys and SPIs are derived from the tunnel secret per direction, so
 // there is no key exchange to fail or to block.
 
-// spiBase marks the SPIs NeoTunnel installs.
+// spiBase marks the SPIs HLTunnel installs.
 const spiBase = 0x4e000000
 
 // espSA is one direction of a tunnel's ESP: from side `from` to the other.
@@ -84,7 +84,9 @@ func carriers(specs []LinkSpec) []forward.Protect {
 		}
 		p, port := outerProto(s)
 		if p == 17 && port == 0 {
-			port = map[config.Kind]uint16{config.KindVXLAN: 4789, config.KindGENEVE: 6081}[s.Kind]
+			if ki, err := config.LookupKind(s.Kind); err == nil {
+				port = ki.DefaultPort
+			}
 		}
 		if p == 0 || p == 17 && port == 0 {
 			continue // all of the far end's UDP is not ours to skip

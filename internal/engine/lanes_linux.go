@@ -8,7 +8,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
-	"neotunnel/internal/sysctl"
+	"hltunnel/internal/sysctl"
 )
 
 // Lanes: a tunnel on several lanes is N kernel tunnels between the same two
@@ -17,14 +17,14 @@ import (
 // end's over all of them:
 //
 //	10.77.0.2 proto 77 src 10.77.0.1
-//	    nexthop dev nt-x  nexthop dev nt-x.1  ...
+//	    nexthop dev hl-x  nexthop dev hl-x.1  ...
 //
 // With the layer-4 multipath hash each inner flow stays on one lane while
 // different flows spread over the lanes, and so over the CPU cores that
 // receive and encrypt them. Forwards, return paths and health checks keep
 // using the inner addresses, so they work unchanged.
 
-// laneProto marks the routes NeoTunnel owns for lanes.
+// laneProto marks the routes HLTunnel owns for lanes.
 const laneProto = netlink.RouteProtocol(77)
 
 // IPv6 refuses device-only next hops in a multipath route, so each lane

@@ -6,10 +6,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/guard"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/guard"
+	"hltunnel/internal/manage"
 )
 
 func guardCmd() *cobra.Command {
@@ -83,7 +83,7 @@ func guardCmd() *cobra.Command {
 
 func printGuard(s guard.Status) {
 	if !s.On {
-		info("firewall is off (turn it on: neotunnel guard on)")
+		info("firewall is off (turn it on: hltunnel guard on)")
 		return
 	}
 	info("guarding %s; %d packet(s) dropped", strings.Join(s.Ifaces, ", "), s.Dropped)

@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/config"
+	"hltunnel/internal/manage"
 )
 
 // The servers that manage this one, from this side: for cleaning up after
@@ -65,9 +65,9 @@ func printMasters(st *config.State) {
 		fmt.Printf("  %-16s %-22s %d tunnels  %s%s%s\n", bold(m.Name), m.Address, m.Tunnels, seen, forget, dropped)
 	}
 	if d := st.ForgetDays(); d > 0 {
-		info("a main server silent for %d days is forgotten with its tunnels (change: neotunnel master auto-forget <days|off>)", d)
+		info("a main server silent for %d days is forgotten with its tunnels (change: hltunnel master auto-forget <days|off>)", d)
 	} else {
-		info("silent main servers are never forgotten (change: neotunnel master auto-forget <days>)")
+		info("silent main servers are never forgotten (change: hltunnel master auto-forget <days>)")
 	}
 }
 

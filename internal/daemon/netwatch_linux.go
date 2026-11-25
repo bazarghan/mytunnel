@@ -26,7 +26,7 @@ func watchNet(ctx context.Context, poke func()) {
 	}
 	ours := func(index int) bool {
 		l, err := netlink.LinkByIndex(index)
-		return err == nil && strings.HasPrefix(l.Attrs().Name, "nt-")
+		return err == nil && (strings.HasPrefix(l.Attrs().Name, "hl-") || strings.HasPrefix(l.Attrs().Name, "hlx-"))
 	}
 	var last time.Time
 	var pending <-chan time.Time
@@ -46,7 +46,7 @@ func watchNet(ctx context.Context, poke func()) {
 				return
 			}
 			a := u.Attrs()
-			if u.Header.Type == unix.RTM_NEWLINK && a.OperState == netlink.OperUp && !strings.HasPrefix(a.Name, "nt-") {
+			if u.Header.Type == unix.RTM_NEWLINK && a.OperState == netlink.OperUp && !strings.HasPrefix(a.Name, "hl-") && !strings.HasPrefix(a.Name, "hlx-") {
 				pending = time.After(500 * time.Millisecond)
 			}
 		case <-pending:

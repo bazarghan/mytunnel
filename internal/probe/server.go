@@ -114,7 +114,10 @@ func (s *Server) serveTCP(ln net.Listener) error {
 	}
 }
 
-// TCP request: token(16) | mode(1: 'U' client sends, 'D' server sends) | duration ms(4)
+// TCP request:
+//
+//	token(16) | mode(1: 'U' client sends, 'D' server sends) | duration ms(4)
+//	token(16) | 'd'(1: server sends up to max_bytes)        | duration ms(4) | max_bytes(8)
 func (s *Server) handleTCP(c net.Conn) {
 	defer c.Close()
 	c.SetReadDeadline(time.Now().Add(5 * time.Second))
@@ -140,6 +143,30 @@ func (s *Server) handleTCP(c net.Conn) {
 		c.SetWriteDeadline(deadline.Add(2 * time.Second))
 		for time.Now().Before(deadline) {
 			if _, err := c.Write(buf); err != nil {
+				return
+			}
+		}
+	case 'd':
+		var lim [8]byte
+		if _, err := io.ReadFull(c, lim[:]); err != nil {
+			return
+		}
+		left := int64(binary.BigEndian.Uint64(lim[:]))
+		if left <= 0 {
+			return
+		}
+		buf := make([]byte, 128<<10)
+		rand.Read(buf)
+		deadline := time.Now().Add(d)
+		c.SetWriteDeadline(deadline.Add(2 * time.Second))
+		for left > 0 && time.Now().Before(deadline) {
+			chunk := buf
+			if int64(len(chunk)) > left {
+				chunk = buf[:left]
+			}
+			n, err := c.Write(chunk)
+			left -= int64(n)
+			if err != nil {
 				return
 			}
 		}

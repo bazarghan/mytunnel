@@ -11,7 +11,7 @@ import (
 )
 
 // EncryptAuto, given as a tunnel's cipher, turns on automatic encryption (see
-// Tunnel.AutoEncrypt); RungObfs is that ladder's last step, a NeoObfs layer.
+// Tunnel.AutoEncrypt); RungObfs is that ladder's last step, a HLObfs layer.
 const (
 	EncryptAuto = "auto"
 	RungObfs    = "obfs"
@@ -73,7 +73,7 @@ func DeriveKey(secret64, tunnel, label string, n int) ([]byte, error) {
 		return nil, fmt.Errorf("tunnel %s has no valid secret", tunnel)
 	}
 	out := make([]byte, n)
-	r := hkdf.New(sha256.New, secret, []byte("neotunnel/"+tunnel), []byte(label))
+	r := hkdf.New(sha256.New, secret, []byte("hltunnel/"+tunnel), []byte(label))
 	if _, err := io.ReadFull(r, out); err != nil {
 		return nil, err
 	}

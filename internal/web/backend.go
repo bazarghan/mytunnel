@@ -2,19 +2,18 @@ package web
 
 import (
 	"context"
-	"neotunnel/internal/neoexit"
 	"time"
 
-	"neotunnel/internal/bench"
-	"neotunnel/internal/clients"
-	"neotunnel/internal/config"
-	"neotunnel/internal/failover"
-	"neotunnel/internal/fleet"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/metrics"
-	"neotunnel/internal/safe"
-	"neotunnel/internal/spoof"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/bench"
+	"hltunnel/internal/clients"
+	"hltunnel/internal/config"
+	"hltunnel/internal/failover"
+	"hltunnel/internal/fleet"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/metrics"
+	"hltunnel/internal/safe"
+	"hltunnel/internal/spoof"
+	"hltunnel/internal/traffic"
 )
 
 // Backend is everything the panel can read and do. Live implements it on the
@@ -120,17 +119,24 @@ type Backend interface {
 	UndoSafe(id string) (*safe.Outcome, error)
 }
 
-// SpeedOptions are a speed test's length per direction and number of
-// connections, as chosen in the panel; zero means the default.
+// SpeedOptions are a speed test's length (or byte limit) per direction and
+// number of connections, as chosen in the panel; zero means the default.
 type SpeedOptions struct {
 	Seconds int `json:"seconds"`
 	Streams int `json:"streams"`
+	MB      int `json:"mb,omitempty"`
 }
 
 // apply sets the chosen values on o, within what the probe server allows.
 func (s SpeedOptions) apply(o *bench.Options) {
+	if s.MB > 0 {
+		o.Bytes = int64(min(max(s.MB, 1), 10240)) << 20
+		if s.Seconds <= 0 {
+			o.Duration = 60 * time.Second
+		}
+	}
 	if s.Seconds > 0 {
-		o.Duration = time.Duration(min(max(s.Seconds, 3), 30)) * time.Second
+		o.Duration = time.Duration(min(max(s.Seconds, 3), 60)) * time.Second
 	}
 	if s.Streams > 0 {
 		o.Streams = min(s.Streams, 32)
@@ -180,7 +186,6 @@ type Overview struct {
 	SafeLast   *safe.Outcome   `json:"safe_last,omitempty"` // how the last one ended
 	Install    string          `json:"install"`             // one-line installer for a new server
 	Repo       string          `json:"repo"`
-	Channel    string          `json:"channel"`
 	Time       int64           `json:"time"` // unix ms, for rate calculation
 }
 
@@ -217,8 +222,6 @@ type NodeInfo struct {
 	// Pressure is where the CPU went in the daemon's last round: packet
 	// work, packets dropped for lack of CPU, and the busiest programs.
 	Pressure *metrics.Pressure `json:"pressure,omitempty"`
-	// NeoExit is the NeoExit program on this server (nil = not running).
-	NeoExit *neoexit.Status `json:"neoexit,omitempty"`
 }
 
 // PoolView is an address pool in the panel.
@@ -341,8 +344,6 @@ type PeerView struct {
 	Tunnels  int    `json:"tunnels"`
 	// Dropped are this server's tunnels the peer removed by hand.
 	Dropped []string `json:"dropped,omitempty"`
-	// NeoExit is what the peer last said about its NeoExit.
-	NeoExit *neoexit.Status `json:"neoexit,omitempty"`
 }
 
 type ForwardView struct {

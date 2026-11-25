@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"neotunnel/internal/events"
+	"hltunnel/internal/events"
 )
 
 func (s *Server) eventRoutes(m *http.ServeMux) {

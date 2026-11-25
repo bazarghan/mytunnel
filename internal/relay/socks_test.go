@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // socksPair runs an exit (side 1) with egress and a proxy entry (side 0) on

@@ -6,7 +6,7 @@ import (
 
 	"github.com/vishvananda/netlink"
 
-	"neotunnel/internal/forward"
+	"hltunnel/internal/forward"
 )
 
 // Forwards to the far server's public address (config.Forward.Public): that

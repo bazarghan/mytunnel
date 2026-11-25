@@ -1,4 +1,4 @@
-// Package tcptun is NeoTunnel's TCP transport, for paths where neither UDP
+// Package tcptun is HLTunnel's TCP transport, for paths where neither UDP
 // nor raw IP protocols (41, 47, ...) pass between two servers: IP packets
 // from a TUN interface travel length-prefixed over a long-lived TCP
 // connection.
@@ -27,7 +27,7 @@
 //
 // GSO: an end whose interface hands out super-packets (up to 64 KiB, with
 // the kernel's virtio-net header in front) says so in its first frame, a
-// control frame no IP packet looks like ("\x00NTG"); an old NeoTunnel
+// control frame no IP packet looks like ("\x00NTG"); an old HLTunnel
 // writes it to its interface, which drops it. An end that gets it and has
 // super-packets to send answers "\x00NTS", and every frame it sends after
 // that has a 4-byte length and carries header and packet. So each
@@ -51,7 +51,7 @@ import (
 
 	"golang.org/x/crypto/chacha20poly1305"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 const (
@@ -198,7 +198,7 @@ func acceptHandshake(c net.Conn, k *keys) (*session, error) {
 		return nil, err
 	}
 	if hello[0] != version {
-		return nil, fmt.Errorf("unknown version %d (update NeoTunnel on both ends)", hello[0])
+		return nil, fmt.Errorf("unknown version %d (update HLTunnel on both ends)", hello[0])
 	}
 	if int(hello[1]) != 1-k.side {
 		return nil, errAuth // ourselves, or the same side of another link

@@ -23,7 +23,7 @@ const (
 )
 
 // ParseProcNet reads a /proc/net socket table. Addresses are hex in host
-// byte order per 32-bit word (little endian on the machines NeoTunnel runs
+// byte order per 32-bit word (little endian on the machines HLTunnel runs
 // on), ports big endian.
 func ParseProcNet(text string) []ProcSocket {
 	var out []ProcSocket

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Port counters are one map lookup per protocol, not a rule per forward;
@@ -16,7 +16,7 @@ func TestAccountingMaps(t *testing.T) {
 		{Node: "hub", Tunnel: "t1", Proto: "both", Ports: "443, 2053-2056"},
 		{Node: "hub", Tunnel: "t1", Proto: "udp", Ports: "8443", To: 443},
 	}
-	rs, errs := Build(st, fs, []Link{{Name: "nt-t1", Tunnel: "t1"}})
+	rs, errs := Build(st, fs, []Link{{Name: "hl-t1", Tunnel: "t1"}})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
@@ -26,10 +26,10 @@ func TestAccountingMaps(t *testing.T) {
 	}
 	_, in, _ := strings.Cut(s, "chain account_in {")
 	in, _, _ = strings.Cut(in, "  }\n")
-	if strings.Count(in, "counter name") != 2 || !strings.Contains(in, "iifname \"nt-*\" return") {
+	if strings.Count(in, "counter name") != 2 || !strings.Contains(in, "iifname \"hl-*\" return") {
 		t.Errorf("account_in:\n%s", in)
 	}
-	for _, want := range []string{"tcp dport map { 443 : \"nt", "2053-2056 : \"nt", "udp dport map { 443 : \"nt", "8443 : \"nt"} {
+	for _, want := range []string{"tcp dport map { 443 : \"hl", "2053-2056 : \"hl", "udp dport map { 443 : \"hl", "8443 : \"hl"} {
 		if !strings.Contains(in, want) {
 			t.Errorf("account_in missing %q:\n%s", want, in)
 		}
@@ -63,7 +63,7 @@ func TestCarrierScript(t *testing.T) {
 	if p := dumpTo(); p != "" {
 		writeFile(t, p+".raw", s)
 	}
-	if CarrierScript(nil) != "table inet neotunnel_raw\ndelete table inet neotunnel_raw\n" {
+	if CarrierScript(nil) != "table inet hltunnel_raw\ndelete table inet hltunnel_raw\n" {
 		t.Error("nothing to skip still leaves a table")
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"neotunnel/internal/manage"
+	"hltunnel/internal/manage"
 )
 
 // addressEvery is how often the daemon checks this server's public IP (see

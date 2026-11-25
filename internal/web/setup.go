@@ -1,4 +1,4 @@
-// Package web is the NeoTunnel panel: an HTTPS JSON API plus an embedded
+// Package web is the HLTunnel panel: an HTTPS JSON API plus an embedded
 // single-page UI, served by the daemon on its own port under a secret path.
 package web
 
@@ -22,7 +22,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 const (
@@ -154,7 +154,7 @@ func certificate(address string) (tls.Certificate, error) {
 	}
 	tmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(time.Now().UnixNano()),
-		Subject:      pkix.Name{CommonName: "NeoTunnel panel", Organization: []string{"NeoTunnel"}},
+		Subject:      pkix.Name{CommonName: "HLTunnel panel", Organization: []string{"HLTunnel"}},
 		NotBefore:    time.Now().Add(-time.Hour),
 		NotAfter:     time.Now().AddDate(10, 0, 0),
 		KeyUsage:     x509.KeyUsageDigitalSignature,

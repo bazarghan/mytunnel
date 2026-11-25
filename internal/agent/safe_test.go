@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/safe"
+	"hltunnel/internal/config"
+	"hltunnel/internal/safe"
 )
 
 // The master keeps a safe change on its peer; a change the peer doesn't hold

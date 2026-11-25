@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/config"
+	"hltunnel/internal/manage"
 )
 
 func quickCmd() *cobra.Command {
@@ -16,14 +16,14 @@ func quickCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "quick <peer>",
 		Short: "One step: tunnel to a peer (6to4 by default) with optional port forwarding",
-		Example: `  neotunnel quick germany --address 203.0.113.10 --forward 443,8443
-  neotunnel quick germany --address 198.51.100.7 --port 3000 --forward 2053 --forward-to 443
-  neotunnel quick germany --encrypt aes-gcm-128 --mtu-probe
-  neotunnel quick germany --encrypt auto --pool 172
-  neotunnel quick germany --mode gre --no-pmtud --pool4 10.20.0.0/24
-  neotunnel quick germany --obfs --port 8443 --padding 32
-  neotunnel quick germany --forward 443 --forward-mode transparent
-  neotunnel quick germany --mode wireguard`,
+		Example: `  hltunnel quick germany --address 203.0.113.10 --forward 443,8443
+  hltunnel quick germany --address 198.51.100.7 --port 3000 --forward 2053 --forward-to 443
+  hltunnel quick germany --encrypt aes-gcm-128 --mtu-probe
+  hltunnel quick germany --encrypt auto --pool 172
+  hltunnel quick germany --mode gre --no-pmtud --pool4 10.20.0.0/24
+  hltunnel quick germany --obfs --port 8443 --padding 32
+  hltunnel quick germany --forward 443 --forward-mode transparent
+  hltunnel quick germany --mode wireguard`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			req.Peer = args[0]
@@ -48,9 +48,9 @@ func quickCmd() *cobra.Command {
 	f.Uint16Var(&req.ForwardTo, "forward-to", 0, "target port on the peer (default: same port)")
 	f.StringVar(&req.Proto, "proto", "both", "forwarded protocol: tcp, udp, both")
 	f.StringVar(&req.ForwardMode, "forward-mode", "", "nat (default), transparent (keeps the client IP), proxy (PROXY protocol) or relay (TCP only, each connection carried as its own TCP connection; fastest on long, lossy paths)")
-	f.BoolVar(&req.ForwardPublic, "forward-public", false, "deliver the forward at the peer's public address instead of its address inside the tunnel (see: neotunnel forward add --help)")
+	f.BoolVar(&req.ForwardPublic, "forward-public", false, "deliver the forward at the peer's public address instead of its address inside the tunnel (see: hltunnel forward add --help)")
 	f.IntVar(&req.ProxyVersion, "proxy-version", 0, "PROXY protocol version for --forward-mode proxy: 2 (default) or 1; with relay: 0 (none, default), 1 or 2")
-	f.BoolVar(&req.Obfs, "obfs", false, "run the tunnel over NeoObfs (encrypted UDP that looks like noise; give --port)")
+	f.BoolVar(&req.Obfs, "obfs", false, "run the tunnel over HLObfs (encrypted UDP that looks like noise; give --port)")
 	f.BoolVar(&req.Spoof, "spoof", false, "run the tunnel (any mode) over a Spoof forged-source-IP carrier layer")
 	f.BoolVar(&req.WireGuard, "wireguard", false, "run an Ethernet (layer 2) tunnel over WireGuard: kernel encryption inside UDP")
 	settingsFlags(f, &req.Settings)
@@ -88,6 +88,6 @@ func quick(req manage.TunnelRequest, address string) error {
 		success("ports %s (%s) on this server now reach %s", req.Forward, req.Proto, req.Peer)
 	}
 	fmt.Println()
-	info("measure it: neotunnel test %s", t.Name)
+	info("measure it: hltunnel test %s", t.Name)
 	return nil
 }

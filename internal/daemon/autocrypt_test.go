@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/health"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/config"
+	"hltunnel/internal/health"
+	"hltunnel/internal/manage"
 )
 
 var (
@@ -96,12 +96,12 @@ func TestAutoCryptRestsAfterAFullRound(t *testing.T) {
 		t.Fatal("first step")
 	}
 	rungs := manage.CryptoRungs(st, "t1")
-	last := autoState(rungs[len(rungs)-2]) // the last cipher: NeoObfs is next
+	last := autoState(rungs[len(rungs)-2]) // the last cipher: HLObfs is next
 	if to, ok := a.next(last, last.Tunnels[0], nil, hs, now); !ok || to != config.RungObfs {
 		t.Fatalf("got %q %v", to, ok)
 	}
 	a.changed["t1"] = now
-	// On NeoObfs (its layer below) the next step is the one it started on.
+	// On HLObfs (its layer below) the next step is the one it started on.
 	st = autoState("")
 	st.Tunnels = append(st.Tunnels, config.Tunnel{Name: "t1-o", Kind: config.KindObfs, AutoLayer: true, Sides: st.Tunnels[0].Sides})
 	st.Tunnels[0].Over = "t1-o"

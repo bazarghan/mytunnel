@@ -29,8 +29,8 @@ import (
 
 	"golang.org/x/crypto/acme"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/relay"
+	"hltunnel/internal/config"
+	"hltunnel/internal/relay"
 )
 
 // LetsEncrypt is the ACME directory certificates come from (a variable so a

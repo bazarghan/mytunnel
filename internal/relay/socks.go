@@ -227,7 +227,7 @@ func httpProxy(s Spec, p *pool, r *bufio.Reader, c net.Conn) net.Conn {
 		fmt.Fprintf(c, "HTTP/1.1 %d %s\r\n%sContent-Length: 0\r\nConnection: close\r\n\r\n", code, http.StatusText(code), extra)
 	}
 	if s.Auth != "" && !httpAuth(s.Auth, req.Header.Get("Proxy-Authorization")) {
-		status(http.StatusProxyAuthRequired, "Proxy-Authenticate: Basic realm=\"NeoTunnel\"\r\n")
+		status(http.StatusProxyAuthRequired, "Proxy-Authenticate: Basic realm=\"HLTunnel\"\r\n")
 		return nil
 	}
 	target := req.Host

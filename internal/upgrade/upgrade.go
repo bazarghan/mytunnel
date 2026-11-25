@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/version"
+	"hltunnel/internal/config"
+	"hltunnel/internal/version"
 )
 
 // Deadline is how long a new version has to answer its main server.
@@ -63,9 +63,9 @@ func Watch(exe, want string) error {
 		return err
 	}
 	os.Remove(okPath())
-	unit := "neotunnel-upgrade-watch-" + strconv.FormatInt(time.Now().Unix(), 10)
+	unit := "hltunnel-upgrade-watch-" + strconv.FormatInt(time.Now().Unix(), 10)
 	out, err := exec.Command("systemd-run", "--unit="+unit, "--collect", "--quiet",
-		"--description=NeoTunnel: undo the upgrade to "+want+" if it doesn't come back",
+		"--description=HLTunnel: undo the upgrade to "+want+" if it doesn't come back",
 		Previous(exe), "upgrade-watch", "--version", want, "--exe", exe).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
@@ -132,5 +132,5 @@ func RunWatch(want, exe string, deadline time.Duration) error {
 	}
 	b, _ := json.Marshal(Failed{Version: want, At: time.Now().Unix()})
 	os.WriteFile(failedPath(), b, 0o600)
-	return exec.Command("systemctl", "restart", "neotunnel").Run()
+	return exec.Command("systemctl", "restart", "hltunnel").Run()
 }

@@ -6,9 +6,9 @@ import (
 	"net/netip"
 	"strings"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/relay"
-	"neotunnel/internal/tcptun"
+	"hltunnel/internal/config"
+	"hltunnel/internal/relay"
+	"hltunnel/internal/tcptun"
 )
 
 // streamRelays lists the listeners of a relay-mode forward on its entry

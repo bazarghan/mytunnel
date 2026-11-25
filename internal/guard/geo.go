@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 //go:embed geoip-ir.txt

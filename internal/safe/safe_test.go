@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // fake records what the hooks were asked to do.

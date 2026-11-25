@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/guard"
+	"hltunnel/internal/config"
+	"hltunnel/internal/guard"
 )
 
 // GuardConfirmWithin is how long the panel has to confirm it still reaches

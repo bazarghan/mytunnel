@@ -175,7 +175,7 @@ func echoRequest(v6 bool, id, seq uint16) []byte {
 	}
 	binary.BigEndian.PutUint16(b[4:], id)
 	binary.BigEndian.PutUint16(b[6:], seq)
-	copy(b[8:], "neotunnel-mtr-probe-0000")
+	copy(b[8:], "hltunnel-mtr-probe-0000")
 	if !v6 {
 		binary.BigEndian.PutUint16(b[2:], checksum(b))
 	}

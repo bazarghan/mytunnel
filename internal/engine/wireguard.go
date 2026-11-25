@@ -6,12 +6,12 @@ import (
 
 	"golang.org/x/crypto/curve25519"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // WireGuard keys are derived from the tunnel secret, one key pair per side,
 // so both ends agree without exchanging anything. A far end that isn't a
-// NeoTunnel server (e.g. a MikroTik) brings its own key in PeerKey.
+// HLTunnel server (e.g. a MikroTik) brings its own key in PeerKey.
 
 func wgPrivate(secret, tunnel string, side int) ([32]byte, error) {
 	var k [32]byte

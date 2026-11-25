@@ -23,7 +23,7 @@ func TestWithPortMovesTheCandidate(t *testing.T) {
 
 func TestPortTaken(t *testing.T) {
 	for _, s := range []string{
-		"peer: ntx-tcp: listen on TCP 40420: listen tcp :40420: bind: address already in use",
+		"peer: hlx-tcp: listen on TCP 40420: listen tcp :40420: bind: address already in use",
 		"UDP port 40417 is already used by another program; choose another tunnel port",
 	} {
 		if !portTaken(errors.New(s)) {

@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/bench"
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/speedlog"
-	"neotunnel/internal/webhook"
+	"hltunnel/internal/bench"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/speedlog"
+	"hltunnel/internal/webhook"
 )
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
@@ -43,7 +43,7 @@ func readUpload(r *http.Request) ([]byte, error) {
 		return nil, err
 	}
 	if len(data) > maxUpload {
-		return nil, errors.New("the file is too large for a NeoTunnel backup")
+		return nil, errors.New("the file is too large for an HLTunnel backup")
 	}
 	return data, nil
 }
@@ -63,7 +63,6 @@ func (s *Server) routes(m *http.ServeMux) {
 	s.updateRoutes(m)
 	s.guardRoutes(m)
 	s.telegramRoutes(m)
-	s.adRoutes(m)
 	s.eventRoutes(m)
 	m.HandleFunc("GET /api/overview", s.authed(func(w http.ResponseWriter, r *http.Request) {
 		ov, err := b.Overview()
@@ -258,7 +257,7 @@ func (s *Server) routes(m *http.ServeMux) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-Disposition", `attachment; filename="neotunnel-backup-`+time.Now().Format("2006-01-02")+`.json"`)
+		w.Header().Set("Content-Disposition", `attachment; filename="hltunnel-backup-`+time.Now().Format("2006-01-02")+`.json"`)
 		w.Header().Set("Cache-Control", "no-store")
 		w.Write(data)
 	}))

@@ -1,4 +1,4 @@
-// Package telegram is NeoTunnel's Telegram bot: alerts when tunnels go bad,
+// Package telegram is HLTunnel's Telegram bot: alerts when tunnels go bad,
 // come back, restart or move to a backup; reports on a schedule; and
 // answers about traffic. Admins (linked with a one-time code from the
 // panel) see and get everything; anyone else who starts the bot, when the
@@ -23,12 +23,12 @@ import (
 	"time"
 	_ "time/tzdata" // Tehran time on servers without zone files
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/health"
-	"neotunnel/internal/metrics"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/health"
+	"hltunnel/internal/metrics"
+	"hltunnel/internal/traffic"
 )
 
 // Deps are the daemon's live data the bot reads.
@@ -238,7 +238,7 @@ func (b *bot) handle(ctx context.Context, m *message) {
 			return nil
 		})
 		admin = true
-		reply(fmt.Sprintf("✅ شما مدیر ربات NeoTunnel روی <b>%s</b> شدید.\nهشدارها و گزارش‌ها برای شما فرستاده می‌شود. از دکمه‌های پایین استفاده کنید یا شماره‌ی یک پورت را بفرستید.", esc(nodeName(st))))
+		reply(fmt.Sprintf("✅ شما مدیر ربات HLTunnel روی <b>%s</b> شدید.\nهشدارها و گزارش‌ها برای شما فرستاده می‌شود. از دکمه‌های پایین استفاده کنید یا شماره‌ی یک پورت را بفرستید.", esc(nodeName(st))))
 	case cmd == "/id" || text == btnID:
 		reply(fmt.Sprintf("شناسه‌ی عددی شما: <code>%d</code>", m.From.ID))
 	case admin && (cmd == "/status" || text == btnStatus):
@@ -259,7 +259,7 @@ func (b *bot) handle(ctx context.Context, m *message) {
 		}
 		reply(b.portText(st, n))
 	case admin:
-		reply(fmt.Sprintf("🖥 NeoTunnel روی <b>%s</b>\nاز دکمه‌های پایین استفاده کنید، یا شماره‌ی یک پورت را بفرستید تا مصرفش را ببینید.", esc(nodeName(st))))
+		reply(fmt.Sprintf("🖥 HLTunnel روی <b>%s</b>\nاز دکمه‌های پایین استفاده کنید، یا شماره‌ی یک پورت را بفرستید تا مصرفش را ببینید.", esc(nodeName(st))))
 	case tg.Users:
 		reply("👋 سلام! شماره‌ی پورت خود را بفرستید (مثلاً <code>443</code>) تا ترافیک مصرفی آن را ببینید.")
 	default:
@@ -378,7 +378,7 @@ func rungTitle(r string) string {
 		return "بدون رمزنگاری"
 	}
 	if r == config.RungObfs {
-		return "NeoObfs"
+		return "HLObfs"
 	}
 	if c, err := config.LookupCipher(r); err == nil {
 		return c.Title
@@ -466,7 +466,7 @@ func Test(ctx context.Context) error {
 		return err
 	}
 	for _, a := range tg.Admins {
-		if err := c.send(ctx, a, "✅ پیام آزمایشی NeoTunnel از <b>"+esc(nodeName(st))+"</b>. ربات درست کار می‌کند.", adminKeys); err != nil {
+		if err := c.send(ctx, a, "✅ پیام آزمایشی HLTunnel از <b>"+esc(nodeName(st))+"</b>. ربات درست کار می‌کند.", adminKeys); err != nil {
 			return err
 		}
 	}

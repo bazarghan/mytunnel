@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/spoof"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/spoof"
 )
 
 func randomProbeToken() string {

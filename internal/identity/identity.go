@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 type Identity struct {
@@ -94,7 +94,7 @@ func Fingerprint(k string) string {
 func (id *Identity) Certificate() (tls.Certificate, error) {
 	tmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(time.Now().UnixNano()),
-		Subject:      pkix.Name{CommonName: "neotunnel"},
+		Subject:      pkix.Name{CommonName: "hltunnel"},
 		NotBefore:    time.Now().Add(-time.Hour),
 		NotAfter:     time.Now().AddDate(20, 0, 0),
 		KeyUsage:     x509.KeyUsageDigitalSignature,

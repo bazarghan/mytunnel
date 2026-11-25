@@ -13,20 +13,20 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel"
+	"hltunnel"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/bench"
-	"neotunnel/internal/config"
-	"neotunnel/internal/daemon"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/service"
-	"neotunnel/internal/setuplink"
-	"neotunnel/internal/sysctl"
-	"neotunnel/internal/traffic"
-	"neotunnel/internal/version"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/bench"
+	"hltunnel/internal/config"
+	"hltunnel/internal/daemon"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/service"
+	"hltunnel/internal/setuplink"
+	"hltunnel/internal/sysctl"
+	"hltunnel/internal/traffic"
+	"hltunnel/internal/version"
 )
 
 func daemonCmd() *cobra.Command {
@@ -67,9 +67,9 @@ func uninstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "uninstall",
 		Aliases: []string{"remove-all"},
-		Short:   "Remove NeoTunnel completely: tunnels, service, rules, settings and the program",
+		Short:   "Remove HLTunnel completely: tunnels, service, rules, settings and the program",
 		Long: "Stops the service, removes every tunnel, IPsec, forward and routing rule,\n" +
-			"the kernel tuning, the configuration and keys, and the neotunnel program.\n" +
+			"the kernel tuning, the configuration and keys, and the hltunnel program.\n" +
 			"With --keep-config the configuration and keys stay for a later reinstall.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireRoot(); err != nil {
@@ -80,7 +80,7 @@ func uninstallCmd() *cobra.Command {
 				if keep {
 					what = "tunnels, service and the program (settings kept)"
 				}
-				if !confirm(red("Remove NeoTunnel")+": "+what+"?", false) {
+				if !confirm(red("Remove HLTunnel")+": "+what+"?", false) {
 					info("nothing removed")
 					return nil
 				}
@@ -89,7 +89,7 @@ func uninstallCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&keep, "keep-config", false, "keep /etc/neotunnel (keys, tunnels, panel) for a later reinstall")
+	cmd.Flags().BoolVar(&keep, "keep-config", false, "keep /etc/hltunnel (keys, tunnels, panel) for a later reinstall")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "don't ask for confirmation")
 	// Older scripts call "uninstall --purge"; removing everything is now the default.
 	cmd.Flags().Bool("purge", false, "")
@@ -120,7 +120,7 @@ func updateCmd() *cobra.Command {
 func setupCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:                "setup [--no-panel] [--port N] [--no-boost] [--no-menu]",
-		Short:              "Install or upgrade NeoTunnel from this file, without internet (panel, service, everything)",
+		Short:              "Install or upgrade HLTunnel from this file, without internet (panel, service, everything)",
 		DisableFlagParsing: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			for _, a := range args {
@@ -139,7 +139,7 @@ func setupCmd() *cobra.Command {
 				return err
 			}
 			c := exec.Command("bash", append([]string{"-s", "--", "--binary", exe}, args...)...)
-			c.Stdin, c.Stdout, c.Stderr = strings.NewReader(neotunnel.InstallScript), os.Stdout, os.Stderr
+			c.Stdin, c.Stdout, c.Stderr = strings.NewReader(hltunnel.InstallScript), os.Stdout, os.Stderr
 			if err := c.Run(); err != nil {
 				return fmt.Errorf("setup failed: %w", err)
 			}
@@ -153,8 +153,8 @@ func setupCmd() *cobra.Command {
 func selfUpdate(ver string) error {
 	args := "--no-menu"
 	if ver != "" {
-		if !strings.HasPrefix(ver, "v") || strings.ContainsAny(ver, " ;&|$`'\"") {
-			return fmt.Errorf("version looks like v0.2.0")
+		if !version.Release(ver) {
+			return fmt.Errorf("version looks like v1.0.0 or v1.0.0-beta.1")
 		}
 		args += " --version " + ver
 	}
@@ -185,8 +185,8 @@ func uninstall(keep bool) {
 	success("service stopped; tunnels, IPsec and forwarding rules removed")
 	if !keep {
 		os.RemoveAll(config.Dir)
-		os.Remove("/etc/sysctl.d/90-neotunnel.conf")
-		os.Remove("/etc/modules-load.d/neotunnel.conf")
+		os.Remove("/etc/sysctl.d/90-hltunnel.conf")
+		os.Remove("/etc/modules-load.d/hltunnel.conf")
 		success("configuration, keys and kernel tuning deleted")
 	} else {
 		info("configuration kept in %s", config.Dir)
@@ -196,13 +196,13 @@ func uninstall(keep bool) {
 			success("program removed (%s)", exe)
 		}
 	}
-	success("NeoTunnel is uninstalled")
+	success("HLTunnel is uninstalled")
 }
 
 func applyCmd() *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
-		Use:   "apply ['NT1....']",
+		Use:   "apply ['HL1....']",
 		Short: "Re-apply the configuration now, or join a main server with its setup key",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -286,7 +286,7 @@ func applyKey(key string, force bool) error {
 	}
 	if !service.Installed() {
 		if err := service.Install(); err != nil {
-			warn("could not install the systemd service (%v); run 'neotunnel daemon' yourself", err)
+			warn("could not install the systemd service (%v); run 'hltunnel daemon' yourself", err)
 			return nil
 		}
 		success("service installed")
@@ -307,7 +307,7 @@ func downCmd() *cobra.Command {
 			if err := engine.Down(); err != nil {
 				return err
 			}
-			success("all neotunnel interfaces removed")
+			success("all hltunnel interfaces removed")
 			return nil
 		},
 	}
@@ -333,12 +333,12 @@ func printStatus(st *config.State) {
 	if exec.Command("systemctl", "is-active", "--quiet", service.Name).Run() == nil {
 		svc = green("running")
 	}
-	title("NeoTunnel")
+	title("HLTunnel")
 	fmt.Printf("  node %s  %s  service %s\n", bold(st.Self), dim(st.Address), svc)
 	ts, _ := st.Effective()
 	title("Tunnels")
 	if len(ts) == 0 {
-		info("none yet — the fastest start: neotunnel quick <peer> --address <ip>")
+		info("none yet — the fastest start: hltunnel quick <peer> --address <ip>")
 	}
 	for _, t := range ts {
 		printTunnel(st, t)
@@ -417,24 +417,35 @@ func showTraffic() error {
 	}
 }
 
-func benchOptions(cmd *cobra.Command) *bench.Options {
+func benchOptions(cmd *cobra.Command) func() bench.Options {
 	o := bench.DefaultOptions()
+	var mb int
 	f := cmd.Flags()
 	f.DurationVar(&o.Duration, "duration", o.Duration, "throughput test length per direction")
+	f.IntVar(&mb, "mb", 0, "max data volume per direction in MB (0 = unlimited, time-based)")
 	f.IntVar(&o.Streams, "streams", o.Streams, "parallel TCP streams")
 	f.IntVar(&o.Pings, "pings", o.Pings, "latency probes")
-	return &o
+	return func() bench.Options {
+		out := o
+		if mb > 0 {
+			out.Bytes = int64(min(max(mb, 1), 10240)) << 20
+			if !cmd.Flags().Changed("duration") {
+				out.Duration = 60 * time.Second
+			}
+		}
+		return out
+	}
 }
 
 func testCmd() *cobra.Command {
-	var o *bench.Options
+	var opts func() bench.Options
 	cmd := &cobra.Command{
 		Use:   "test <tunnel>",
 		Short: "Measure ping, jitter, loss and bandwidth through a tunnel",
 		Args:  cobra.ExactArgs(1),
-		RunE:  func(cmd *cobra.Command, args []string) error { return runTest(args[0], *o) },
+		RunE:  func(cmd *cobra.Command, args []string) error { return runTest(args[0], opts()) },
 	}
-	o = benchOptions(cmd)
+	opts = benchOptions(cmd)
 	return cmd
 }
 
@@ -460,7 +471,7 @@ func runTest(name string, o bench.Options) error {
 }
 
 func benchCmd() *cobra.Command {
-	var o *bench.Options
+	var opts func() bench.Options
 	var only string
 	cmd := &cobra.Command{
 		Use:   "bench <peer>",
@@ -478,10 +489,10 @@ func benchCmd() *cobra.Command {
 					want[s] = true
 				}
 			}
-			return runBench(args[0], *o, want)
+			return runBench(args[0], opts(), want)
 		},
 	}
-	o = benchOptions(cmd)
+	opts = benchOptions(cmd)
 	cmd.Flags().StringVar(&only, "only", "", "comma-separated subset, e.g. 6to4,ipip,vxlan,direct")
 	return cmd
 }
@@ -501,7 +512,7 @@ func runBench(peer string, o bench.Options, only map[string]bool) error {
 		return fmt.Errorf("%s is not connected yet: run its connect command on it first", peer)
 	}
 	if _, err := netip.ParseAddr(st.Address); err != nil {
-		return fmt.Errorf("this server's public IP is unknown: neotunnel node --address <ip>")
+		return fmt.Errorf("this server's public IP is unknown: hltunnel node --address <ip>")
 	}
 	id, err := identity.LoadOrCreate()
 	if err != nil {
@@ -538,7 +549,7 @@ func runBench(peer string, o bench.Options, only map[string]bool) error {
 		if res.Err == "" && res.Mode != "" {
 			fmt.Println()
 			success("fastest tunnel: %s", bold(res.Title))
-			cmd := fmt.Sprintf("neotunnel quick %s --mode %s", p.Name, res.Mode)
+			cmd := fmt.Sprintf("hltunnel quick %s --mode %s", p.Name, res.Mode)
 			if res.Port != 0 {
 				cmd += fmt.Sprintf(" --port %d", res.Port)
 			}
@@ -560,7 +571,7 @@ func boostCmd() *cobra.Command {
 			if err := sysctl.ApplyBoost(); err != nil {
 				return err
 			}
-			success("tuning applied and saved to /etc/sysctl.d/90-neotunnel.conf")
+			success("tuning applied and saved to /etc/sysctl.d/90-hltunnel.conf")
 			return nil
 		},
 	}

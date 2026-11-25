@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/subtle"
 	"fmt"
-	"neotunnel/internal/neoexit"
 	"net/netip"
 	"os"
 	"os/exec"
@@ -13,28 +12,28 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/bench"
-	"neotunnel/internal/clients"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/events"
-	"neotunnel/internal/failover"
-	"neotunnel/internal/firewall"
-	"neotunnel/internal/fleet"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/guard"
-	"neotunnel/internal/health"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/metrics"
-	"neotunnel/internal/mikrotik"
-	"neotunnel/internal/pmtu"
-	"neotunnel/internal/safe"
-	"neotunnel/internal/spoof"
-	"neotunnel/internal/sysctl"
-	"neotunnel/internal/sysinfo"
-	"neotunnel/internal/traffic"
-	"neotunnel/internal/version"
+	"hltunnel/internal/bench"
+	"hltunnel/internal/clients"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/events"
+	"hltunnel/internal/failover"
+	"hltunnel/internal/firewall"
+	"hltunnel/internal/fleet"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/guard"
+	"hltunnel/internal/health"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/metrics"
+	"hltunnel/internal/mikrotik"
+	"hltunnel/internal/pmtu"
+	"hltunnel/internal/safe"
+	"hltunnel/internal/spoof"
+	"hltunnel/internal/sysctl"
+	"hltunnel/internal/sysinfo"
+	"hltunnel/internal/traffic"
+	"hltunnel/internal/version"
 )
 
 // Live is the Backend for a real node.
@@ -123,11 +122,9 @@ func (l *Live) Overview() (Overview, error) {
 		NextName: manage.FreeName(st),
 		Install:  "curl -fsSL " + version.InstallURL + " | sudo bash",
 		Repo:     version.RepoURL,
-		Channel:  version.Channel,
 		Time:     time.Now().UnixMilli(),
 	}
 	readSystem(&ov.Node)
-	ov.Node.NeoExit = neoexit.Local()
 	if l.History != nil {
 		if p := l.History.Pressure(); p.At > 0 {
 			ov.Node.Pressure = &p
@@ -143,7 +140,7 @@ func (l *Live) Overview() (Overview, error) {
 	}
 	ov.ForgetDays = st.ForgetDays()
 	for _, g := range st.Gone {
-		ov.Gone = append(ov.Gone, GoneView{Name: g.Peer.Name, Address: g.Peer.Address, Since: g.Since.Unix(), Command: "neotunnel master forget " + st.Self})
+		ov.Gone = append(ov.Gone, GoneView{Name: g.Peer.Name, Address: g.Peer.Address, Since: g.Since.Unix(), Command: "hltunnel master forget " + st.Self})
 	}
 	if p := st.Panel; p != nil {
 		ov.Panel = PanelInfo{URL: PanelURL(st), Port: p.Port, User: p.User}
@@ -213,17 +210,7 @@ func tunnelViews(st *config.State, sums map[string]traffic.Summary, hs map[strin
 			if bt.Over == "" {
 				// The public address of the server at the bottom of the stack.
 				v.FarIP = bt.Sides[1-me].Endpoint
-				switch {
-				case bt.Encrypt != "":
-					v.Encrypt = bt.Encrypt
-				case bt.Kind == config.KindWireGuard:
-					v.Encrypt = "wireguard"
-				case bt.Kind == config.KindObfs, bt.Kind == config.KindSpoof && !bt.SpoofNoCrypt:
-					v.Encrypt = "xchacha20-poly1305"
-					if bt.ObfsAES {
-						v.Encrypt = "aes-gcm-128"
-					}
-				}
+				v.Encrypt = bt.EffectiveEncrypt()
 				if bt.MTUProbe {
 					if a, err := netip.ParseAddr(v.FarIP); err == nil {
 						v.PathMTU = pmtu.Cached(a)
@@ -234,7 +221,7 @@ func tunnelViews(st *config.State, sums map[string]traffic.Summary, hs map[strin
 		if t.Kind == config.KindWireGuard {
 			v.WGKey, _ = engine.WireGuardPublicKey(t, me)
 		}
-		if t.Kind == config.KindVXLAN || t.Kind == config.KindGENEVE {
+		if ki, err := config.LookupKind(t.Kind); err == nil && ki.HasVNI {
 			v.VNI = t.VNI
 		}
 		if t.IsStream() {
@@ -301,7 +288,7 @@ func peerViews(st *config.State) []PeerView {
 		v := PeerView{
 			Name: p.Name, Label: p.Label, Address: p.Address, Address6: p.Address6, AESNI: p.AESNI, Paired: p.Paired(),
 			InSync: p.Paired() && p.AppliedRevision == st.Revision, Applied: p.AppliedRevision,
-			Version: p.Version, Arch: p.Arch, NeoExit: neoexit.Peer(p.Name), Dropped: p.Dropped,
+			Version: p.Version, Arch: p.Arch, Dropped: p.Dropped,
 		}
 		if !p.LastSeen.IsZero() {
 			v.LastSeen = p.LastSeen.Unix()
@@ -395,34 +382,34 @@ func commands(st *config.State) []CommandGroup {
 	g := []CommandGroup{{
 		Title: "روی همین سرور (" + here + ")",
 		Commands: []Command{
-			{"وضعیت کلی تانل‌ها و سرورها", "sudo neotunnel status", here},
-			{"منوی تعاملی", "sudo neotunnel", here},
-			{"ترافیک زنده و مجموع مصرف هر تانل", "sudo neotunnel traffic", here},
-			{"آدرس و نام کاربری پنل", "sudo neotunnel panel info", here},
-			{"تغییر رمز پنل", "sudo neotunnel panel password", here},
-			{"بهینه‌سازی شبکه (BBR)", "sudo neotunnel boost", here},
-			{"ارسال دوباره‌ی تنظیمات به همه‌ی سرورها", "sudo neotunnel peer sync", here},
-			{"ارتقای سرورها به نسخه‌ی همین سرور", "sudo neotunnel peer upgrade", here},
-			{"به‌روزرسانی NeoTunnel به آخرین نسخه", "sudo neotunnel update", here},
-			{"حذف کامل NeoTunnel از این سرور", "sudo neotunnel uninstall", here},
+			{"وضعیت کلی تانل‌ها و سرورها", "sudo hltunnel status", here},
+			{"منوی تعاملی", "sudo hltunnel", here},
+			{"ترافیک زنده و مجموع مصرف هر تانل", "sudo hltunnel traffic", here},
+			{"آدرس و نام کاربری پنل", "sudo hltunnel panel info", here},
+			{"تغییر رمز پنل", "sudo hltunnel panel password", here},
+			{"بهینه‌سازی شبکه (BBR)", "sudo hltunnel boost", here},
+			{"ارسال دوباره‌ی تنظیمات به همه‌ی سرورها", "sudo hltunnel peer sync", here},
+			{"ارتقای سرورها به نسخه‌ی همین سرور", "sudo hltunnel peer upgrade", here},
+			{"به‌روزرسانی HLTunnel به آخرین نسخه", "sudo hltunnel update", here},
+			{"حذف کامل HLTunnel از این سرور", "sudo hltunnel uninstall", here},
 		},
 	}}
 	for _, p := range st.Peers {
 		cg := CommandGroup{Title: "سرور " + p.Name + " (" + p.Address + ")"}
 		cg.Commands = append(cg.Commands,
-			Command{"تانل 6to4 تا این سرور با فوروارد پورت 443", fmt.Sprintf("sudo neotunnel quick %s --address %s --forward 443", p.Name, p.Address), here},
-			Command{"تانل 6to4 روی پورت UDP دلخواه (مثلاً 3000)", fmt.Sprintf("sudo neotunnel quick %s --port 3000", p.Name), here},
-			Command{"تانل رمزنگاری‌شده (IPsec) با MTU خودکار", fmt.Sprintf("sudo neotunnel quick %s --encrypt aes-gcm-128 --mtu-probe", p.Name), here},
-			Command{"تانل مبهم‌شده روی UDP (NeoObfs)", fmt.Sprintf("sudo neotunnel quick %s --obfs --port 8443", p.Name), here},
-			Command{"فوروارد 443 با رد کردن IP واقعی کاربر", fmt.Sprintf("sudo neotunnel quick %s --forward 443 --forward-mode transparent", p.Name), here},
-			Command{"مقایسه‌ی سرعت همه‌ی انواع تانل تا این سرور", "sudo neotunnel bench " + p.Name, here},
-			Command{"دستور نصب/همگام‌سازی برای اجرا روی " + p.Name, "sudo neotunnel peer connect " + p.Name, here},
+			Command{"تانل 6to4 تا این سرور با فوروارد پورت 443", fmt.Sprintf("sudo hltunnel quick %s --address %s --forward 443", p.Name, p.Address), here},
+			Command{"تانل 6to4 روی پورت UDP دلخواه (مثلاً 3000)", fmt.Sprintf("sudo hltunnel quick %s --port 3000", p.Name), here},
+			Command{"تانل رمزنگاری‌شده (IPsec) با MTU خودکار", fmt.Sprintf("sudo hltunnel quick %s --encrypt aes-gcm-128 --mtu-probe", p.Name), here},
+			Command{"تانل مبهم‌شده روی UDP (HLObfs)", fmt.Sprintf("sudo hltunnel quick %s --obfs --port 8443", p.Name), here},
+			Command{"فوروارد 443 با رد کردن IP واقعی کاربر", fmt.Sprintf("sudo hltunnel quick %s --forward 443 --forward-mode transparent", p.Name), here},
+			Command{"مقایسه‌ی سرعت همه‌ی انواع تانل تا این سرور", "sudo hltunnel bench " + p.Name, here},
+			Command{"دستور نصب/همگام‌سازی برای اجرا روی " + p.Name, "sudo hltunnel peer connect " + p.Name, here},
 		)
 		for _, t := range st.Tunnels {
 			if _, ok := t.SideOf(p.Name); ok && t.Mode != "" {
 				cg.Commands = append(cg.Commands,
-					Command{"تست سرعت تانل " + t.Name, "sudo neotunnel test " + t.Name, here},
-					Command{"پیدا کردن بهترین MTU تانل " + t.Name, "sudo neotunnel mtu " + t.Name + " --apply", here})
+					Command{"تست سرعت تانل " + t.Name, "sudo hltunnel test " + t.Name, here},
+					Command{"پیدا کردن بهترین MTU تانل " + t.Name, "sudo hltunnel mtu " + t.Name + " --apply", here})
 			}
 		}
 		g = append(g, cg)
@@ -476,7 +463,7 @@ func (l *Live) UpgradePeer(ctx context.Context, name string) (string, error) {
 	v, err := fleet.Upgrade(ctx, l.ID, st, name)
 	if err == nil {
 		// Right away rather than at the next watch: what the new version can
-		// do (NeoObfs on AES) is known from the status the upgrade just read.
+		// do (HLObfs on AES) is known from the status the upgrade just read.
 		manage.UseObfsAES(name)
 	}
 	return v, err
@@ -814,33 +801,11 @@ func (l *Live) Boost() error { return sysctl.ApplyBoost() }
 func stackOverhead(ts []config.Tunnel, stack []string, under6, avgPad bool) int {
 	o := 0
 	for _, n := range stack {
-		t, _ := tunnelByName(ts, n)
-		ki, err := config.LookupKind(t.Kind)
-		if err != nil {
+		t, ok := tunnelByName(ts, n)
+		if !ok {
 			continue
 		}
-		if t.Kind == config.KindSpoof {
-			o += config.SpoofOverheadFor(t.SpoofProto, t.SpoofNoCrypt)
-			if avgPad {
-				o += t.Padding / 2
-			} else {
-				o += t.Padding
-			}
-			continue
-		}
-		o += ki.OverheadFor(under6 && t.Over == "", t.Port != 0 && t.Over == "")
-		if t.Kind == config.KindObfs {
-			if avgPad {
-				o += t.Padding / 2
-			} else {
-				o += t.Padding
-			}
-		}
-		if t.Encrypt != "" && t.Kind == config.KindTCP {
-			o += config.TCPTagOverhead
-		} else if t.Encrypt != "" {
-			o += config.ESPOverhead
-		}
+		o += t.PacketOverhead(under6 && t.Over == "", false, avgPad)
 	}
 	return o
 }
@@ -860,7 +825,7 @@ func (l *Live) Check(ctx context.Context, req manage.TunnelRequest, all bool, sp
 		return nil, err
 	}
 	if req.Peer == "" {
-		return nil, fmt.Errorf("a quick check needs NeoTunnel on the far end")
+		return nil, fmt.Errorf("a quick check needs HLTunnel on the far end")
 	}
 	p, ok := st.Peer(req.Peer)
 	if !ok {
@@ -881,9 +846,9 @@ func (l *Live) Check(ctx context.Context, req manage.TunnelRequest, all bool, sp
 		return r.Compare(ctx, bench.Candidates(st.Self, p.Name, st.Address, p.Address), nil), nil
 	}
 	if req.Obfs || req.Mode == "obfs" {
-		// NeoObfs runs in the daemon, not as a temporary kernel tunnel.
+		// HLObfs runs in the daemon, not as a temporary kernel tunnel.
 		return []bench.Result{{Name: "check", Mode: req.Mode, Status: "skipped",
-			Err: "NeoObfs is checked once created: use the tunnel's speed test"}}, nil
+			Err: "HLObfs is checked once created: use the tunnel's speed test"}}, nil
 	}
 	// A connection tunnel is checked like the others, as a temporary one in
 	// both daemons, the same side listening, and measured over its sessions.

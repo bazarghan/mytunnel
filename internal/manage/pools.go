@@ -5,7 +5,7 @@ import (
 	"net/netip"
 	"slices"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // PoolChoice says where a new tunnel's inner addresses come from: ranges

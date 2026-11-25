@@ -5,8 +5,8 @@ import (
 	"slices"
 	"testing"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
 )
 
 func routeLocal(remote netip.Addr) (netip.Addr, error) {
@@ -44,7 +44,7 @@ func TestCryptoRungs(t *testing.T) {
 		t.Fatalf("this end without AES: got %v", got)
 	}
 	withAES(t, true)
-	// No room for "-o" in the name, and no NeoObfs under TCP.
+	// No room for "-o" in the name, and no HLObfs under TCP.
 	st.Tunnels = []config.Tunnel{gre("name-of-10")}
 	if got := CryptoRungs(st, "name-of-10"); got[len(got)-1] == config.RungObfs {
 		t.Fatalf("got %v", got)
@@ -58,7 +58,7 @@ func TestCryptoRungs(t *testing.T) {
 }
 
 // Every step of the ladder is a configuration both ends can render, and the
-// NeoObfs layer leaves no trace once it is gone.
+// HLObfs layer leaves no trace once it is gone.
 func TestLadderRenders(t *testing.T) {
 	withAES(t, true)
 	st := &config.State{Self: "hub", ULA48: "fd00:1:2::/48", Tunnels: []config.Tunnel{gre("t1")}}
@@ -146,7 +146,7 @@ func TestObfsAESNeedsBothEnds(t *testing.T) {
 	}
 }
 
-// After the far server was upgraded, its old NeoObfs tunnels move to AES; others
+// After the far server was upgraded, its old HLObfs tunnels move to AES; others
 // stay as they are.
 func TestObfsTunnelsMoveToAES(t *testing.T) {
 	yes := true

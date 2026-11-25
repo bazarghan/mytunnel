@@ -9,12 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/fleet"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/service"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/fleet"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/service"
 )
 
 // The servers that manage this one, seen from here: what to do when one
@@ -223,7 +223,7 @@ func LeaveAll() []Cleanup {
 			err := fleet.Leave(context.Background(), id, p)
 			mu.Lock()
 			defer mu.Unlock()
-			c := Cleanup{Peer: p.Name, Command: "neotunnel master forget " + st.Self}
+			c := Cleanup{Peer: p.Name, Command: "hltunnel master forget " + st.Self}
 			if err != nil {
 				c.Error = err.Error()
 			}

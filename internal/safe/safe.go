@@ -26,7 +26,7 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 const (

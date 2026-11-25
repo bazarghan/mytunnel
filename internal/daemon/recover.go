@@ -20,11 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
-	"neotunnel/internal/health"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
+	"hltunnel/internal/health"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/manage"
 )
 
 const (

@@ -1,4 +1,4 @@
-// Package config holds NeoTunnel's persistent data model.
+// Package config holds HLTunnel's persistent data model.
 //
 // A node keeps two sets of definitions: Local (owned and edited on this node,
 // including the tunnels it manages on its peers) and Managed (pushed by the
@@ -139,16 +139,16 @@ const (
 
 // Defaults pre-fill the advanced options of new tunnels and forwards.
 type Defaults struct {
-	Encrypt              string `json:"encrypt,omitempty"`                // IPsec cipher for new tunnels to NeoTunnel servers
+	Encrypt              string `json:"encrypt,omitempty"`                // IPsec cipher for new tunnels to HLTunnel servers
 	MTUProbe             bool   `json:"mtu_probe,omitempty"`              // measure the path MTU of new tunnels
-	Obfs                 bool   `json:"obfs,omitempty"`                   // run new tunnels over a NeoObfs layer
+	Obfs                 bool   `json:"obfs,omitempty"`                   // run new tunnels over an HLObfs layer
 	Spoof                bool   `json:"spoof,omitempty"`                  // run new tunnels over a Spoof (forged source IP) layer
 	SpoofProto           string `json:"spoof_proto,omitempty"`            // outer spoof protocol: udp, tcp, gre, ipip, sit, icmp
 	SpoofMode            string `json:"spoof_mode,omitempty"`             // spoof direction: both, out, in
 	SpoofSrc             string `json:"spoof_src,omitempty"`              // spoof source IP: auto, iran, rotate, or IPv4
 	SpoofPinhole         bool   `json:"spoof_pinhole,omitempty"`          // stateful firewall pinhole keepalive for Spoof
 	SpoofPinholeInterval int    `json:"spoof_pinhole_interval,omitempty"` // pinhole keepalive interval in seconds (0 = 15s)
-	Padding              int    `json:"padding,omitempty"`                // NeoObfs / Spoof random padding
+	Padding              int    `json:"padding,omitempty"`                // HLObfs / Spoof random padding
 	ForwardMode          string `json:"forward_mode,omitempty"`           // nat, transparent, proxy, relay
 	// NoRecover turns off the daemon's automatic recovery of tunnels that
 	// lose most of their packets (restart once, then move forwards to the
@@ -193,7 +193,7 @@ type Panel struct {
 }
 
 // Webhook posts each event as JSON to URL, signed with Secret (HMAC-SHA256
-// of the body, in the X-NeoTunnel-Signature header as "sha256=<hex>").
+// of the body, in the X-HLTunnel-Signature header as "sha256=<hex>").
 type Webhook struct {
 	URL    string `json:"url"`
 	Secret string `json:"secret"`
@@ -284,7 +284,7 @@ type Peer struct {
 	Address6 string `json:"address6,omitempty"`
 	// AESNI is whether the peer's CPU has AES instructions, as it reports.
 	AESNI *bool `json:"aes_ni,omitempty"`
-	// ObfsAES: the peer's version can run NeoObfs on AES-128-GCM.
+	// ObfsAES: the peer's version can run HLObfs on AES-128-GCM.
 	ObfsAES bool `json:"obfs_aes,omitempty"`
 	// StreamTunnels: the peer's version runs connection tunnels and takes
 	// relay connections on each tunnel's own ports (RelayPorts).
@@ -364,7 +364,7 @@ type Tunnel struct {
 	// one). Only kernel IP tunnels honor it.
 	DSCP uint8 `json:"dscp,omitempty"`
 
-	// Secret seeds every key of the tunnel (IPsec, WireGuard, NeoObfs):
+	// Secret seeds every key of the tunnel (IPsec, WireGuard, HLObfs):
 	// 32 random bytes, base64, shared by both sides.
 	Secret string `json:"secret,omitempty"`
 	// Encrypt protects the tunnel's outer packets with kernel IPsec (ESP in
@@ -373,10 +373,10 @@ type Tunnel struct {
 	// AutoEncrypt, on the user-facing tunnel, lets the daemon step the
 	// tunnel's encryption from none toward the strongest while traffic does
 	// not pass (see daemon/autocrypt.go). The current step stays in Encrypt
-	// of the bottom tunnel, or is a NeoObfs layer marked AutoLayer.
+	// of the bottom tunnel, or is an HLObfs layer marked AutoLayer.
 	AutoEncrypt bool `json:"auto_encrypt,omitempty"`
 	AutoLayer   bool `json:"auto_layer,omitempty"`
-	// ObfsAES runs a NeoObfs or Spoof tunnel on AES-128-GCM, chosen when both
+	// ObfsAES runs an HLObfs or Spoof tunnel on AES-128-GCM, chosen when both
 	// servers have AES instructions and the far one understands it.
 	ObfsAES bool `json:"obfs_aes,omitempty"`
 	// SpoofProto is the outer wire protocol of a Spoof tunnel ("udp", "tcp",
@@ -398,13 +398,13 @@ type Tunnel struct {
 	// SpoofPinholeInterval is the interval in seconds between pinhole
 	// keepalive packets when SpoofPinhole is enabled (0 = default 15s).
 	SpoofPinholeInterval int `json:"spoof_pinhole_interval,omitempty"`
-	// Padding adds up to this many random bytes to NeoObfs/Spoof packets so their
+	// Padding adds up to this many random bytes to HLObfs/Spoof packets so their
 	// sizes don't reveal the traffic inside.
 	Padding int `json:"padding,omitempty"`
-	// Keepalive in seconds for WireGuard and NeoObfs (0 = 25, -1 = off).
+	// Keepalive in seconds for WireGuard and HLObfs (0 = 25, -1 = off).
 	Keepalive int `json:"keepalive,omitempty"`
 	// PeerKey is a WireGuard far end's public key when it doesn't run
-	// NeoTunnel (e.g. a MikroTik); managed ends derive keys from Secret.
+	// HLTunnel (e.g. a MikroTik); managed ends derive keys from Secret.
 	PeerKey string `json:"peer_key,omitempty"`
 
 	// Mode labels the user-facing tunnel of a stack (e.g. "6to4").
@@ -511,7 +511,7 @@ func (t Tunnel) StreamConns() int {
 const MaxStreamConns = 16
 
 // MaxLanes is the most lanes a tunnel can have (lane interfaces are named
-// nt-<name>.<n>, which must fit 15 characters).
+// hl-<name>.<n>, which must fit 15 characters).
 const MaxLanes = 8
 
 // LaneCount is the number of parallel tunnels the tunnel runs on (>= 1).
@@ -525,25 +525,22 @@ func (t Tunnel) LaneCount() int {
 // PMTUKinds reports whether a kind honors a tunnel's path MTU discovery flag:
 // those that set a DF bit on outer IPv4 packets (IPv6 has no such bit).
 func PMTUKinds(k Kind) bool {
-	switch k {
-	case KindSIT, KindIPIP, KindGRE, KindGRETAP, KindEoIP, KindSpoof:
-		return true
-	}
-	return false
+	ki, _ := LookupKind(k)
+	return ki.PMTU
 }
 
 // IgnoreDFKinds reports whether a kind can also ignore the inner DF bit.
-func IgnoreDFKinds(k Kind) bool { return k == KindGRE || k == KindGRETAP }
+func IgnoreDFKinds(k Kind) bool {
+	ki, _ := LookupKind(k)
+	return ki.IgnoreDF
+}
 
 // LaneKinds reports whether a kind can run on several lanes: the kernel GRE
 // family, whose lanes are told apart by their keys. (Keyless SIT and IPIP
 // allow one tunnel per address pair; EoIP's user-space carrier is per tunnel.)
 func LaneKinds(k Kind) bool {
-	switch k {
-	case KindGRE, KindGRETAP, KindIP6GRE, KindIP6GRETAP:
-		return true
-	}
-	return false
+	ki, _ := LookupKind(k)
+	return ki.Lanes
 }
 
 type Side struct {
@@ -575,7 +572,7 @@ type Forward struct {
 	// Mode decides what the far end sees as the client's address:
 	//   nat (default)  this node's tunnel address (kernel DNAT + masquerade)
 	//   transparent    the real client IP (kernel; the far end routes replies
-	//                  back through the tunnel, so it must run NeoTunnel)
+	//                  back through the tunnel, so it must run HLTunnel)
 	//   proxy          a PROXY protocol header carrying the client's address,
 	//                  sent by a relay in the daemon (nginx, HAProxy, Xray...)
 	//   relay          TCP only, without the tunnel's packets: each user
@@ -769,7 +766,7 @@ func ValidForwardMode(mode string, version int, proto string) error {
 
 var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,9}$`)
 
-// ValidName enforces names that fit Linux interface names as "nt-<name>".
+// ValidName enforces names that fit Linux interface names as "hl-<name>".
 func ValidName(s string) error {
 	if !nameRe.MatchString(s) {
 		return fmt.Errorf("invalid name %q: use 1-10 chars of a-z, 0-9, '-'", s)

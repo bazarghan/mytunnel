@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/config"
+	"hltunnel/internal/manage"
 )
 
 // forwardSellCmd sets a sold port's plan: what its buyer gets.
@@ -20,10 +20,10 @@ func forwardSellCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sell <tunnel> <ports>",
 		Short: "Sell a port: speed cap, traffic quota, end date and client limits, enforced on this server",
-		Example: `  neotunnel forward sell t1 443 --customer "Ali" --quota 100 --days 30 --rate 50 --ips 2
-  neotunnel forward sell t1 443 --quota 200 --reset-days 30   # 200 GB every 30 days
-  neotunnel forward sell t1 443 --pause                        # closed until --resume
-  neotunnel forward sell t1 443 --remove                       # not sold any more`,
+		Example: `  hltunnel forward sell t1 443 --customer "Ali" --quota 100 --days 30 --rate 50 --ips 2
+  hltunnel forward sell t1 443 --quota 200 --reset-days 30   # 200 GB every 30 days
+  hltunnel forward sell t1 443 --pause                        # closed until --resume
+  hltunnel forward sell t1 443 --remove                       # not sold any more`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if remove {
@@ -113,8 +113,8 @@ func forwardRenewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "renew <tunnel> <ports>",
 		Short: "Renew a sold port: its end moves on; with --reset its quota is whole again from now",
-		Example: `  neotunnel forward renew t1 443 --days 30           # the traffic used stays counted
-  neotunnel forward renew t1 443 --days 30 --reset   # a new period: the quota whole again`,
+		Example: `  hltunnel forward renew t1 443 --days 30           # the traffic used stays counted
+  hltunnel forward renew t1 443 --days 30 --reset   # a new period: the quota whole again`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ch, err := manage.RenewPort(args[0], args[1], days, reset)

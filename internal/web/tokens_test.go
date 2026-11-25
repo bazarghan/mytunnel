@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // A token reaches what its scope allows, and never the panel's own
@@ -58,7 +58,7 @@ func TestTokens(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(tok, "nt_") || v.Name != "sales bot" || !strings.HasPrefix(tok[3:], v.ID) {
+	if !strings.HasPrefix(tok, "hl_") || v.Name != "sales bot" || !strings.HasPrefix(tok[3:], v.ID) {
 		t.Fatalf("token %q view %+v", tok, v)
 	}
 	st, _ := config.Load()
@@ -73,7 +73,7 @@ func TestTokens(t *testing.T) {
 	if got, ok := k.check(req("Bearer " + tok)); !ok || got.Scope != config.ScopePorts {
 		t.Errorf("valid token refused: %+v", got)
 	}
-	for _, bad := range []string{"Bearer " + tok + "x", "Bearer nt_nothing", tok, ""} {
+	for _, bad := range []string{"Bearer " + tok + "x", "Bearer hl_nothing", tok, ""} {
 		if _, ok := k.check(req(bad)); ok {
 			t.Errorf("%q accepted", bad)
 		}

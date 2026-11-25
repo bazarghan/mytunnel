@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/crypto/hkdf"
 
-	"neotunnel/internal/identity"
+	"hltunnel/internal/identity"
 )
 
 // A filtered path can let TCP through and still stall a TLS session to a bare
@@ -42,7 +42,7 @@ func veilStreams(serverKey string, nonce []byte) (toServer, toClient cipher.Stre
 	}
 	stream := func(label string) (cipher.Stream, error) {
 		k := make([]byte, 32+aes.BlockSize)
-		if _, err := io.ReadFull(hkdf.New(sha256.New, pub, nonce, []byte("neotunnel/veil/"+label)), k); err != nil {
+		if _, err := io.ReadFull(hkdf.New(sha256.New, pub, nonce, []byte("hltunnel/veil/"+label)), k); err != nil {
 			return nil, err
 		}
 		b, err := aes.NewCipher(k[:32])

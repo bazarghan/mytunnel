@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
 )
 
 // A post carries the event, signed with the secret; a receiver that
@@ -20,7 +20,7 @@ func TestPost(t *testing.T) {
 	status := 200
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
-		sig = r.Header.Get("X-NeoTunnel-Signature")
+		sig = r.Header.Get("X-HLTunnel-Signature")
 		if sig != Sign("0123456789abcdef", b) {
 			w.WriteHeader(401)
 			return

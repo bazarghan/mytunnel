@@ -1,5 +1,5 @@
 package main
 
-import "neotunnel/internal/cli"
+import "hltunnel/internal/cli"
 
 func main() { cli.Execute() }

@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Kinds of events.

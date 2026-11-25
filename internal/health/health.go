@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 const (
@@ -219,7 +219,7 @@ type Pinger func(ctx context.Context, addr string) (time.Duration, bool)
 // quietFile marks a speed test in progress (until a unix time), from any
 // process: a test fills the tunnels on purpose, and the loss it causes must
 // not be taken for a broken tunnel.
-var quietFile = "/run/neotunnel/quiet"
+var quietFile = "/run/hltunnel/quiet"
 
 // QuietFor holds automatic actions off for d from now.
 func QuietFor(d time.Duration) {

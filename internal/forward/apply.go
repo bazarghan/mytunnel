@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/sysctl"
+	"hltunnel/internal/sysctl"
 )
 
 // The daemon calls Apply every reconcile tick; an unchanged ruleset is only

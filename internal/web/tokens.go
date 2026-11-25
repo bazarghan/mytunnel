@@ -14,17 +14,17 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // API tokens: a program (a sales bot, a script) calls the same API the
-// panel does, with "Authorization: Bearer nt_…" instead of a session. A
+// panel does, with "Authorization: Bearer hl_…" instead of a session. A
 // token never reaches what only the panel's owner should: its password and
 // settings, backups (they hold every key), tokens, the Telegram bot, the
 // firewall, updates, and the commands and keys that set up a server.
 
 // tokenPrefix starts every token, so a leaked one is easy to search for.
-const tokenPrefix = "nt_"
+const tokenPrefix = "hl_"
 
 // TokenView is a token as the panel lists it.
 type TokenView struct {
@@ -39,7 +39,7 @@ type TokenView struct {
 // the method); a prefix ends with "*".
 var panelOnly = []string{
 	"/api/settings/*", "/api/backup*", "/api/tokens*", "/api/telegram*", "/api/guard*",
-	"/api/update", "/api/spot*", "/api/safe*", "/api/peers/{name}/setup", "/api/tunnels/{name}/mikrotik",
+	"/api/update", "/api/safe*", "/api/peers/{name}/setup", "/api/tunnels/{name}/mikrotik",
 	"/api/system/restart", "/api/logout",
 }
 

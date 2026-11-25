@@ -5,12 +5,12 @@
 # port-based (FOU) tunnels, offline catch-up, tests, bench, port forwarding
 # (including a remapped port) and cleanup.
 #
-# Needs root, iproute2, nftables, curl, python3.  Usage: sudo test/e2e.sh ./neotunnel
+# Needs root, iproute2, nftables, curl, python3.  Usage: sudo test/e2e.sh ./hltunnel
 set -euo pipefail
 
-BIN=$(realpath "${1:?usage: e2e.sh <neotunnel binary>}")
+BIN=$(realpath "${1:?usage: e2e.sh <hltunnel binary>}")
 WORK=$(mktemp -d)
-HUB=nt-e2e-hub EDGE=nt-e2e-edge CLIENT=nt-e2e-client
+HUB=hl-e2e-hub EDGE=hl-e2e-edge CLIENT=hl-e2e-client
 HUB_IP=192.0.2.1 EDGE_IP=192.0.2.2
 PANEL_PORT=34567 PANEL_PASS=e2e-password-123
 
@@ -21,9 +21,9 @@ fail() {
   echo "--- edge daemon log"; tail -n 40 "$WORK/edge.log" 2>/dev/null || true
   exit 1
 }
-in_hub()   { ip netns exec $HUB   env NEOTUNNEL_DIR=$WORK/hub   NO_COLOR=1 "$BIN" "$@"; }
-in_edge() { ip netns exec $EDGE env NEOTUNNEL_DIR=$WORK/edge NO_COLOR=1 "$BIN" "$@"; }
-start_edge() { ip netns exec $EDGE env NEOTUNNEL_DIR=$WORK/edge "$BIN" daemon >>"$WORK/edge.log" 2>&1 & echo $! > "$WORK/edge.pid"; sleep 1; }
+in_hub()   { ip netns exec $HUB   env HLTUNNEL_DIR=$WORK/hub   NO_COLOR=1 "$BIN" "$@"; }
+in_edge() { ip netns exec $EDGE env HLTUNNEL_DIR=$WORK/edge NO_COLOR=1 "$BIN" "$@"; }
+start_edge() { ip netns exec $EDGE env HLTUNNEL_DIR=$WORK/edge "$BIN" daemon >>"$WORK/edge.log" 2>&1 & echo $! > "$WORK/edge.pid"; sleep 1; }
 http_code() { ip netns exec $CLIENT curl -s -o /dev/null -m 5 -w '%{http_code}' "$1" || true; }
 wait_for() { # seconds, command...: poll until the command succeeds
   local n=$1; shift
@@ -35,7 +35,7 @@ cleanup() {
   set +e
   for p in $(jobs -p); do kill "$p" 2>/dev/null; done
   [ -f "$WORK/edge.pid" ] && kill "$(cat "$WORK/edge.pid")" 2>/dev/null
-  for ns in $HUB $EDGE $CLIENT nt-e2e-hub2; do ip netns del $ns 2>/dev/null; done
+  for ns in $HUB $EDGE $CLIENT hl-e2e-hub2; do ip netns del $ns 2>/dev/null; done
   rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -61,7 +61,7 @@ ip netns exec $EDGE python3 -m http.server 8080 --directory "$WORK/www" >/dev/nu
 in_hub node --name hub --address $HUB_IP >/dev/null
 in_edge node --name edge --address $EDGE_IP >/dev/null
 in_hub panel setup --port $PANEL_PORT --password $PANEL_PASS >/dev/null || fail "panel setup"
-ip netns exec $HUB env NEOTUNNEL_DIR=$WORK/hub NEOTUNNEL_PEER_WATCH=3s "$BIN" daemon >"$WORK/hub.log" 2>&1 & echo $! > "$WORK/hub.pid"
+ip netns exec $HUB env HLTUNNEL_DIR=$WORK/hub HLTUNNEL_PEER_WATCH=3s "$BIN" daemon >"$WORK/hub.log" 2>&1 & echo $! > "$WORK/hub.pid"
 start_edge
 sleep 1
 
@@ -79,22 +79,22 @@ in_edge apply "$key"
 in_hub peer list | grep -q "edge.*in sync" || fail "peer not paired and in sync"
 pass "peer paired and in sync"
 
-ip -n $HUB -d link show nt-t1-6 | grep -q sit || fail "sit missing on hub"
-ip -n $EDGE -d link show nt-t1 | grep -q ip6tnl || fail "ipip6 missing on edge"
+ip -n $HUB -d link show hl-t1-6 | grep -q sit || fail "sit missing on hub"
+ip -n $EDGE -d link show hl-t1 | grep -q ip6tnl || fail "ipip6 missing on edge"
 ip netns exec $HUB ping -c 3 -W 2 10.77.0.2 >/dev/null || fail "ping through 6to4 (IPv4 over ipip6 over sit)"
 pass "6to4 stack up, IPv4 ping through it works"
 
 # 2b. Display names: renaming changes only the label, on both servers; the
 #     running tunnel (same interfaces) keeps passing traffic.
-idx_hub=$(ip -n $HUB -o link show nt-t1 | cut -d: -f1)
-idx_edge=$(ip -n $EDGE -o link show nt-t1 | cut -d: -f1)
+idx_hub=$(ip -n $HUB -o link show hl-t1 | cut -d: -f1)
+idx_edge=$(ip -n $EDGE -o link show hl-t1 | cut -d: -f1)
 in_hub tunnel rename t1 "آلمان اصلی" >/dev/null || fail "rename tunnel"
 in_hub peer rename edge "سرور مقصد" >/dev/null || fail "rename peer"
 in_hub node --label "ایران" >/dev/null || fail "rename this node"
 in_hub tunnel list | grep -q "آلمان اصلی" || fail "tunnel list shows no display name"
 grep -q '"label": "آلمان اصلی"' "$WORK/edge/state.json" || fail "the tunnel's display name did not reach edge"
-[ "$(ip -n $HUB -o link show nt-t1 | cut -d: -f1)" = "$idx_hub" ] || fail "renaming recreated nt-t1 on hub"
-[ "$(ip -n $EDGE -o link show nt-t1 | cut -d: -f1)" = "$idx_edge" ] || fail "renaming recreated nt-t1 on edge"
+[ "$(ip -n $HUB -o link show hl-t1 | cut -d: -f1)" = "$idx_hub" ] || fail "renaming recreated hl-t1 on hub"
+[ "$(ip -n $EDGE -o link show hl-t1 | cut -d: -f1)" = "$idx_edge" ] || fail "renaming recreated hl-t1 on edge"
 ip netns exec $HUB ping -c 2 -W 2 10.77.0.2 >/dev/null || fail "ping after renaming"
 in_hub peer list | grep -q "edge.*in sync" || fail "peer not in sync after renaming"
 pass "display names: tunnel, peer and node renamed; the tunnel stays up on the same interfaces"
@@ -102,11 +102,11 @@ pass "display names: tunnel, peer and node renamed; the tunnel stays up on the s
 # 3. Changes on the master reach the peer by themselves.
 out=$(in_hub tunnel add v1 --kind vxlan --peer edge 2>&1)
 grep -q "edge updated" <<<"$out" || { echo "$out"; fail "push to peer"; }
-ip -n $EDGE -d link show nt-v1 | grep -q vxlan || fail "vxlan not created on peer"
-v1peer=$(ip -n $EDGE -o -4 addr show dev nt-v1 | awk '{print $4}' | cut -d/ -f1)
+ip -n $EDGE -d link show hl-v1 | grep -q vxlan || fail "vxlan not created on peer"
+v1peer=$(ip -n $EDGE -o -4 addr show dev hl-v1 | awk '{print $4}' | cut -d/ -f1)
 ip netns exec $HUB ping -c 3 -W 2 "$v1peer" >/dev/null || fail "ping through vxlan"
 in_hub tunnel remove v1 >/dev/null
-ip -n $EDGE link show nt-v1 >/dev/null 2>&1 && fail "vxlan still on peer after remove"
+ip -n $EDGE link show hl-v1 >/dev/null 2>&1 && fail "vxlan still on peer after remove"
 pass "add and remove pushed automatically (vxlan)"
 
 # 3b. The interactive menu, driven through a real pseudo-terminal: create a
@@ -114,17 +114,17 @@ pass "add and remove pushed automatically (vxlan)"
 #     port, no forward, name m1, confirm), then quit.
 keys() { for k in "$@"; do printf '%b' "$k"; sleep 0.7; done; }
 keys '1' '1' '9' '\r' '\r' '\r' 'm1\r' 'y\r' ' ' 'q' |
-  ip netns exec $HUB env NEOTUNNEL_DIR=$WORK/hub TERM=xterm script -qfec "$BIN" /dev/null > "$WORK/menu.log" 2>&1 || true
+  ip netns exec $HUB env HLTUNNEL_DIR=$WORK/hub TERM=xterm script -qfec "$BIN" /dev/null > "$WORK/menu.log" 2>&1 || true
 grep -q "menu closed" "$WORK/menu.log" || { tail -c 3000 "$WORK/menu.log"; fail "menu did not exit cleanly"; }
-ip -n $EDGE -d link show nt-m1 | grep -q vxlan || { tail -c 3000 "$WORK/menu.log"; fail "tunnel created in the menu missing on edge"; }
+ip -n $EDGE -d link show hl-m1 | grep -q vxlan || { tail -c 3000 "$WORK/menu.log"; fail "tunnel created in the menu missing on edge"; }
 in_hub tunnel remove m1 >/dev/null
 pass "menu: created a VXLAN tunnel on both servers with the keyboard"
 
 # 4. Port-based tunnel: IPIP inside UDP 3001 (FOU), plus a remapped forward.
 in_hub tunnel add u1 --kind ipip --peer edge --port 3001 >/dev/null || fail "add ipip on port 3001"
-ip -n $HUB -d link show nt-u1 | grep -q "encap fou" || fail "nt-u1 is not FOU-encapsulated"
+ip -n $HUB -d link show hl-u1 | grep -q "encap fou" || fail "hl-u1 is not FOU-encapsulated"
 ip netns exec $EDGE ip fou show | grep -q "port 3001" || fail "peer has no FOU listener on 3001"
-u1peer=$(ip -n $EDGE -o -4 addr show dev nt-u1 | awk '{print $4}' | cut -d/ -f1)
+u1peer=$(ip -n $EDGE -o -4 addr show dev hl-u1 | awk '{print $4}' | cut -d/ -f1)
 ip netns exec $HUB ping -c 3 -W 2 "$u1peer" >/dev/null || fail "ping through ipip over UDP 3001"
 in_hub forward add u1 9090 --to 8080 --proto tcp >/dev/null || fail "add remapped forward"
 sleep 16  # one daemon reconcile with the FOU port already open must stay quiet
@@ -137,7 +137,7 @@ out=$(in_hub tunnel add g1 --kind gre --peer edge)
 grep -q "not reachable" <<<"$out" || fail "expected unreachable peer"
 key=$(grep -o "NT1\.[^']*" <<<"$out" | head -1)
 in_edge apply "$key" >/dev/null
-ip -n $EDGE -d link show nt-g1 | grep -q gre || fail "gre not applied from the offline setup key"
+ip -n $EDGE -d link show hl-g1 | grep -q gre || fail "gre not applied from the offline setup key"
 start_edge
 pass "offline peer caught up with one command"
 
@@ -146,10 +146,10 @@ pass "offline peer caught up with one command"
 #     The peer's agent listens on a port of its own, which the hub learns.
 kill "$(cat "$WORK/edge.pid")"; sleep 0.5
 in_hub tunnel add g9 --kind gre --peer edge >/dev/null 2>&1 || true
-ip -n $EDGE link show nt-g9 >/dev/null 2>&1 && fail "g9 reached a stopped peer?"
+ip -n $EDGE link show hl-g9 >/dev/null 2>&1 && fail "g9 reached a stopped peer?"
 start_edge
-for i in $(seq 1 20); do ip -n $EDGE -d link show nt-g9 2>/dev/null | grep -q gre && break; sleep 1; done
-ip -n $EDGE -d link show nt-g9 2>/dev/null | grep -q gre || fail "the peer did not catch up by itself"
+for i in $(seq 1 20); do ip -n $EDGE -d link show hl-g9 2>/dev/null | grep -q gre && break; sleep 1; done
+ip -n $EDGE -d link show hl-g9 2>/dev/null | grep -q gre || fail "the peer did not catch up by itself"
 eport=$(grep -o '"agent_port": *[0-9]*' "$WORK/edge/state.json" | head -1 | grep -o '[0-9]*$')
 [ -n "$eport" ] && [ "$eport" != 7710 ] || fail "edge has no agent port of its own ($eport)"
 ip netns exec $EDGE ss -ltn | grep -q ":$eport " || fail "edge's agent does not listen on $eport"
@@ -168,9 +168,9 @@ then
   ip netns exec $HUB curl -sk -m 3 -o /dev/null "https://$EDGE_IP:$eport/" && fail "the filter let TLS through"
   in_hub tunnel add g8 --kind gre --peer edge >/dev/null || fail "add a tunnel behind the TLS filter"
   in_hub peer list | grep -q "edge.*in sync" || { in_hub peer list; fail "peer not in sync behind the TLS filter"; }
-  ip -n $EDGE -d link show nt-g8 2>/dev/null | grep -q gre || fail "the change did not reach edge behind the TLS filter"
+  ip -n $EDGE -d link show hl-g8 2>/dev/null | grep -q gre || fail "the change did not reach edge behind the TLS filter"
   in_hub tunnel remove g8 >/dev/null || fail "remove a tunnel behind the TLS filter"
-  ip -n $EDGE link show nt-g8 >/dev/null 2>&1 && fail "the removal did not reach edge behind the TLS filter"
+  ip -n $EDGE link show hl-g8 >/dev/null 2>&1 && fail "the removal did not reach edge behind the TLS filter"
   [ "$(ip netns exec $HUB ss -tn state established "( dport = :$eport )" | tail -n +2 | wc -l)" -le 1 ] || { ip netns exec $HUB ss -tn; fail "connections to edge's agent left open"; }
   ip netns exec $EDGE nft delete table inet e2etls
   pass "control channel keeps working where TLS is dropped; no connections left open"
@@ -189,7 +189,7 @@ for a in 127.0.0.1 $HUB_IP 10.77.0.1; do
   ip netns exec $HUB curl -s -m 5 "http://$a:8080/" | grep -q hello-from-edge || fail "forward 8080 from hub itself via $a"
 done
 ip netns exec $HUB curl -s -m 5 http://127.0.0.1:9090/ | grep -q hello-from-edge || fail "forward 9090 -> 8080 from hub itself"
-[ "$(ip netns exec $HUB cat /proc/sys/net/ipv4/conf/nt-t1/route_localnet)" = 1 ] || fail "route_localnet not on for nt-t1"
+[ "$(ip netns exec $HUB cat /proc/sys/net/ipv4/conf/hl-t1/route_localnet)" = 1 ] || fail "route_localnet not on for hl-t1"
 pass "forwards also serve hub's own programs at 127.0.0.1, its public and its tunnel address"
 
 # 7. Built-in test and benchmark.
@@ -199,8 +199,8 @@ pass "tunnel test (ping, jitter, loss, bandwidth)"
 in_hub bench edge --duration 1s --pings 20 | tee "$WORK/bench.txt"
 grep -q "fastest tunnel" "$WORK/bench.txt" || fail "bench gave no recommendation"
 sleep 1
-ip -n $HUB -o link | grep -qE '^[0-9]+: ntx-' && fail "bench left temporary tunnels on master"
-ip -n $EDGE -o link | grep -qE '^[0-9]+: ntx-' && fail "bench left temporary tunnels on peer"
+ip -n $HUB -o link | grep -qE '^[0-9]+: hlx-' && fail "bench left temporary tunnels on master"
+ip -n $EDGE -o link | grep -qE '^[0-9]+: hlx-' && fail "bench left temporary tunnels on peer"
 pass "benchmark ranked the kinds and cleaned up"
 
 # 8. Panel: login, overview, create a tunnel through the API.
@@ -208,48 +208,48 @@ purl=$(in_hub panel info | grep -o "https://[^ ]*")
 ppath=$(sed -E 's#https://[^/]+(/[^/]+)/#\1#' <<<"$purl")
 base="https://127.0.0.1:$PANEL_PORT$ppath"
 jar="$WORK/cookies"
-api() { ip netns exec $HUB curl -sk -b "$jar" -c "$jar" -H 'Content-Type: application/json' -H 'X-NeoTunnel: 1' "$@"; }
+api() { ip netns exec $HUB curl -sk -b "$jar" -c "$jar" -H 'Content-Type: application/json' -H 'X-HLTunnel: 1' "$@"; }
 [ "$(api -o /dev/null -w '%{http_code}' "$base/api/overview")" = 401 ] || fail "panel API open without login"
 api -d "{\"user\":\"admin\",\"password\":\"wrong\"}" "$base/api/login" | grep -q error || fail "panel accepted a wrong password"
 api -d "{\"user\":\"admin\",\"password\":\"$PANEL_PASS\"}" "$base/api/login" | grep -q '"ok":true' || fail "panel login"
 api "$base/api/overview" | grep -q '"name":"t1"' || fail "overview misses tunnel t1"
 api -d '{"peer":"edge","mode":"gretap","name":"p1"}' "$base/api/tunnels" | grep -q '"ok":true' || fail "create tunnel via panel"
-ip -n $EDGE -d link show nt-p1 | grep -q gretap || fail "panel-created tunnel missing on peer"
+ip -n $EDGE -d link show hl-p1 | grep -q gretap || fail "panel-created tunnel missing on peer"
 [ "$(ip netns exec $HUB curl -sk -o /dev/null -w '%{http_code}' "https://127.0.0.1:$PANEL_PORT/")" = 404 ] || fail "panel reachable outside its secret path"
 pass "panel: auth, overview and tunnel creation reach the peer"
 
 # 10. IPsec: an encrypted GRE tunnel; its packets travel as ESP.
 inner() { ip -n "$1" -o -4 addr show dev "$2" | awk '{print $4}' | cut -d/ -f1; }
-hup() { pkill -HUP -f "neotunnel daemon" || true; sleep "${1:-2}"; }
+hup() { pkill -HUP -f "hltunnel daemon" || true; sleep "${1:-2}"; }
 out=$(in_hub tunnel add e1 --kind gre --peer edge --encrypt aes-gcm-128 2>&1) || { echo "$out"; fail "add encrypted gre"; }
 ip netns exec $HUB ip xfrm state | grep -q "spi 0x4e" || fail "no ESP SA on hub"
 ip netns exec $EDGE ip xfrm state | grep -q "spi 0x4e" || fail "no ESP SA on edge"
-[ "$(ip -n $HUB -o link show nt-e1 | grep -o 'mtu [0-9]*')" = "mtu 1434" ] || fail "encrypted gre MTU should be 1434"
-ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-e1)" >/dev/null || fail "ping through encrypted gre"
+[ "$(ip -n $HUB -o link show hl-e1 | grep -o 'mtu [0-9]*')" = "mtu 1434" ] || fail "encrypted gre MTU should be 1434"
+ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-e1)" >/dev/null || fail "ping through encrypted gre"
 ip netns exec $HUB ip -s xfrm state | grep -qE '[1-9][0-9]*\(bytes\)' || fail "ESP SAs carried no traffic"
 pass "IPsec (AES-GCM) encrypts the GRE tunnel; MTU accounts for ESP"
 
 # 11. WireGuard with keys derived on both ends.
 out=$(in_hub tunnel add w1 --kind wireguard --peer edge 2>&1) || { echo "$out"; fail "add wireguard"; }
-ip -n $EDGE -d link show nt-w1 2>/dev/null | grep -q wireguard || { echo "$out"; fail "wireguard missing on edge"; }
-ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-w1)" >/dev/null || fail "ping through wireguard"
+ip -n $EDGE -d link show hl-w1 2>/dev/null | grep -q wireguard || { echo "$out"; fail "wireguard missing on edge"; }
+ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-w1)" >/dev/null || fail "ping through wireguard"
 pass "WireGuard tunnel up with derived keys"
 
-# 12. NeoObfs, alone and under a kernel tunnel (runs in the daemons).
+# 12. HLObfs, alone and under a kernel tunnel (runs in the daemons).
 in_hub tunnel add o1 --kind obfs --peer edge --port 8443 --padding 16 >/dev/null || fail "add obfs"
 in_hub quick edge --name q2 --mode ipip --obfs --port 8444 >/dev/null || fail "quick ipip over obfs"
 hup 3
-ip -n $HUB link show nt-o1 >/dev/null 2>&1 || fail "obfs interface missing on hub"
-ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-o1)" >/dev/null || fail "ping through NeoObfs"
-ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-q2)" >/dev/null || fail "ping through ipip over NeoObfs"
+ip -n $HUB link show hl-o1 >/dev/null 2>&1 || fail "obfs interface missing on hub"
+ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-o1)" >/dev/null || fail "ping through HLObfs"
+ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-q2)" >/dev/null || fail "ping through ipip over HLObfs"
 # Both namespaces share this CPU: with AES instructions, the tunnel runs on AES.
 # A tunnel from before (put back on XChaCha20 here, as an older version made
 # it) moves to AES by itself at the next peer watch, on both servers.
 o1enc() { api "$base/api/overview" | python3 -c "import json,sys; print([t for t in json.load(sys.stdin)['tunnels'] if t['name']=='o1'][0].get('encrypt'))"; }
 if grep -qw aes /proc/cpuinfo; then
-  [ "$(o1enc)" = aes-gcm-128 ] || fail "NeoObfs not on AES-GCM between two servers with AES instructions"
+  [ "$(o1enc)" = aes-gcm-128 ] || fail "HLObfs not on AES-GCM between two servers with AES instructions"
   o1aes() { [ "$(o1enc)" = aes-gcm-128 ]; }
-  moved() { grep -q "NeoObfs tunnels \[o1\] to edge now run on AES-GCM" "$WORK/hub.log"; }
+  moved() { grep -q "HLObfs tunnels \[o1\] to edge now run on AES-GCM" "$WORK/hub.log"; }
   # The daemon writes state.json too (each peer refresh); an edit it wrote
   # over never happened, so it is made again.
   for try in 1 2 3; do
@@ -264,12 +264,12 @@ PY
     for i in $(seq 1 30); do moved && break; sleep 1; done
     moved && break
   done
-  o1aes || { tail -20 "$WORK/hub.log"; fail "an old NeoObfs tunnel did not move to AES-GCM by itself"; }
+  o1aes || { tail -20 "$WORK/hub.log"; fail "an old HLObfs tunnel did not move to AES-GCM by itself"; }
   moved || { tail -20 "$WORK/hub.log"; fail "the move to AES-GCM was not logged"; }
-  for i in $(seq 1 15); do ip netns exec $HUB ping -c 1 -W 2 "$(inner $EDGE nt-o1)" >/dev/null && break; sleep 1; done
-  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-o1)" >/dev/null || fail "ping through NeoObfs after it moved to AES-GCM"
+  for i in $(seq 1 15); do ip netns exec $HUB ping -c 1 -W 2 "$(inner $EDGE hl-o1)" >/dev/null && break; sleep 1; done
+  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-o1)" >/dev/null || fail "ping through HLObfs after it moved to AES-GCM"
 fi
-pass "NeoObfs carries traffic, and kernel tunnels stack on it"
+pass "HLObfs carries traffic, and kernel tunnels stack on it"
 
 # 12b. TCP transport (user space): plain and with a stream cipher, a speed
 #      test through it, recovery when the far daemon restarts, and the
@@ -278,8 +278,8 @@ in_hub tunnel add c1 --kind tcp --peer edge --port 8445 >/dev/null || fail "add 
 in_hub tunnel add c2 --kind tcp --peer edge --port 8446 --encrypt chacha20-poly1305 >/dev/null || fail "add encrypted tcp"
 hup 3
 for n in c1 c2; do
-  ip -n $EDGE link show nt-$n >/dev/null 2>&1 || fail "tcp interface nt-$n missing on edge"
-  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-$n)" >/dev/null || fail "ping through tcp tunnel $n"
+  ip -n $EDGE link show hl-$n >/dev/null 2>&1 || fail "tcp interface hl-$n missing on edge"
+  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-$n)" >/dev/null || fail "ping through tcp tunnel $n"
 done
 ip netns exec $HUB ss -Htn state established "( sport = :8446 or dport = :8446 )" | grep -q . || fail "no TCP connection on port 8446"
 in_hub test c2 --duration 2s --pings 20 | tee "$WORK/tcptest.txt"
@@ -287,7 +287,7 @@ grep -q "Mbit/s\|Gbit/s" "$WORK/tcptest.txt" || fail "no throughput through the 
 kill "$(cat "$WORK/edge.pid")"; sleep 0.5
 start_edge
 ok=
-for _ in $(seq 15); do ip netns exec $HUB ping -c 1 -W 1 "$(inner $EDGE nt-c2)" >/dev/null 2>&1 && { ok=1; break; }; done
+for _ in $(seq 15); do ip netns exec $HUB ping -c 1 -W 1 "$(inner $EDGE hl-c2)" >/dev/null 2>&1 && { ok=1; break; }; done
 [ -n "$ok" ] || fail "tcp tunnel did not reconnect after the edge daemon restarted"
 api -d '{"peer":"edge","mode":"tcp","encrypt":"aes-gcm-128"}' "$base/api/check" | tee "$WORK/tcpcheck.json" | grep -q '"status":"passed"' || { cat "$WORK/tcpcheck.json"; fail "panel check of a tcp tunnel"; }
 pass "TCP transport carries ping and bandwidth, reconnects, and passes the panel check"
@@ -386,9 +386,9 @@ ip netns exec $EDGE sysctl -qw net.ipv6.conf.default.disable_ipv6=1
 api -d '{"peer":"edge","mode":"gre"}' "$base/api/check" | tee "$WORK/v6check.json" | grep -q '"status":"passed"' || { cat "$WORK/v6check.json"; fail "check of gre to a server with IPv6 off"; }
 out=$(in_hub tunnel add v6x --kind gre --peer edge 2>&1) || { echo "$out"; fail "add gre to a server with IPv6 off"; }
 hup 3
-[ "$(ip netns exec $EDGE cat /proc/sys/net/ipv6/conf/nt-v6x/disable_ipv6)" = 0 ] || fail "IPv6 still off on edge's nt-v6x"
-ip -n $EDGE -o -6 addr show dev nt-v6x scope global | grep -q inet6 || { ip -n $EDGE addr show dev nt-v6x; fail "edge's nt-v6x has no inner IPv6 address"; }
-ip netns exec $HUB ping -c 2 -W 2 "$(inner $EDGE nt-v6x)" >/dev/null || fail "ping through gre to a server with IPv6 off"
+[ "$(ip netns exec $EDGE cat /proc/sys/net/ipv6/conf/hl-v6x/disable_ipv6)" = 0 ] || fail "IPv6 still off on edge's hl-v6x"
+ip -n $EDGE -o -6 addr show dev hl-v6x scope global | grep -q inet6 || { ip -n $EDGE addr show dev hl-v6x; fail "edge's hl-v6x has no inner IPv6 address"; }
+ip netns exec $HUB ping -c 2 -W 2 "$(inner $EDGE hl-v6x)" >/dev/null || fail "ping through gre to a server with IPv6 off"
 [ "$(ip netns exec $EDGE cat /proc/sys/net/ipv6/conf/veth-edge/disable_ipv6)" = 0 ] || fail "the server's own interface changed"
 in_hub tunnel remove v6x >/dev/null
 ip netns exec $EDGE sysctl -qw net.ipv6.conf.default.disable_ipv6=0
@@ -408,9 +408,9 @@ in_hub forward add p5 8121 --to 8085 --proto tcp --public >/dev/null || fail "ad
 in_hub forward add p5 8122 --to 8085 --mode relay --public >/dev/null || fail "add a relay forward to edge's public address"
 hup 3
 [ "$(http_code http://198.18.0.1:8120/)" = 000 ] || fail "a service on the public address only answered at the tunnel address"
-[ "$(http_code http://198.18.0.1:8121/)" = 200 ] || { ip netns exec $HUB nft list table inet neotunnel | grep -n "public\|8121"; ip -n $HUB rule; fail "nat forward to edge's public address"; }
+[ "$(http_code http://198.18.0.1:8121/)" = 200 ] || { ip netns exec $HUB nft list table inet hltunnel | grep -n "public\|8121"; ip -n $HUB rule; fail "nat forward to edge's public address"; }
 [ "$(http_code http://198.18.0.1:8122/)" = 200 ] || fail "relay forward to edge's public address"
-hubin=$(inner $HUB nt-p5)
+hubin=$(inner $HUB hl-p5)
 grep -q "^$hubin " "$WORK/pub.log" || { cat "$WORK/pub.log"; fail "the public-address forward did not come through the tunnel (from $hubin)"; }
 in_hub forward list | grep -q "8121.*at its public address" || { in_hub forward list; fail "forward list doesn't show the public delivery"; }
 # Proxy mode dials the public address itself, its socket marked so the
@@ -430,13 +430,13 @@ grep -q "^$hubin PROXY TCP4 198.18.0.2 " "$WORK/pubproxy.txt" || { cat "$WORK/pu
 # out of veth-hub, for the server's own packets and forwarded ones alike.
 # A default route like a datacenter's (via edge here, which would answer)
 # is what such packets would take.
-farin=$(inner $EDGE nt-p5)
+farin=$(inner $EDGE hl-p5)
 ip -n $HUB route add default via $EDGE_IP dev veth-hub
-ip -n $HUB link set nt-p5 down
+ip -n $HUB link set hl-p5 down
 ip netns exec $HUB ping -c 1 -W 1 "$farin" >/dev/null 2>&1 && { ip -n $HUB route; fail "ping to $farin with p5 down got an answer by the default route"; }
-ip netns exec $HUB nft list chain inet neotunnel leak_output | grep -qE "packets [1-9]" || { ip netns exec $HUB nft list chain inet neotunnel leak_output; fail "the leak guard dropped nothing"; }
+ip netns exec $HUB nft list chain inet hltunnel leak_output | grep -qE "packets [1-9]" || { ip netns exec $HUB nft list chain inet hltunnel leak_output; fail "the leak guard dropped nothing"; }
 http_code http://198.18.0.1:8120/ >/dev/null
-ip netns exec $HUB nft list chain inet neotunnel leak_forward | grep -qE "packets [1-9]" || { ip netns exec $HUB nft list chain inet neotunnel leak_forward; fail "a forwarded packet for p5 left by another interface"; }
+ip netns exec $HUB nft list chain inet hltunnel leak_forward | grep -qE "packets [1-9]" || { ip netns exec $HUB nft list chain inet hltunnel leak_forward; fail "a forwarded packet for p5 left by another interface"; }
 ip -n $HUB route del default via $EDGE_IP dev veth-hub
 in_hub tunnel remove p5 >/dev/null
 kill $pubsrv 2>/dev/null
@@ -450,15 +450,15 @@ pass "public address: nat, proxy and relay forwards reach a service on edge's pu
 #      one lane.
 in_hub tunnel add g4 --kind gre --peer edge --lanes 4 >/dev/null || fail "add gre on 4 lanes"
 for ns in $HUB $EDGE; do
-  for i in "" .1 .2 .3; do ip -n $ns -d link show "nt-g4$i" | grep -q "gre remote" || fail "lane nt-g4$i missing in $ns"; done
+  for i in "" .1 .2 .3; do ip -n $ns -d link show "hl-g4$i" | grep -q "gre remote" || fail "lane hl-g4$i missing in $ns"; done
 done
-g4far=$(ip -n $EDGE -o -4 addr show dev nt-g4 | awk '{print $4}' | cut -d/ -f1)
-[ "$(ip -n $EDGE -o -4 addr show dev nt-g4.3 | awk '{print $4}')" = "$g4far/32" ] || fail "lanes do not share the inner address"
+g4far=$(ip -n $EDGE -o -4 addr show dev hl-g4 | awk '{print $4}' | cut -d/ -f1)
+[ "$(ip -n $EDGE -o -4 addr show dev hl-g4.3 | awk '{print $4}')" = "$g4far/32" ] || fail "lanes do not share the inner address"
 [ "$(ip -n $HUB route show "$g4far" | grep -c 'nexthop')" = 4 ] || { ip -n $HUB route show "$g4far"; fail "no 4-way multipath route to $g4far"; }
 ip netns exec $HUB ping -c 3 -W 2 "$g4far" >/dev/null || fail "ping through gre on lanes"
 # IPv6 has no device-only multipath routes: its next hop is the far side's
 # lane link-local address on every lane.
-g4far6=$(ip -n $EDGE -o -6 addr show dev nt-g4 scope global | awk '{print $4}' | cut -d/ -f1)
+g4far6=$(ip -n $EDGE -o -6 addr show dev hl-g4 scope global | awk '{print $4}' | cut -d/ -f1)
 [ -n "$g4far6" ] || fail "no inner IPv6 address on lanes"
 [ "$(ip -n $HUB -6 route show "$g4far6" | grep -c 'nexthop via fe80::4e54:')" = 4 ] || { ip -n $HUB -6 route show "$g4far6"; fail "no 4-way IPv6 multipath route to $g4far6"; }
 ip netns exec $HUB ping -6 -c 3 -W 2 "$g4far6" >/dev/null || fail "IPv6 ping through gre on lanes"
@@ -466,7 +466,7 @@ in_hub test g4 --duration 2s --pings 20 | tee "$WORK/lanetest.txt"
 grep -q "Mbit/s\|Gbit/s" "$WORK/lanetest.txt" || fail "no throughput through the lanes"
 used=0
 for i in "" .1 .2 .3; do
-  rx=$(ip netns exec $EDGE cat "/sys/class/net/nt-g4$i/statistics/rx_packets")
+  rx=$(ip netns exec $EDGE cat "/sys/class/net/hl-g4$i/statistics/rx_packets")
   [ "$rx" -gt 100 ] && used=$((used + 1))
 done
 [ "$used" -ge 2 ] || fail "the speed test used only $used lane(s)"
@@ -475,7 +475,7 @@ in_hub forward add g4 8082 --to 8080 --proto tcp >/dev/null || fail "add forward
 in_hub forward add g4 8083 --to 8080 --proto tcp --mode transparent >/dev/null || fail "add transparent forward over lanes"
 for _ in 1 2 3 4 5 6; do [ "$(http_code http://198.18.0.1:8083/)" = 200 ] || fail "transparent forward through lanes"; done
 in_hub tunnel set g4 --lanes 1 >/dev/null || fail "back to one lane"
-ip -n $EDGE link show nt-g4.1 >/dev/null 2>&1 && fail "lane nt-g4.1 left after going to one lane"
+ip -n $EDGE link show hl-g4.1 >/dev/null 2>&1 && fail "lane hl-g4.1 left after going to one lane"
 ip -n $HUB route show proto 77 | grep -q . && fail "lane route left after going to one lane"
 ip netns exec $HUB ping -c 3 -W 2 "$g4far" >/dev/null || fail "ping after going back to one lane"
 [ "$(http_code http://198.18.0.1:8082/)" = 200 ] || fail "forward after going back to one lane"
@@ -493,9 +493,9 @@ if [ "$(nproc)" -gt 1 ]; then
     m=$(ip netns exec $HUB cat "$q/rps_cpus")
     [ -n "$(echo "$m" | tr -d '0,')" ] || fail "max profile: $q of veth-hub does not spread (rps_cpus $m)"
   done
-  m=$(ip netns exec $HUB cat /sys/class/net/nt-g5/queues/rx-0/rps_cpus)
-  [ -z "$(echo "$m" | tr -d '0,')" ] || fail "max profile: nt-g5 spreads again on top of the card (rps_cpus $m)"
-  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-g5)" >/dev/null || fail "ping through gre with the max profile"
+  m=$(ip netns exec $HUB cat /sys/class/net/hl-g5/queues/rx-0/rps_cpus)
+  [ -z "$(echo "$m" | tr -d '0,')" ] || fail "max profile: hl-g5 spreads again on top of the card (rps_cpus $m)"
+  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-g5)" >/dev/null || fail "ping through gre with the max profile"
   doc=$(in_hub doctor 2>&1 || true)
   grep -q "✓ RPS on veth-hub: 1 of 1" <<<"$doc" || { echo "$doc"; fail "doctor does not report how the card spreads"; }
   in_hub tunnel remove g5 >/dev/null
@@ -504,8 +504,8 @@ if [ "$(nproc)" -gt 1 ]; then
 fi
 
 # 13. L2TPv3, where the kernel has it.
-if out=$(in_hub tunnel add l1 --kind l2tpv3 --peer edge 2>&1) && ip -n $HUB link show nt-l1 >/dev/null 2>&1; then
-  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-l1)" >/dev/null || fail "ping through l2tpv3"
+if out=$(in_hub tunnel add l1 --kind l2tpv3 --peer edge 2>&1) && ip -n $HUB link show hl-l1 >/dev/null 2>&1; then
+  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-l1)" >/dev/null || fail "ping through l2tpv3"
   in_hub tunnel remove l1 >/dev/null
   pass "L2TPv3 pseudowire"
 else
@@ -514,13 +514,13 @@ else
 fi
 
 # 13b. EoIP (MikroTik's Ethernet over IP, user space TAP): raw GRE and in UDP.
-if out=$(in_hub tunnel add eo1 --kind eoip --peer edge 2>&1) && hup 3 && ip -n $HUB link show nt-eo1 >/dev/null 2>&1 && ip -n $EDGE link show nt-eo1 >/dev/null 2>&1; then
-  ip -n $HUB -d link show nt-eo1 | grep -q "tun type tap" || fail "eoip is not a TAP interface"
-  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-eo1)" >/dev/null || fail "ping through EoIP"
-  ip -n $HUB neigh show dev nt-eo1 | grep -q lladdr || fail "no layer-2 neighbor over EoIP"
+if out=$(in_hub tunnel add eo1 --kind eoip --peer edge 2>&1) && hup 3 && ip -n $HUB link show hl-eo1 >/dev/null 2>&1 && ip -n $EDGE link show hl-eo1 >/dev/null 2>&1; then
+  ip -n $HUB -d link show hl-eo1 | grep -q "tun type tap" || fail "eoip is not a TAP interface"
+  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-eo1)" >/dev/null || fail "ping through EoIP"
+  ip -n $HUB neigh show dev hl-eo1 | grep -q lladdr || fail "no layer-2 neighbor over EoIP"
   in_hub tunnel add eo2 --kind eoip --peer edge --port 8450 >/dev/null || fail "add eoip over udp"
   hup 3
-  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-eo2)" >/dev/null || fail "ping through EoIP over UDP"
+  ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-eo2)" >/dev/null || fail "ping through EoIP over UDP"
   in_hub tunnel remove eo1 >/dev/null; in_hub tunnel remove eo2 >/dev/null
   pass "EoIP carries Ethernet over GRE and over UDP"
 else
@@ -593,7 +593,7 @@ PY
 rp=$(relay_ports t1 e1)
 echo "$rp" | grep -q 7712 && echo "  (relay ports not assigned yet; on 7712)"
 ip netns exec $EDGE ss -Htn state established "( $rp )" | grep -q "$HUB_IP" || fail "no relay connections from hub on edge's relay ports ($rp)"
-ip netns exec $HUB nft list chain inet neotunnel prerouting | grep -q "8090" && fail "relay forward must not be a DNAT rule"
+ip netns exec $HUB nft list chain inet hltunnel prerouting | grep -q "8090" && fail "relay forward must not be a DNAT rule"
 ip netns exec $CLIENT bash -c 'exec 3<>/dev/tcp/198.18.0.1/9103; printf hello >&3; exec 3>&-' || fail "connect to relay forward 9103"
 sleep 1
 grep -q "^PROXY TCP4 198.18.0.2 198.18.0.1 [0-9]* 9103" "$WORK/relay-proxy.txt" || { cat "$WORK/relay-proxy.txt"; fail "no PROXY header through the relay"; }
@@ -646,20 +646,20 @@ r=$(api -d '{"on":true,"tunnel":"t1","domains":["fetch.test"],"all":true}' "$bas
 grep -q '"error"' <<<"$r" && { echo "$r"; fail "turn downloads through the tunnel on"; }
 for _ in $(seq 1 10); do fetch_running true && break; sleep 1; done
 fetch_running true || { api "$base/api/settings/fetch"; fail "downloads listener not running"; }
-ip netns exec $HUB nft list table inet neotunnel_fetch | grep -q "redirect to :7713" || fail "no downloads redirect"
+ip netns exec $HUB nft list table inet hltunnel_fetch | grep -q "redirect to :7713" || fail "no downloads redirect"
 [ "$(ip netns exec $HUB curl -s -m 8 http://fetch.test/)" = hello-fetch ] || { api "$base/api/settings/fetch"; fail "listed site not reached through the tunnel"; }
 ip netns exec $HUB curl -s -m 3 http://other.test/ >/dev/null && fail "a site not listed went through the tunnel"
 api "$base/api/settings/fetch" | grep -q '"host":"fetch.test","via":"tunnel"' || fail "status does not show fetch.test through the tunnel"
 api -d '{"on":false,"tunnel":"t1","domains":["fetch.test"],"all":true}' "$base/api/settings/fetch" | grep -q '"error"' && fail "turn downloads off"
 for _ in $(seq 1 10); do fetch_running false && break; sleep 1; done
-ip netns exec $HUB nft list table inet neotunnel_fetch 2>/dev/null | grep -q redirect && fail "redirect left after turning downloads off"
+ip netns exec $HUB nft list table inet hltunnel_fetch 2>/dev/null | grep -q redirect && fail "redirect left after turning downloads off"
 ip netns exec $HUB curl -s -m 3 http://fetch.test/ >/dev/null && fail "listed site still went through the tunnel after turning it off"
 pass "downloads: a listed site goes through the tunnel and leaves from edge, others stay direct; off removes the redirect"
 
 # 15b4. Backup: one file with the state and the server's key, which the
 #       restore page reads back as this same server.
 api "$base/api/backup" > "$WORK/backup.json"
-grep -q '"format": "neotunnel-backup"' "$WORK/backup.json" && grep -q '"identity.key"' "$WORK/backup.json" || fail "backup lacks the format or the key"
+grep -q '"format": "hltunnel-backup"' "$WORK/backup.json" && grep -q '"identity.key"' "$WORK/backup.json" || fail "backup lacks the format or the key"
 api --data-binary @"$WORK/backup.json" "$base/api/backup/inspect" | tee "$WORK/inspect.json" | grep -q '"node":"hub"' || { cat "$WORK/inspect.json"; fail "backup preview"; }
 grep -q '"same_key":true' "$WORK/inspect.json" && grep -q '"edge"' "$WORK/inspect.json" || { cat "$WORK/inspect.json"; fail "backup preview misses the key or the peer"; }
 pass "backup: state and key in one file, read back as this server"
@@ -721,7 +721,7 @@ if ! ip netns exec $EDGE ip xfrm state 2>/dev/null | grep -q "rfc4106"; then
   in_hub peer list
   fail "re-keyed SA missing on edge"
 fi
-ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-e1)" >/dev/null || fail "ping after switching to AES-256"
+ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-e1)" >/dev/null || fail "ping after switching to AES-256"
 pass "panel: traffic totals, MTU probe and live settings change"
 
 # 16a. Smart queue: CAKE (or fq_codel under a token bucket where the kernel
@@ -729,13 +729,13 @@ pass "panel: traffic totals, MTU probe and live settings change"
 in_hub tunnel limit t1 --queue 50 >/dev/null || fail "set smart queue"
 hup 3
 for ns in $HUB $EDGE; do
-  ip netns exec $ns tc qdisc show dev nt-t1 | grep -qE "qdisc (cake|tbf) 7a7a: root" || { ip netns exec $ns tc qdisc show dev nt-t1; fail "no smart queue on nt-t1 in $ns"; }
+  ip netns exec $ns tc qdisc show dev hl-t1 | grep -qE "qdisc (cake|tbf) 7a7a: root" || { ip netns exec $ns tc qdisc show dev hl-t1; fail "no smart queue on hl-t1 in $ns"; }
 done
-ip netns exec $HUB tc qdisc show dev nt-t1 | grep -q "cake" || echo "NOTE no CAKE in this kernel: tbf + fq_codel"
+ip netns exec $HUB tc qdisc show dev hl-t1 | grep -q "cake" || echo "NOTE no CAKE in this kernel: tbf + fq_codel"
 [ "$(http_code http://198.18.0.1:8080/)" = 200 ] || fail "forward 8080 through t1 under the smart queue"
 in_hub tunnel limit t1 --queue 0 >/dev/null || fail "remove smart queue"
 hup 3
-ip netns exec $HUB tc qdisc show dev nt-t1 | grep -q "7a7a:" && fail "smart queue left on nt-t1"
+ip netns exec $HUB tc qdisc show dev hl-t1 | grep -q "7a7a:" && fail "smart queue left on hl-t1"
 pass "smart queue on and off on both ends"
 
 # 16a2. Sold ports: the speed cap, connections and addresses at once, the
@@ -745,7 +745,7 @@ dd if=/dev/urandom of="$WORK/www/mid" bs=1M count=2 status=none
 in_hub forward add t1 8095 --to 8080 --proto tcp >/dev/null || fail "add port to sell"
 in_hub forward sell t1 8095 --customer e2e --rate 4 --conns 1 --ips 1 >/dev/null || fail "sell port"
 hup 3
-ip netns exec $HUB nft list chain inet neotunnel_plans plan_in | grep -q "8095 : jump" || { ip netns exec $HUB nft list table inet neotunnel_plans; fail "no plan chain for 8095"; }
+ip netns exec $HUB nft list chain inet hltunnel_plans plan_in | grep -q "8095 : jump" || { ip netns exec $HUB nft list table inet hltunnel_plans; fail "no plan chain for 8095"; }
 # Connections to a port the kernel still counts as open, or open now.
 # Clients only: the hub's own connections to that port elsewhere don't count.
 # The hub's connection table: /proc/net/nf_conntrack where the kernel has
@@ -796,10 +796,10 @@ port_ok() { [ "$(http_code "http://198.18.0.1:$1/")" = 200 ]; }
 wait_for 10 port_ok 8095 || fail "renewed port does not answer"
 in_hub forward list | grep -q "sold to e2e: 0.01 GB" || { in_hub forward list; fail "forward list shows no plan"; }
 [ "$(http_code http://198.18.0.1:8090/)" = 200 ] || fail "relay forward 8090 after the sold port"
-c=$(ip netns exec $HUB nft list chain inet neotunnel account_in | grep -o '8090 : "nt[0-9a-f]*u"' | grep -o 'nt[0-9a-f]*u')
+c=$(ip netns exec $HUB nft list chain inet hltunnel account_in | grep -o '8090 : "hl[0-9a-f]*u"' | grep -o 'hl[0-9a-f]*u')
 [ -n "$c" ] || fail "relay port 8090 not counted"
-ip netns exec $HUB nft list counter inet neotunnel "$c" | grep -qE 'bytes [1-9]' || fail "relay port 8090 counted nothing"
-bytes_of() { ip netns exec $HUB nft list counter inet neotunnel "$1" | grep -o "bytes [0-9]*" | cut -d" " -f2; }
+ip netns exec $HUB nft list counter inet hltunnel "$c" | grep -qE 'bytes [1-9]' || fail "relay port 8090 counted nothing"
+bytes_of() { ip netns exec $HUB nft list counter inet hltunnel "$1" | grep -o "bytes [0-9]*" | cut -d" " -f2; }
 b1=$(bytes_of "$c")
 in_hub forward remove t1 8095 >/dev/null
 hup 3
@@ -902,7 +902,7 @@ pass "port order: saved, listed in that order, peer untouched"
 #         tunnel around, a1's "plain" packets would leave as ESP too.
 in_hub tunnel remove e1 >/dev/null
 in_hub quick edge --name a1 --mode gre --encrypt auto --pool 172 >/dev/null || fail "quick with automatic encryption"
-a1peer=$(inner $EDGE nt-a1)
+a1peer=$(inner $EDGE hl-a1)
 case "$a1peer" in 172.27.*) ;; *) fail "a1 should get its address from pool 172, got $a1peer";; esac
 ip netns exec $HUB ping -c 2 -W 2 "$a1peer" >/dev/null || fail "ping through a1, plain"
 a1="[t for t in o['tunnels'] if t['name']=='a1'][0]"
@@ -927,7 +927,7 @@ wait_for 60 a1logged || { api "$base/api/tunnels/a1/events" | head -c 2000; fail
 pass "automatic encryption: plain GRE blocked, a1 moved to AES-128 on both servers and passes again"
 ip netns exec $EDGE nft delete table netdev e2eplain
 
-# 16b''''. The last step: from ChaCha20, with ESP blocked too, a NeoObfs layer
+# 16b''''. The last step: from ChaCha20, with ESP blocked too, a HLObfs layer
 #          goes under the tunnel on both servers and traffic passes as UDP.
 #          Choosing a cipher by hand takes the layer away again.
 in_hub tunnel set a1 --encrypt auto >/dev/null || fail "keep automatic encryption"
@@ -946,39 +946,39 @@ table netdev e2eplain {
 }
 NFT
 t0=$(date +%s)
-a5layer() { ip -n $HUB link show nt-a5-o >/dev/null 2>&1 && ip -n $EDGE link show nt-a5-o >/dev/null 2>&1; }
-wait_for 150 a5layer || { tail -20 "$WORK/hub.log"; ip -n $HUB -o link show; fail "a5 did not get its NeoObfs layer"; }
-echo "NOTE NeoObfs layer up $(( $(date +%s) - t0 )) s after ESP stopped"
-a5ping() { ip netns exec $HUB ping -c 1 -W 2 "$(inner $EDGE nt-a5)" >/dev/null; }
-wait_for 60 a5ping || { tail -20 "$WORK/hub.log"; ip -n $HUB -d link show nt-a5; fail "no traffic through a5 over NeoObfs"; }
-ov "$a5['auto_encrypt'] and $a5['obfs'] and [l['kind'] for l in $a5['stack']] == ['obfs', 'gre']" || { api "$base/api/overview" | head -c 3000; fail "panel does not show a5 over NeoObfs"; }
-ov "not any(t['name'] == 'a5-o' and not t['carrier'] for t in o['tunnels'])" || fail "the NeoObfs layer shows as a tunnel of its own"
+a5layer() { ip -n $HUB link show hl-a5-o >/dev/null 2>&1 && ip -n $EDGE link show hl-a5-o >/dev/null 2>&1; }
+wait_for 150 a5layer || { tail -20 "$WORK/hub.log"; ip -n $HUB -o link show; fail "a5 did not get its HLObfs layer"; }
+echo "NOTE HLObfs layer up $(( $(date +%s) - t0 )) s after ESP stopped"
+a5ping() { ip netns exec $HUB ping -c 1 -W 2 "$(inner $EDGE hl-a5)" >/dev/null; }
+wait_for 60 a5ping || { tail -20 "$WORK/hub.log"; ip -n $HUB -d link show hl-a5; fail "no traffic through a5 over HLObfs"; }
+ov "$a5['auto_encrypt'] and $a5['obfs'] and [l['kind'] for l in $a5['stack']] == ['obfs', 'gre']" || { api "$base/api/overview" | head -c 3000; fail "panel does not show a5 over HLObfs"; }
+ov "not any(t['name'] == 'a5-o' and not t['carrier'] for t in o['tunnels'])" || fail "the HLObfs layer shows as a tunnel of its own"
 ip netns exec $EDGE nft delete table netdev e2eplain
 in_hub tunnel set a5 --encrypt aes-gcm-256 >/dev/null || fail "choose a cipher by hand over the layer"
-a5gone() { ! ip -n $HUB link show nt-a5-o >/dev/null 2>&1 && ! ip -n $EDGE link show nt-a5-o >/dev/null 2>&1; }
+a5gone() { ! ip -n $HUB link show hl-a5-o >/dev/null 2>&1 && ! ip -n $EDGE link show hl-a5-o >/dev/null 2>&1; }
 hup 2
-wait_for 30 a5gone || { ip -n $HUB -o link show; fail "the NeoObfs layer stayed after choosing a cipher"; }
+wait_for 30 a5gone || { ip -n $HUB -o link show; fail "the HLObfs layer stayed after choosing a cipher"; }
 ov "not $a5.get('auto_encrypt') and $a5.get('encrypt') == 'aes-gcm-256'" || fail "a5 not on the cipher chosen by hand"
-wait_for 30 a5ping || { tail -20 "$WORK/hub.log"; ip -n $HUB -d link show nt-a5; fail "no traffic through a5 after the layer went"; }
+wait_for 30 a5ping || { tail -20 "$WORK/hub.log"; ip -n $HUB -d link show hl-a5; fail "no traffic through a5 after the layer went"; }
 in_hub tunnel remove a5 >/dev/null
 in_hub tunnel remove b3 >/dev/null
-pass "automatic encryption: NeoObfs layer as the last step, gone again with a cipher chosen by hand"
+pass "automatic encryption: HLObfs layer as the last step, gone again with a cipher chosen by hand"
 
 # 16b'''''. Address pools: a preset, ranges by hand, and what they refuse.
 in_hub pool add office --net4 10.99.0.0/29 --net6 fd99::/48 >/dev/null || fail "add a pool"
 in_hub pool list | grep -q "office" || fail "pool not listed"
 in_hub tunnel add a2 --kind gre --peer edge --pool office >/dev/null || fail "tunnel from a pool"
-ip -n $HUB -o -4 addr show dev nt-a2 | grep -q "10.99.0.1/30" || { ip -n $HUB -o addr show dev nt-a2; fail "a2 not on its pool's range"; }
-ip -n $HUB -o -6 addr show dev nt-a2 | grep -q "fd99::1/64" || { ip -n $HUB -o addr show dev nt-a2; fail "a2 not on its pool's IPv6 range"; }
+ip -n $HUB -o -4 addr show dev hl-a2 | grep -q "10.99.0.1/30" || { ip -n $HUB -o addr show dev hl-a2; fail "a2 not on its pool's range"; }
+ip -n $HUB -o -6 addr show dev hl-a2 | grep -q "fd99::1/64" || { ip -n $HUB -o addr show dev hl-a2; fail "a2 not on its pool's IPv6 range"; }
 ip netns exec $HUB ping -c 2 -W 2 10.99.0.2 >/dev/null || fail "ping through a tunnel from a pool"
 in_hub tunnel add a3 --kind gre --peer edge --pool4 10.98.0.4/30 >/dev/null || fail "tunnel with a range by hand"
-ip -n $EDGE -o -4 addr show dev nt-a3 | grep -q "10.98.0.6/30" || fail "a3 not on the range given by hand"
+ip -n $EDGE -o -4 addr show dev hl-a3 | grep -q "10.98.0.6/30" || fail "a3 not on the range given by hand"
 in_hub tunnel add a4 --kind gre --peer edge --pool4 10.98.0.4/30 >/dev/null 2>&1 && fail "a full range gave out addresses"
 in_hub tunnel add a4 --kind gre --peer edge --pool nope >/dev/null 2>&1 && fail "accepted an unknown pool"
 in_hub tunnel add a4 --kind gre --peer edge --pool4 $HUB_IP/24 >/dev/null 2>&1 && fail "accepted a range with the server's own address"
 in_hub pool use office >/dev/null || fail "use a pool for new tunnels"
 in_hub tunnel add a4 --kind gre --peer edge >/dev/null || fail "tunnel from the default pool"
-ip -n $HUB -o -4 addr show dev nt-a4 | grep -q "10.99.0.5/30" || { ip -n $HUB -o addr show dev nt-a4; fail "a4 not on the pool in use"; }
+ip -n $HUB -o -4 addr show dev hl-a4 | grep -q "10.99.0.5/30" || { ip -n $HUB -o addr show dev hl-a4; fail "a4 not on the pool in use"; }
 in_hub pool remove office >/dev/null || fail "remove a pool"
 ip netns exec $HUB ping -c 1 -W 2 10.99.0.6 >/dev/null || fail "removing a pool should leave its tunnels"
 in_hub tunnel remove a2 >/dev/null; in_hub tunnel remove a3 >/dev/null; in_hub tunnel remove a4 >/dev/null
@@ -987,15 +987,15 @@ pass "address pools: presets, ranges by hand, the default pool, and what they re
 # 16b''''''. PMTUD flags reach the kernel, on both ends.
 in_hub tunnel add p3 --kind gre --peer edge >/dev/null || fail "add gre"
 # (ip prints only nopmtudisc, and nothing when path MTU discovery is on.)
-ip -n $HUB -d link show nt-p3 | grep -qw nopmtudisc && { ip -n $HUB -d link show nt-p3; fail "PMTUD should be on by default"; }
+ip -n $HUB -d link show hl-p3 | grep -qw nopmtudisc && { ip -n $HUB -d link show hl-p3; fail "PMTUD should be on by default"; }
 in_hub tunnel set p3 --no-pmtud >/dev/null || fail "turn PMTUD off"
-for ns in $HUB $EDGE; do ip -n $ns -d link show nt-p3 | grep -qw nopmtudisc || { ip -n $ns -d link show nt-p3; fail "PMTUD still on in $ns"; }; done
-ip -n $HUB -d link show nt-p3 | grep -q "ignore-df" && fail "ignore-df set by itself"
+for ns in $HUB $EDGE; do ip -n $ns -d link show hl-p3 | grep -qw nopmtudisc || { ip -n $ns -d link show hl-p3; fail "PMTUD still on in $ns"; }; done
+ip -n $HUB -d link show hl-p3 | grep -q "ignore-df" && fail "ignore-df set by itself"
 in_hub tunnel set p3 --ignore-df >/dev/null || fail "ignore DF"
-for ns in $HUB $EDGE; do ip -n $ns -d link show nt-p3 | grep -qw nopmtudisc && ip -n $ns -d link show nt-p3 | grep -q "ignore-df" || { ip -n $ns -d link show nt-p3; fail "ignore-df missing in $ns"; }; done
-ip netns exec $HUB ping -c 2 -W 2 "$(inner $EDGE nt-p3)" >/dev/null || fail "ping with PMTUD off and DF ignored"
+for ns in $HUB $EDGE; do ip -n $ns -d link show hl-p3 | grep -qw nopmtudisc && ip -n $ns -d link show hl-p3 | grep -q "ignore-df" || { ip -n $ns -d link show hl-p3; fail "ignore-df missing in $ns"; }; done
+ip netns exec $HUB ping -c 2 -W 2 "$(inner $EDGE hl-p3)" >/dev/null || fail "ping with PMTUD off and DF ignored"
 in_hub tunnel set p3 --no-pmtud=false >/dev/null || fail "turn PMTUD back on"
-ip -n $HUB -d link show nt-p3 | grep -qE "nopmtudisc|ignore-df" && { ip -n $HUB -d link show nt-p3; fail "PMTUD not back on"; }
+ip -n $HUB -d link show hl-p3 | grep -qE "nopmtudisc|ignore-df" && { ip -n $HUB -d link show hl-p3; fail "PMTUD not back on"; }
 in_hub tunnel add p4 --kind ipip --peer edge --port 3004 --no-pmtud --ignore-df >/dev/null 2>&1 && fail "IPIP accepted ignore-df"
 in_hub tunnel remove p3 >/dev/null
 pass "PMTUD: on by default, off with nopmtudisc, ignore-df on GRE, on both servers"
@@ -1004,22 +1004,22 @@ pass "PMTUD: on by default, off with nopmtudisc, ignore-df on GRE, on both serve
 #      after the change the agent port is dropped on edge, so edge can't
 #      confirm; the hub reverts at the deadline, and edge, which never heard
 #      back, puts its own part back by itself.
-g1mtu=$(mtu_of $EDGE nt-g1)
+g1mtu=$(mtu_of $EDGE hl-g1)
 r=$(api -X PATCH -d '{"mtu":1300}' "$base/api/tunnels/g1?safe=1")
 grep -q '"safe":{"id":"' <<<"$r" || { echo "$r"; fail "safe change not started"; }
 id=$(grep -o '"safe":{"id":"[0-9a-f]*' <<<"$r" | cut -d'"' -f6)
-[ "$(mtu_of $EDGE nt-g1)" = 1300 ] || fail "safe change not applied on edge"
+[ "$(mtu_of $EDGE hl-g1)" = 1300 ] || fail "safe change not applied on edge"
 [ -f "$WORK/edge/safe-hold.json" ] || fail "edge holds no snapshot of the safe change"
 api -X PATCH -d '{"mtu":1280}' "$base/api/tunnels/g1" | grep -q 'منتظر تأیید' || fail "another change accepted while a safe one waits"
 api -X POST "$base/api/safe/$id/keep" | grep -q '"kept":true' || fail "keep safe change"
 [ -f "$WORK/edge/safe-hold.json" ] && fail "edge still holds the kept change"
-[ "$(mtu_of $HUB nt-g1)" = 1300 ] || fail "kept change reverted on hub"
+[ "$(mtu_of $HUB hl-g1)" = 1300 ] || fail "kept change reverted on hub"
 pass "safe apply: confirmed change kept on both servers"
 
 r=$(api -X PATCH -d '{"mtu":1280}' "$base/api/tunnels/g1?safe=1")
 id=$(grep -o '"safe":{"id":"[0-9a-f]*' <<<"$r" | cut -d'"' -f6)
 [ -n "$id" ] || { echo "$r"; fail "second safe change not started"; }
-[ "$(mtu_of $EDGE nt-g1)" = 1280 ] || fail "safe change not applied on edge"
+[ "$(mtu_of $EDGE hl-g1)" = 1280 ] || fail "safe change not applied on edge"
 ip netns exec $EDGE nft -f - <<NFT
 table inet e2ecut {
   chain in { type filter hook input priority -300; policy accept; tcp dport { 7710, $eport } drop; }
@@ -1027,15 +1027,15 @@ table inet e2ecut {
 NFT
 api -X POST "$base/api/safe/$id/keep" >/dev/null
 t0=$(date +%s)
-wait_for 75 mtu_is $HUB nt-g1 1300 || fail "hub did not revert the unconfirmed change"
+wait_for 75 mtu_is $HUB hl-g1 1300 || fail "hub did not revert the unconfirmed change"
 echo "NOTE hub reverted $(( $(date +%s) - t0 )) s after the change"
 ov "not o['safe_last']['kept'] and o['safe_last']['reason'].startswith('edge did not confirm')" || fail "panel does not say why the change was reverted"
-wait_for 30 mtu_is $EDGE nt-g1 1300 || fail "edge did not revert by itself"
+wait_for 30 mtu_is $EDGE hl-g1 1300 || fail "edge did not revert by itself"
 wait_for 15 grep -q "previous configuration restored" "$WORK/edge.log" || fail "edge did not log its revert"
 ip netns exec $EDGE nft delete table inet e2ecut
-ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-g1)" >/dev/null || fail "ping through g1 after both reverted"
+ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-g1)" >/dev/null || fail "ping through g1 after both reverted"
 api -X PATCH -d '{}' "$base/api/tunnels/g1" | grep -q error && fail "reset g1 settings"
-[ "$(mtu_of $EDGE nt-g1)" = "$g1mtu" ] || fail "g1 MTU not back to automatic"
+[ "$(mtu_of $EDGE hl-g1)" = "$g1mtu" ] || fail "g1 MTU not back to automatic"
 pass "safe apply: change that cut the agent path reverted on both servers"
 
 # 16c2. Firewall (guard) on hub. The client (198.18.0.2, not an Iranian
@@ -1046,11 +1046,11 @@ pass "safe apply: change that cut the agent path reverted on both servers"
 #       address gets the forward; turning it on from the panel without a
 #       confirmation turns it off again by itself; off removes the table.
 in_hub guard on --iface veth-hub,veth-ci --icmp closed --config-iran >/dev/null || fail "guard on"
-ip netns exec $HUB nft list table inet neotunnel_guard >/dev/null || fail "guard table missing"
+ip netns exec $HUB nft list table inet hltunnel_guard >/dev/null || fail "guard table missing"
 ip netns exec $CLIENT ping -c 2 -W 1 198.18.0.1 >/dev/null 2>&1 && fail "guard: the client still gets ping"
 [ "$(http_code http://198.18.0.1:8080/)" = 200 ] && fail "guard: a config port answers a non-Iranian client"
 [ "$(ip netns exec $CLIENT curl -sk -o /dev/null -m 5 -w '%{http_code}' "https://198.18.0.1:$PANEL_PORT/")" = 404 ] || fail "guard: the panel is not reachable"
-ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE nt-g1)" >/dev/null || fail "guard: tunnel to the peer stopped"
+ip netns exec $HUB ping -c 3 -W 2 "$(inner $EDGE hl-g1)" >/dev/null || fail "guard: tunnel to the peer stopped"
 ip netns exec $HUB python3 -m http.server 18555 --directory "$WORK/www" >/dev/null 2>&1 &
 newsrv=$!
 wait_for 15 sh -c "[ \"\$(ip netns exec $CLIENT curl -s -o /dev/null -m 2 -w '%{http_code}' http://198.18.0.1:18555/)\" = 200 ]" || fail "guard: a new listening port was not opened"
@@ -1060,9 +1060,9 @@ api -X POST "$base/api/guard/confirm" | grep -q '"ok":true' || fail "guard: conf
 wait_for 10 sh -c "[ \"\$(ip netns exec $CLIENT curl -s -o /dev/null -m 2 -w '%{http_code}' http://198.18.0.1:8080/)\" = 200 ]" || fail "guard: the allowed client does not get the forward"
 in_hub guard status | grep -q "Iran only" || { in_hub guard status; fail "guard status does not list the Iran-only ports"; }
 in_hub guard off >/dev/null || fail "guard off"
-ip netns exec $HUB nft list table inet neotunnel_guard >/dev/null 2>&1 && fail "guard off left its table"
+ip netns exec $HUB nft list table inet hltunnel_guard >/dev/null 2>&1 && fail "guard off left its table"
 api -d '{"on":true,"icmp":"closed","ifaces":["veth-hub","veth-ci"]}' "$base/api/guard" | grep -q '"confirm_by":[1-9]' || fail "guard: turned on from the panel without a confirmation deadline"
-wait_for 80 sh -c "! ip netns exec $HUB nft list table inet neotunnel_guard >/dev/null 2>&1" || fail "guard: not turned off without a confirmation"
+wait_for 80 sh -c "! ip netns exec $HUB nft list table inet hltunnel_guard >/dev/null 2>&1" || fail "guard: not turned off without a confirmation"
 grep -q "firewall turned off again" "$WORK/hub.log" || fail "guard: the automatic turn-off was not logged"
 ip netns exec $CLIENT ping -c 2 -W 1 198.18.0.1 >/dev/null || fail "guard: ping still closed after it turned off"
 pass "firewall: closes ping and config ports to others, keeps the panel and peers, opens new listeners, turns itself off without a confirmation"
@@ -1072,14 +1072,14 @@ pass "firewall: closes ping and config ports to others, keeps the panel and peer
 #      subnet as hub's t1. edge accepts the second setup key, runs hub2's t1
 #      under a local name, and hub2 moves the tunnel to a free subnet once
 #      edge reports the clash; hub's t1 is never disturbed.
-HUB2=nt-e2e-hub2 HUB2_IP=192.0.3.1 EDGE2_IP=192.0.3.2
+HUB2=hl-e2e-hub2 HUB2_IP=192.0.3.1 EDGE2_IP=192.0.3.2
 ip netns add $HUB2
 ip link add veth-h2 netns $HUB2 type veth peer name veth-e2 netns $EDGE
 ip -n $HUB2 addr add $HUB2_IP/24 dev veth-h2; ip -n $EDGE addr add $EDGE2_IP/24 dev veth-e2
 ip -n $HUB2 link set lo up; ip -n $HUB2 link set veth-h2 up; ip -n $EDGE link set veth-e2 up
-in_hub2() { ip netns exec $HUB2 env NEOTUNNEL_DIR=$WORK/hub2 NO_COLOR=1 "$BIN" "$@"; }
+in_hub2() { ip netns exec $HUB2 env HLTUNNEL_DIR=$WORK/hub2 NO_COLOR=1 "$BIN" "$@"; }
 in_hub2 node --name hub2 --address $HUB2_IP >/dev/null
-ip netns exec $HUB2 env NEOTUNNEL_DIR=$WORK/hub2 NEOTUNNEL_PEER_WATCH=3s "$BIN" daemon >"$WORK/hub2.log" 2>&1 & echo $! > "$WORK/hub2.pid"
+ip netns exec $HUB2 env HLTUNNEL_DIR=$WORK/hub2 HLTUNNEL_PEER_WATCH=3s "$BIN" daemon >"$WORK/hub2.log" 2>&1 & echo $! > "$WORK/hub2.pid"
 sleep 1
 in_hub2 peer add edge --address $EDGE2_IP >/dev/null || fail "hub2: add edge"
 in_hub2 tunnel add t1 --kind gre --peer edge >/dev/null 2>&1 || true # edge not paired yet
@@ -1092,7 +1092,7 @@ ip netns exec $HUB ping -c 2 -W 2 10.77.0.2 >/dev/null || fail "hub's t1 disturb
 # hub2 hears edge's report on its next refresh and moves t1.
 moved=""
 for i in $(seq 90); do
-  n=$(ip -n $EDGE -o link show | grep -oE 'nt-t1-[a-z0-9]{3}[@:]' | tr -d '@:' | head -1 || true)
+  n=$(ip -n $EDGE -o link show | grep -oE 'hl-t1-[a-z0-9]{3}[@:]' | tr -d '@:' | head -1 || true)
   if [ -n "$n" ] && a=$(inner $EDGE "$n") && [ -n "$a" ] && [ "$a" != "10.77.0.2" ] &&
      ip netns exec $HUB2 ping -c 1 -W 1 "$a" >/dev/null 2>&1; then moved=$n; break; fi
   sleep 1
@@ -1104,7 +1104,7 @@ pass "two main servers: edge runs both t1s (hub2's as $moved), hub2 moved its su
 
 # 16e. hub2 can't be reached, so edge removes hub2's t1 there by hand. It
 #      stays removed whatever hub2 sends, and hub2 hears which it was.
-in_edge tunnel remove "${moved#nt-}" --local >/dev/null || fail "edge: remove hub2's t1 locally"
+in_edge tunnel remove "${moved#hl-}" --local >/dev/null || fail "edge: remove hub2's t1 locally"
 ip -n $EDGE -o link show "$moved" >/dev/null 2>&1 && fail "the locally removed tunnel is still up"
 in_hub2 peer sync edge >/dev/null 2>&1 || true
 sleep 1
@@ -1119,7 +1119,7 @@ pass "a main server's tunnel removed on the far server only stays removed, and i
 #      then forgets hub2 alone; hub's tunnels stay.
 kill "$(cat "$WORK/edge.pid")"; sleep 0.5
 out=$(in_hub2 peer remove edge 2>&1) || { echo "$out"; fail "hub2: remove edge"; }
-grep -q "neotunnel master forget hub2" <<<"$out" || { echo "$out"; fail "hub2 did not print the cleanup command"; }
+grep -q "hltunnel master forget hub2" <<<"$out" || { echo "$out"; fail "hub2 did not print the cleanup command"; }
 grep -q '"gone_peers"' "$WORK/hub2/state.json" || fail "hub2 does not keep edge to tell later"
 start_edge
 wait_for 40 sh -c "! grep -q '\"hub2\"' $WORK/edge/state.json" || { tail -20 "$WORK/hub2.log"; fail "edge was not told to forget hub2 once back"; }
@@ -1129,27 +1129,27 @@ wait_for 20 ip netns exec $HUB ping -c 1 -W 2 10.77.0.2 >/dev/null || fail "hub'
 pass "a server removed while down drops the tunnels of that main server only, once it is back"
 kill "$(cat "$WORK/hub2.pid")" 2>/dev/null; ip netns del $HUB2
 
-# 16g. An interface with NeoTunnel's name but none of its tags (a process
+# 16g. An interface with HLTunnel's name but none of its tags (a process
 #      that died between creating and tagging it) is found by the doctor,
 #      and removed by the service a minute later. Other names stay.
-ip -n $EDGE link add nt-ghost type dummy; ip -n $EDGE link add keep0 type dummy
+ip -n $EDGE link add hl-ghost type dummy; ip -n $EDGE link add keep0 type dummy
 doc=$(in_edge doctor 2>&1 || true)
-grep -q "leftover interface nt-ghost" <<<"$doc" || { echo "$doc"; fail "doctor does not see an untagged nt- interface"; }
+grep -q "leftover interface hl-ghost" <<<"$doc" || { echo "$doc"; fail "doctor does not see an untagged hl- interface"; }
 in_edge doctor --fix >/dev/null 2>&1 || true
-ip -n $EDGE -o link show nt-ghost >/dev/null 2>&1 && fail "doctor --fix left nt-ghost"
-ip -n $EDGE link add nt-ghost2 type dummy
-wait_for 120 sh -c "! ip -n $EDGE -o link show nt-ghost2 >/dev/null 2>&1" || fail "the service did not remove an untagged nt- interface"
-ip -n $EDGE -o link show keep0 >/dev/null 2>&1 || fail "an interface outside NeoTunnel's names was removed"
+ip -n $EDGE -o link show hl-ghost >/dev/null 2>&1 && fail "doctor --fix left hl-ghost"
+ip -n $EDGE link add hl-ghost2 type dummy
+wait_for 120 sh -c "! ip -n $EDGE -o link show hl-ghost2 >/dev/null 2>&1" || fail "the service did not remove an untagged hl- interface"
+ip -n $EDGE -o link show keep0 >/dev/null 2>&1 || fail "an interface outside HLTunnel's names was removed"
 ip -n $EDGE link del keep0
-pass "untagged interfaces with NeoTunnel's names are removed (doctor at once, the service after a minute)"
+pass "untagged interfaces with HLTunnel's names are removed (doctor at once, the service after a minute)"
 
 # 17. Uninstall from the command line removes everything, the program too.
 kill "$(cat "$WORK/edge.pid")"; sleep 0.5
-cp "$BIN" "$WORK/nt-edge"
-ip netns exec $EDGE env NEOTUNNEL_DIR=$WORK/edge NO_COLOR=1 "$WORK/nt-edge" uninstall -y >/dev/null
-[ -e "$WORK/nt-edge" ] && fail "uninstall left the program"
+cp "$BIN" "$WORK/hl-edge"
+ip netns exec $EDGE env HLTUNNEL_DIR=$WORK/edge NO_COLOR=1 "$WORK/hl-edge" uninstall -y >/dev/null
+[ -e "$WORK/hl-edge" ] && fail "uninstall left the program"
 [ -d "$WORK/edge" ] && fail "uninstall left the configuration"
-ip -n $EDGE -o link | grep -qE '^[0-9]+: nt-' && fail "uninstall left interfaces"
+ip -n $EDGE -o link | grep -qE '^[0-9]+: hl-' && fail "uninstall left interfaces"
 ip netns exec $EDGE ip xfrm state | grep -q "spi 0x4e" && fail "uninstall left IPsec SAs"
 ip netns exec $EDGE ip rule | grep -q "^7700:" && fail "uninstall left routing rules"
 pass "uninstall removed tunnels, IPsec, rules, configuration and the program"
@@ -1158,7 +1158,7 @@ pass "uninstall removed tunnels, IPsec, rules, configuration and the program"
 #    tick, so it is stopped first, as `down` says.
 kill "$(cat "$WORK/hub.pid")" 2>/dev/null; sleep 0.5
 in_hub down >/dev/null
-ip -n $HUB -o link | grep -qE '^[0-9]+: nt-' && fail "interfaces left after down"
+ip -n $HUB -o link | grep -qE '^[0-9]+: hl-' && fail "interfaces left after down"
 ip netns exec $HUB ip fou show | grep -q "port 3001" && fail "FOU port left after down"
 pass "down removes interfaces and FOU ports"
 

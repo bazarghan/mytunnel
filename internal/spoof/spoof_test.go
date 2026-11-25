@@ -38,7 +38,7 @@ func TestCodecAndPacketsAllProtos(t *testing.T) {
 
 			for _, proto := range Protos() {
 				cfg := Config{
-					Name:     "nt-sp1",
+					Name:     "hl-sp1",
 					Tunnel:   "sp1",
 					Secret:   "dGVzdHNlY3JldDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
 					Side:     0,

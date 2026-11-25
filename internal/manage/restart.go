@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/identity"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/identity"
 )
 
 // RestartTunnel takes a tunnel and the layers under it down and up again,

@@ -7,9 +7,9 @@ import (
 
 	"github.com/vishvananda/netlink"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/sysctl"
+	"hltunnel/internal/config"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/sysctl"
 )
 
 // Return paths for transparent forwards: the far side DNATs clients into the

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Entry is one night's test of a tunnel.

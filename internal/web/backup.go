@@ -22,12 +22,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/version"
+	"hltunnel/internal/config"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/version"
 )
 
-const backupFormat = "neotunnel-backup"
+const backupFormat = "hltunnel-backup"
 
 // backupFiles are the files of the state directory a backup carries.
 var backupFiles = []string{"identity.key", "traffic.json", "traffic.exclude", "traffic.reset", "failover.json", "pmtu.json",
@@ -36,7 +36,7 @@ var backupFiles = []string{"identity.key", "traffic.json", "traffic.exclude", "t
 // Bundle is a backup file.
 type Bundle struct {
 	Format  string            `json:"format"`
-	Version string            `json:"version"` // NeoTunnel's, that made it
+	Version string            `json:"version"` // HLTunnel's, that made it
 	Created time.Time         `json:"created"`
 	Node    string            `json:"node"`
 	Address string            `json:"address,omitempty"`
@@ -97,20 +97,20 @@ type BackupPreview struct {
 func parseBackup(data []byte) (Bundle, *config.State, error) {
 	var b Bundle
 	if err := json.Unmarshal(data, &b); err != nil {
-		return b, nil, errors.New("this isn't a NeoTunnel backup file")
+		return b, nil, errors.New("this isn't a HLTunnel backup file")
 	}
 	if b.Format == "" {
 		// Before v0.8 the backup was the state file itself.
 		b = Bundle{State: data}
 	} else if b.Format != backupFormat {
-		return b, nil, errors.New("this isn't a NeoTunnel backup file")
+		return b, nil, errors.New("this isn't a HLTunnel backup file")
 	}
 	var st config.State
 	if err := json.Unmarshal(b.State, &st); err != nil || st.Self == "" {
 		return b, nil, errors.New("the backup's settings can't be read")
 	}
 	if st.Schema > config.SchemaVersion {
-		return b, nil, fmt.Errorf("the backup was made by a newer NeoTunnel (%s): update this server first", b.Version)
+		return b, nil, fmt.Errorf("the backup was made by a newer HLTunnel (%s): update this server first", b.Version)
 	}
 	for n, v := range b.Files {
 		if !slicesContains(backupFiles, n) {

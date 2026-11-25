@@ -12,7 +12,7 @@ import (
 // = 1). Interfaces made there start with IPv6 off too, and the kernel then
 // refuses a tunnel's inner IPv6 addresses with "permission denied", which
 // also left the tunnel down, and a SIT layer (6to4) can't carry anything.
-// So IPv6 is turned on for NeoTunnel's own interfaces only; the server's
+// So IPv6 is turned on for HLTunnel's own interfaces only; the server's
 // other interfaces stay as they are.
 
 // errNoIPv6: the kernel itself has no IPv6 (booted with ipv6.disable=1).

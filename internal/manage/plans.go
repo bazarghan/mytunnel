@@ -6,8 +6,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
 )
 
 // SetPortPlan sells the forward of ports on tunnel as a product, or stops

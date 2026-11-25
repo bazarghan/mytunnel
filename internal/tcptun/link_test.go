@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // fakeDev is a TUN stand-in: packets pushed into in are read by the link,

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/version"
+	"hltunnel/internal/config"
+	"hltunnel/internal/version"
 )
 
 // The old binary is kept beside the new one; the watchdog stops once the
@@ -15,7 +15,7 @@ import (
 func TestKeepAndConfirm(t *testing.T) {
 	defer func(d string) { config.Dir = d }(config.Dir)
 	config.Dir = t.TempDir()
-	exe := filepath.Join(t.TempDir(), "neotunnel")
+	exe := filepath.Join(t.TempDir(), "hltunnel")
 	os.WriteFile(exe, []byte("old"), 0o755)
 	if err := Keep(exe); err != nil {
 		t.Fatal(err)
@@ -42,7 +42,7 @@ func TestKeepAndConfirm(t *testing.T) {
 func TestRollback(t *testing.T) {
 	defer func(d string) { config.Dir = d }(config.Dir)
 	config.Dir = t.TempDir()
-	exe := filepath.Join(t.TempDir(), "neotunnel")
+	exe := filepath.Join(t.TempDir(), "hltunnel")
 	os.WriteFile(exe, []byte("broken new version"), 0o755)
 	RunWatch("v9.9.9", exe, 4*time.Second) // systemctl may be missing here
 	self, _ := os.Executable()

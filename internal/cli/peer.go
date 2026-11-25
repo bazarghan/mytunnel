@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/fleet"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/config"
+	"hltunnel/internal/fleet"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/manage"
 )
 
 func nodeCmd() *cobra.Command {
@@ -106,7 +106,7 @@ func peerListCmd() *cobra.Command {
 func printPeers(st *config.State) {
 	title("Peers")
 	if len(st.Peers) == 0 {
-		info("none yet — add one with: neotunnel peer add <name> --address <ip>")
+		info("none yet — add one with: hltunnel peer add <name> --address <ip>")
 		return
 	}
 	for _, p := range st.Peers {
@@ -197,7 +197,7 @@ func peerSyncCmd() *cobra.Command {
 func peerUpgradeCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "upgrade [name...]",
-		Short: "Install this node's neotunnel version on peers (all by default)",
+		Short: "Install this node's hltunnel version on peers (all by default)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := loadNode()
 			if err != nil {

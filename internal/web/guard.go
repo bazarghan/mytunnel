@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/guard"
-	"neotunnel/internal/manage"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/guard"
+	"hltunnel/internal/manage"
 )
 
 // GuardView is the firewall page: its settings and what it does now.

@@ -3,7 +3,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/upgrade"
+	"hltunnel/internal/upgrade"
 )
 
 // upgradeWatchCmd is the watchdog an upgrade starts from the old binary

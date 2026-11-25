@@ -27,11 +27,11 @@ import (
 	"strconv"
 	"strings"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Table is the guard's nftables table.
-const Table = "neotunnel_guard"
+const Table = "hltunnel_guard"
 
 // Socket is a port a program listens on.
 type Socket struct {
@@ -75,12 +75,12 @@ func IsXray(process string) bool {
 	return strings.HasPrefix(p, "xray") || strings.HasPrefix(p, "v2ray") || strings.HasPrefix(p, "sing-box")
 }
 
-// skipProcess: sockets of these programs are covered otherwise (NeoTunnel's
+// skipProcess: sockets of these programs are covered otherwise (HLTunnel's
 // own: the agent and test ports are for peers, forwards come from the
 // configuration; sshd: always open).
 func skipProcess(p string) bool {
 	switch p {
-	case "neotunnel", "sshd":
+	case "hltunnel", "sshd":
 		return true
 	}
 	return false

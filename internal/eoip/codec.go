@@ -1,6 +1,6 @@
 // Package eoip is MikroTik's Ethernet over IP in user space: Ethernet
 // frames from a TAP interface travel to the far end in EoIP's own framing,
-// so two NeoTunnel servers (or a NeoTunnel server and a MikroTik) share a
+// so two HLTunnel servers (or a HLTunnel server and a MikroTik) share a
 // layer-2 segment without any kernel module beyond tun.
 //
 // EoIP (IPv4, IP protocol 47) is a GRE version 1 packet:

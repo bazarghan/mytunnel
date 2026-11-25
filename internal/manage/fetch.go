@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"slices"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // FetchTunnels lists the tunnels this node's downloads can leave through:
-// its own, to a paired NeoTunnel server, and turned on.
+// its own, to a paired HLTunnel server, and turned on.
 func FetchTunnels(st *config.State) []string {
 	// The layers under a stack (6to4's SIT) aren't tunnels users pick.
 	carriers := map[string]bool{}
@@ -33,7 +33,7 @@ func fetchTunnelOK(st *config.State, t config.Tunnel) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("tunnel %s doesn't go to a NeoTunnel server connected to this one", t.Name)
+	return fmt.Errorf("tunnel %s doesn't go to a HLTunnel server connected to this one", t.Name)
 }
 
 // SetFetch saves the downloads-through-a-tunnel settings and tells the far

@@ -13,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/agent"
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/probe"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/agent"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/probe"
+	"hltunnel/internal/traffic"
 )
 
 type Options struct {
@@ -26,6 +26,7 @@ type Options struct {
 	Interval time.Duration
 	Duration time.Duration // per direction
 	Streams  int
+	Bytes    int64 // max bytes per direction (0 = unlimited, time-based)
 	// Live, if set, receives measurements as they happen: phase "ping"
 	// (milliseconds), "upload" or "download" (bits/s), "done".
 	Live func(phase string, value float64)
@@ -147,12 +148,13 @@ func Candidates(self, peer string, selfAddr, peerAddr string) []Candidate {
 
 // Runner holds an open probe session on the peer.
 type Runner struct {
-	ID     *identity.Identity
-	State  *config.State
-	Peer   config.Peer
-	Opts   Options
-	client *agent.Client
-	token  probe.Token
+	ID        *identity.Identity
+	State     *config.State
+	Peer      config.Peer
+	Opts      Options
+	client    *agent.Client
+	token     probe.Token
+	byteLimit bool
 	// Progress receives human-readable step updates.
 	Progress func(string)
 	// CheckOnly stops after the connectivity check: a few seconds per
@@ -181,9 +183,11 @@ func (r *Runner) open(ctx context.Context) error {
 		return err
 	}
 	r.token = probe.NewToken()
-	if err := c.OpenProbe(ctx, r.token.String(), 15*time.Minute); err != nil {
+	info, err := c.OpenProbeInfo(ctx, r.token.String(), 15*time.Minute)
+	if err != nil {
 		return fmt.Errorf("open test session on %s: %w", r.Peer.Name, err)
 	}
+	r.byteLimit = info.ByteLimit
 	r.client = c
 	return nil
 }
@@ -200,6 +204,9 @@ func (r *Runner) measure(ctx context.Context, t target) (probe.LatencyResult, fl
 	}
 	r.say("  latency %.1f ms, jitter %.1f ms, loss %.0f%%", ms(lat.Avg), ms(lat.Jitter), lat.Loss())
 	r.live("ping", ms(lat.Avg))
+	if r.Opts.Bytes > 0 {
+		r.say("  volume limit %d MB per direction", r.Opts.Bytes>>20)
+	}
 	up, err := r.bandwidth(ctx, t, probe.Upload)
 	if err != nil {
 		return lat, 0, 0, fmt.Errorf("upload: %w", err)
@@ -396,7 +403,7 @@ func secret(t config.Tunnel) config.Tunnel {
 }
 
 // needsDaemon reports whether a candidate has user-space layers (TCP,
-// NeoObfs) that only the daemon's data plane can bring up.
+// HLObfs) that only the daemon's data plane can bring up.
 func needsDaemon(c Candidate) bool {
 	if engine.InDaemon() {
 		return false

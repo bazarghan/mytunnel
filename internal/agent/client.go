@@ -18,12 +18,12 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/mtr"
-	"neotunnel/internal/traffic"
-	"neotunnel/internal/version"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/mtr"
+	"hltunnel/internal/traffic"
+	"hltunnel/internal/version"
 )
 
 type Client struct {
@@ -261,7 +261,13 @@ func (c *Client) Apply(ctx context.Context, req ApplyRequest) (ApplyResponse, er
 }
 
 func (c *Client) OpenProbe(ctx context.Context, token string, d time.Duration) error {
-	return c.do(ctx, "POST", "/v1/probe", ProbeRequest{Token: token, Seconds: int(d.Seconds())}, nil, nil)
+	_, err := c.OpenProbeInfo(ctx, token, d)
+	return err
+}
+
+func (c *Client) OpenProbeInfo(ctx context.Context, token string, d time.Duration) (ProbeResponse, error) {
+	var r ProbeResponse
+	return r, c.do(ctx, "POST", "/v1/probe", ProbeRequest{Token: token, Seconds: int(d.Seconds())}, &r, nil)
 }
 
 func (c *Client) BenchUp(ctx context.Context, req BenchUpRequest) (BenchUpResponse, error) {

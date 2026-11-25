@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"neotunnel/internal/mmsg"
-	"neotunnel/internal/offload"
+	"hltunnel/internal/mmsg"
+	"hltunnel/internal/offload"
 )
 
 // Config describes this node's end of an EoIP tunnel.
@@ -41,7 +41,7 @@ func (c Config) framing() framing {
 // mac is a stable, locally administered address for this end, so the far
 // end's neighbor caches survive a daemon restart.
 func (c Config) mac() net.HardwareAddr {
-	h := sha256.Sum256([]byte(fmt.Sprintf("neotunnel/eoip/%s/%d", c.Tunnel, c.Side)))
+	h := sha256.Sum256([]byte(fmt.Sprintf("hltunnel/eoip/%s/%d", c.Tunnel, c.Side)))
 	m := net.HardwareAddr(h[:6])
 	m[0] = m[0]&^0x01 | 0x02
 	return m

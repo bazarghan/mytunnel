@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/config"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/traffic"
 )
 
 // Ports close when paused, past their end or out of quota, and open again

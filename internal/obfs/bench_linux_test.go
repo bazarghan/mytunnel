@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// TestBenchEnd runs one end of a real NeoObfs tunnel until SIGTERM, for
+// TestBenchEnd runs one end of a real HLObfs tunnel until SIGTERM, for
 // test/tcptun-bench.sh (KIND=obfs). Skipped unless NT_BENCH_SIDE is set.
 func TestBenchEnd(t *testing.T) {
 	sideS := os.Getenv("NT_BENCH_SIDE")

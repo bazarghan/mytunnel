@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/metrics"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/metrics"
+	"hltunnel/internal/traffic"
 )
 
 // history turns one round of counter readings into graph samples: rates

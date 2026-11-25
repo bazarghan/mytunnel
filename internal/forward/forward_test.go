@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 func TestParsePorts(t *testing.T) {
@@ -27,7 +27,7 @@ func TestBuildTargetsFarEnd(t *testing.T) {
 		Sides: [2]config.Side{{Node: "hub"}, {Node: "edge"}},
 	}}}
 	fs := []config.Forward{{Node: "hub", Tunnel: "t1", Proto: "both", Ports: "443"}}
-	rs, errs := Build(st, fs, []Link{{Name: "nt-t1", Tunnel: "t1"}})
+	rs, errs := Build(st, fs, []Link{{Name: "hl-t1", Tunnel: "t1"}})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
@@ -38,7 +38,7 @@ func TestBuildTargetsFarEnd(t *testing.T) {
 	for _, want := range []string{
 		`tcp dport { 443 } dnat ip to 10.77.0.2`,
 		`udp dport { 443 } dnat ip to 10.77.0.2`,
-		`oifname "nt-t1" ct status dnat masquerade`,
+		`oifname "hl-t1" ct status dnat masquerade`,
 		`maxseg size set rt mtu`,
 	} {
 		if !strings.Contains(s, want) {
@@ -55,7 +55,7 @@ func TestForwardFromThisServer(t *testing.T) {
 		{Node: "hub", Tunnel: "t1", Proto: "tcp", Ports: "443", Mode: config.ForwardTransparent},
 		{Node: "hub", Tunnel: "t1", Proto: "udp", Ports: "2053", To: 53},
 	}
-	rs, errs := Build(st, fs, []Link{{Name: "nt-t1", Tunnel: "t1"}})
+	rs, errs := Build(st, fs, []Link{{Name: "hl-t1", Tunnel: "t1"}})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
@@ -73,16 +73,16 @@ func TestForwardFromThisServer(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		`iifname "nt-*" ip daddr 127.0.0.0/8 drop`,
+		`iifname "hl-*" ip daddr 127.0.0.0/8 drop`,
 		"type filter hook output priority -150;",
-		`iifname "nt-t1" ct status dnat udp sport { 2053 } counter name`,
+		`iifname "hl-t1" ct status dnat udp sport { 2053 } counter name`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("script missing %q:\n%s", want, s)
 		}
 	}
-	if !localnetIfaces(rs)["nt-t1"] {
-		t.Error("route_localnet not wanted on nt-t1")
+	if !localnetIfaces(rs)["hl-t1"] {
+		t.Error("route_localnet not wanted on hl-t1")
 	}
 }
 
@@ -92,7 +92,7 @@ func TestForwardFromThisServerIPv6(t *testing.T) {
 		Sides: [2]config.Side{{Node: "hub"}, {Node: "edge"}},
 	}}}
 	fs := []config.Forward{{Node: "hub", Tunnel: "t6", Proto: "tcp", Ports: "443"}}
-	rs, errs := Build(st, fs, []Link{{Name: "nt-t6", Tunnel: "t6"}})
+	rs, errs := Build(st, fs, []Link{{Name: "hl-t6", Tunnel: "t6"}})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
@@ -111,7 +111,7 @@ func TestForwardToOtherPort(t *testing.T) {
 		Sides: [2]config.Side{{Node: "hub"}, {Node: "germany"}},
 	}}}
 	fs := []config.Forward{{Node: "hub", Tunnel: "de", Proto: "tcp", Ports: "2053", To: 443}}
-	rs, _ := Build(st, fs, []Link{{Name: "nt-de", Tunnel: "de"}})
+	rs, _ := Build(st, fs, []Link{{Name: "hl-de", Tunnel: "de"}})
 	if s := Script(rs); !strings.Contains(s, "tcp dport { 2053 } dnat ip to 10.77.0.6:443") {
 		t.Errorf("port remap missing:\n%s", s)
 	}
@@ -136,7 +136,7 @@ func TestTransparentKeepsClientAddress(t *testing.T) {
 		{Node: "hub", Tunnel: "t1", Proto: "tcp", Ports: "443", Mode: config.ForwardTransparent},
 		{Node: "hub", Tunnel: "t1", Proto: "tcp", Ports: "80"},
 	}
-	rs, errs := Build(st, fs, []Link{{Name: "nt-t1", Tunnel: "t1"}})
+	rs, errs := Build(st, fs, []Link{{Name: "hl-t1", Tunnel: "t1"}})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
@@ -144,7 +144,7 @@ func TestTransparentKeepsClientAddress(t *testing.T) {
 	for _, want := range []string{
 		"tcp dport { 443 } ct mark set 0x4e550001 dnat ip to 10.77.0.2",
 		"tcp dport { 80 } dnat ip to 10.77.0.2",
-		`oifname "nt-t1" ct status dnat ct mark != 0x4e550001 masquerade`,
+		`oifname "hl-t1" ct status dnat ct mark != 0x4e550001 masquerade`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("script missing %q:\n%s", want, s)
@@ -162,14 +162,14 @@ func TestReturnPathOnFarEnd(t *testing.T) {
 	}
 	edge := &config.State{Self: "edge", Managed: &config.Managed{Self: "edge", Tunnels: ts, Forwards: fs}}
 	_, own := edge.Effective()
-	rs, _ := Build(edge, own, []Link{{Name: "nt-t1", Tunnel: "t1"}})
+	rs, _ := Build(edge, own, []Link{{Name: "hl-t1", Tunnel: "t1"}})
 	if len(rs.Rules) != 0 || len(rs.Returns) != 1 || rs.Returns[0].Mark != ReturnMark("t1") {
 		t.Fatalf("far end should only get a return path: %+v", rs)
 	}
 	s := Script(rs)
 	mark := fmt.Sprintf("0x%08x", ReturnMark("t1"))
 	for _, want := range []string{
-		`iifname "nt-t1" ct state new ct mark set ` + mark + "\n    ct mark " + mark + " meta mark set ct mark",
+		`iifname "hl-t1" ct state new ct mark set ` + mark + "\n    ct mark " + mark + " meta mark set ct mark",
 		"type route hook output",
 		"ct mark " + mark + " meta mark set ct mark",
 	} {
@@ -186,7 +186,7 @@ func TestReturnPathOnFarEnd(t *testing.T) {
 func TestProxyModeBecomesRelays(t *testing.T) {
 	st := modeState()
 	fs := []config.Forward{{Node: "hub", Tunnel: "t1", Proto: "both", Ports: "443,8000-8001", To: 9000, Mode: config.ForwardProxy}}
-	rs, errs := Build(st, fs, []Link{{Name: "nt-t1", Tunnel: "t1"}})
+	rs, errs := Build(st, fs, []Link{{Name: "hl-t1", Tunnel: "t1"}})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
@@ -198,7 +198,7 @@ func TestProxyModeBecomesRelays(t *testing.T) {
 		t.Errorf("relay %+v", r)
 	}
 	fs[0].ProxyVersion = 1
-	if _, errs := Build(st, fs, []Link{{Name: "nt-t1", Tunnel: "t1"}}); len(errs) != 1 {
+	if _, errs := Build(st, fs, []Link{{Name: "hl-t1", Tunnel: "t1"}}); len(errs) != 1 {
 		t.Error("PROXY v1 over UDP accepted")
 	}
 }
@@ -220,14 +220,14 @@ func TestLaneInterfaces(t *testing.T) {
 	st.Tunnels = []config.Tunnel{{Name: "g1", Kind: config.KindGRE, Net4: "10.77.0.0/30", Lanes: 2,
 		Sides: [2]config.Side{{Node: "hub"}, {Node: "edge"}}}}
 	fs := []config.Forward{{Node: "hub", Tunnel: "g1", Proto: "tcp", Ports: "80"}}
-	rs, errs := Build(st, fs, []Link{{Name: "nt-g1", Tunnel: "g1"}, {Name: "nt-g1.1", Tunnel: "g1"}})
+	rs, errs := Build(st, fs, []Link{{Name: "hl-g1", Tunnel: "g1"}, {Name: "hl-g1.1", Tunnel: "g1"}})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
 	if len(rs.Rules) != 1 || rs.Rules[0].Target.String() != "10.77.0.2" {
 		t.Fatalf("rules %+v", rs.Rules)
 	}
-	if s := Script(rs); !strings.Contains(s, `oifname { "nt-g1", "nt-g1.1" } ct status dnat masquerade`) {
+	if s := Script(rs); !strings.Contains(s, `oifname { "hl-g1", "hl-g1.1" } ct status dnat masquerade`) {
 		t.Errorf("masquerade must cover every lane:\n%s", s)
 	}
 }

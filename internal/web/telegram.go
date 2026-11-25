@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/forward"
-	"neotunnel/internal/telegram"
+	"hltunnel/internal/config"
+	"hltunnel/internal/forward"
+	"hltunnel/internal/telegram"
 )
 
 // TelegramView is the Telegram section: the settings (without the token),

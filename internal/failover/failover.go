@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/health"
+	"hltunnel/internal/config"
+	"hltunnel/internal/health"
 )
 
 const (

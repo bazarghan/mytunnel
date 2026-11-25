@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"neotunnel/internal/neoexit"
 	"net"
 	"net/http"
 	"net/netip"
@@ -20,17 +19,17 @@ import (
 	"strings"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/mtr"
-	"neotunnel/internal/probe"
-	"neotunnel/internal/safe"
-	"neotunnel/internal/spoof"
-	"neotunnel/internal/sysinfo"
-	"neotunnel/internal/traffic"
-	"neotunnel/internal/upgrade"
-	"neotunnel/internal/version"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/mtr"
+	"hltunnel/internal/probe"
+	"hltunnel/internal/safe"
+	"hltunnel/internal/spoof"
+	"hltunnel/internal/sysinfo"
+	"hltunnel/internal/traffic"
+	"hltunnel/internal/upgrade"
+	"hltunnel/internal/version"
 )
 
 type Server struct {
@@ -164,7 +163,7 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 			return errors.New("unknown peer")
 		}
 		if !validEnroll(*p, req.Token) {
-			return errors.New("invalid or expired enrollment token; show a new connect command on the main server: neotunnel peer connect " + req.Name)
+			return errors.New("invalid or expired enrollment token; show a new connect command on the main server: hltunnel peer connect " + req.Name)
 		}
 		p.PublicKey = key
 		p.EnrollToken, p.EnrollExpires = "", time.Time{}
@@ -252,7 +251,7 @@ func agentBusy(st *config.State) []string {
 // LocalStatus reports this node's tunnels and counters.
 func LocalStatus(st *config.State, started time.Time) Status {
 	aes := sysinfo.AESNI()
-	out := Status{Name: st.Self, Version: version.Version, Arch: version.Arch(), Address6: engine.PublicIPv6(), AESNI: &aes, ObfsAES: true, StreamTunnels: true, StreamTests: true, StreamFallback: true, Leave: true, AgentPort: st.ListenAgentPort(), RolledBack: upgrade.LastFailed().Version, NeoExit: neoexit.Local()}
+	out := Status{Name: st.Self, Version: version.Version, Arch: version.Arch(), Address6: engine.PublicIPv6(), AESNI: &aes, ObfsAES: true, StreamTunnels: true, StreamTests: true, StreamFallback: true, Leave: true, AgentPort: st.ListenAgentPort(), RolledBack: upgrade.LastFailed().Version}
 	if st.Managed != nil {
 		out.Revision = st.Managed.Revision
 	}
@@ -341,7 +340,7 @@ func (s *Server) openProbe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Probe.Open(tok, time.Duration(req.Seconds)*time.Second)
-	writeJSON(w, http.StatusOK, map[string]int{"port": probe.DefaultPort})
+	writeJSON(w, http.StatusOK, ProbeResponse{Port: probe.DefaultPort, ByteLimit: true})
 }
 
 func (s *Server) benchUp(w http.ResponseWriter, r *http.Request) {
@@ -417,7 +416,7 @@ func (s *Server) upgrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	exe, _ = filepath.EvalSymlinks(exe)
-	tmp, err := os.CreateTemp(filepath.Dir(exe), ".neotunnel-new-*")
+	tmp, err := os.CreateTemp(filepath.Dir(exe), ".hltunnel-new-*")
 	if err != nil {
 		fail(w, http.StatusInternalServerError, err)
 		return

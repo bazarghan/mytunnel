@@ -11,7 +11,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // FOU receive ports are kernel-wide and carry no owner mark, so the ones we

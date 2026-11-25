@@ -1,5 +1,5 @@
 // Package forward renders port forwarding and MSS clamping as one nftables
-// table ("inet neotunnel") that is replaced atomically on every apply.
+// table ("inet hltunnel") that is replaced atomically on every apply.
 package forward
 
 import (
@@ -10,12 +10,12 @@ import (
 	"strings"
 	"sync"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/relay"
+	"hltunnel/internal/config"
+	"hltunnel/internal/relay"
 )
 
 // Reserved ports are never forwarded so a typo can't lock you out.
-var Reserved = map[int]string{22: "SSH", 7710: "neotunnel agent", 7711: "neotunnel probe", relay.RelayPort: "neotunnel relay", config.FetchPort: "neotunnel downloads"}
+var Reserved = map[int]string{22: "SSH", 7710: "hltunnel agent", 7711: "hltunnel probe", relay.RelayPort: "hltunnel relay", config.FetchPort: "hltunnel downloads"}
 
 type Rule struct {
 	Iface string

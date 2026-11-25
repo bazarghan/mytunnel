@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"neotunnel/internal/health"
+	"hltunnel/internal/health"
 )
 
 type LatencyResult struct {
@@ -177,6 +177,15 @@ const (
 	Download Direction = 'D' // peer -> this node
 )
 
+// BandwidthOptions configures a throughput measurement.
+type BandwidthOptions struct {
+	Duration    time.Duration
+	Streams     int
+	MaxBytes    int64 // total bytes across all streams (0 = unlimited, time-based)
+	ServerLimit bool  // peer probe server supports 'd' mode for download byte caps
+	Report      func(bps float64)
+}
+
 // Bandwidth runs streams parallel TCP connections for d and returns bits/s.
 func Bandwidth(ctx context.Context, addr string, tok Token, dir Direction, d time.Duration, streams int) (float64, error) {
 	return BandwidthLive(ctx, addr, tok, dir, d, streams, nil)
@@ -192,11 +201,16 @@ func Bandwidth(ctx context.Context, addr string, tok Token, dir Direction, d tim
 // not the bytes written: the first writes only fill socket buffers, which
 // made the live rate jump high and then fall.
 func BandwidthLive(ctx context.Context, addr string, tok Token, dir Direction, d time.Duration, streams int, report func(bps float64)) (float64, error) {
+	return BandwidthLimit(ctx, addr, tok, dir, BandwidthOptions{Duration: d, Streams: streams, Report: report})
+}
+
+// BandwidthLimit runs a TCP throughput test with opts (duration and/or byte cap).
+func BandwidthLimit(ctx context.Context, addr string, tok Token, dir Direction, opts BandwidthOptions) (float64, error) {
 	dial := func(ctx context.Context) (net.Conn, error) {
 		var dl net.Dialer
 		return dl.DialContext(ctx, "tcp", addr)
 	}
-	return bandwidth(ctx, dial, false, tok, dir, d, streams, report)
+	return bandwidth(ctx, dial, false, tok, dir, opts)
 }
 
 // Dial opens one connection to a probe server.
@@ -207,17 +221,70 @@ type Dial func(ctx context.Context) (net.Conn, error)
 // its frame is on the session's socket, which keeps little unsent, so an
 // upload counts the bytes written once the run is past its start.
 func BandwidthOver(ctx context.Context, dial Dial, tok Token, dir Direction, d time.Duration, streams int, report func(bps float64)) (float64, error) {
-	return bandwidth(ctx, dial, true, tok, dir, d, streams, report)
+	return BandwidthOverLimit(ctx, dial, tok, dir, BandwidthOptions{Duration: d, Streams: streams, Report: report})
 }
 
-func bandwidth(ctx context.Context, dial Dial, written bool, tok Token, dir Direction, d time.Duration, streams int, report func(bps float64)) (float64, error) {
+// BandwidthOverLimit is BandwidthOver with opts (duration and/or byte cap).
+func BandwidthOverLimit(ctx context.Context, dial Dial, tok Token, dir Direction, opts BandwidthOptions) (float64, error) {
+	return bandwidth(ctx, dial, true, tok, dir, opts)
+}
+
+type byteBudget struct {
+	left atomic.Int64
+}
+
+func newByteBudget(n int64) *byteBudget {
+	b := &byteBudget{}
+	b.left.Store(n)
+	return b
+}
+
+// take reserves up to want bytes from the budget (0 if exhausted).
+func (b *byteBudget) take(want int64) int64 {
+	for {
+		cur := b.left.Load()
+		if cur <= 0 {
+			return 0
+		}
+		n := min(cur, want)
+		if b.left.CompareAndSwap(cur, cur-n) {
+			return n
+		}
+	}
+}
+
+func (b *byteBudget) sub(n int64) int64 { return b.left.Add(-n) }
+func (b *byteBudget) remaining() int64  { return b.left.Load() }
+
+func bandwidth(ctx context.Context, dial Dial, written bool, tok Token, dir Direction, opts BandwidthOptions) (float64, error) {
+	d := opts.Duration
+	if d <= 0 {
+		d = maxTestTime
+	}
+	streams := opts.Streams
 	if streams < 1 {
 		streams = 1
+	}
+	if opts.MaxBytes > 0 && opts.MaxBytes < int64(streams) {
+		streams = int(opts.MaxBytes)
 	}
 	// The test fills the tunnel on purpose; the loss it causes must not
 	// make the daemon restart the tunnel or move its forwards.
 	health.QuietFor(d + 30*time.Second)
 	m := &meter{dir: dir, written: written}
+	runCtx, runCancel := context.WithCancel(ctx)
+	defer runCancel()
+
+	var budget *byteBudget
+	if opts.MaxBytes > 0 && (dir == Upload || !opts.ServerLimit) {
+		budget = newByteBudget(opts.MaxBytes)
+	}
+	var baseShare, remShare int64
+	if opts.MaxBytes > 0 && dir == Download && opts.ServerLimit {
+		baseShare = opts.MaxBytes / int64(streams)
+		remShare = opts.MaxBytes % int64(streams)
+	}
+
 	var (
 		wg    sync.WaitGroup
 		mu    sync.Mutex
@@ -226,17 +293,24 @@ func bandwidth(ctx context.Context, dial Dial, written bool, tok Token, dir Dire
 	)
 	start := time.Now()
 	for i := 0; i < streams; i++ {
+		var share int64
+		if baseShare > 0 || remShare > 0 {
+			share = baseShare
+			if int64(i) < remShare {
+				share++
+			}
+		}
 		wg.Add(1)
-		go func() {
+		go func(share int64) {
 			defer wg.Done()
-			n, err := stream(ctx, dial, tok, dir, d, m)
+			n, err := stream(runCtx, runCancel, dial, tok, dir, d, m, budget, share)
 			mu.Lock()
 			defer mu.Unlock()
 			total += n
 			if err != nil && first == nil {
 				first = err
 			}
-		}()
+		}(share)
 	}
 	finished := make(chan struct{})
 	go func() { wg.Wait(); close(finished) }()
@@ -255,9 +329,9 @@ sampling:
 				break sampling
 			}
 			samples = append(samples, sample{m.delivered(), now})
-			if report != nil {
+			if opts.Report != nil {
 				a, b := samples[max(0, len(samples)-6)], samples[len(samples)-1]
-				report(float64(b.n-a.n) * 8 / b.at.Sub(a.at).Seconds())
+				opts.Report(float64(b.n-a.n) * 8 / b.at.Sub(a.at).Seconds())
 			}
 		}
 	}
@@ -269,12 +343,17 @@ sampling:
 		}
 		return 0, first
 	}
-	rate := float64(total*8) / time.Since(start).Seconds()
-	if steady, ok := steadyRate(samples, start.Add(Warmup(d))); ok && (dir == Download || m.exact || m.written) {
+	elapsed := time.Since(start)
+	if elapsed <= 0 {
+		elapsed = time.Nanosecond
+	}
+	rate := float64(total*8) / elapsed.Seconds()
+	effDur := min(d, elapsed)
+	if steady, ok := steadyRate(samples, start.Add(Warmup(effDur))); ok && (dir == Download || m.exact || m.written) {
 		rate = steady
 	}
-	if report != nil {
-		report(rate)
+	if opts.Report != nil {
+		opts.Report(rate)
 	}
 	return rate, nil
 }
@@ -351,22 +430,37 @@ func (m *meter) delivered() int64 {
 	return int64(sum)
 }
 
-func stream(ctx context.Context, dial Dial, tok Token, dir Direction, d time.Duration, m *meter) (int64, error) {
+func stream(ctx context.Context, stop context.CancelFunc, dial Dial, tok Token, dir Direction, d time.Duration, m *meter, budget *byteBudget, share int64) (int64, error) {
 	dctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	c, err := dial(dctx)
 	cancel()
 	if err != nil {
+		if budget != nil && budget.remaining() <= 0 {
+			return 0, nil
+		}
 		return 0, err
 	}
 	defer c.Close()
 	go func() { <-ctx.Done(); c.Close() }()
 	m.track(c)
 
-	hdr := make([]byte, tokenLen+5)
-	copy(hdr, tok[:])
-	hdr[tokenLen] = byte(dir)
-	binary.BigEndian.PutUint32(hdr[tokenLen+1:], uint32(d.Milliseconds()))
+	var hdr []byte
+	if dir == Download && share > 0 {
+		hdr = make([]byte, tokenLen+13)
+		copy(hdr, tok[:])
+		hdr[tokenLen] = 'd'
+		binary.BigEndian.PutUint32(hdr[tokenLen+1:], uint32(d.Milliseconds()))
+		binary.BigEndian.PutUint64(hdr[tokenLen+5:], uint64(share))
+	} else {
+		hdr = make([]byte, tokenLen+5)
+		copy(hdr, tok[:])
+		hdr[tokenLen] = byte(dir)
+		binary.BigEndian.PutUint32(hdr[tokenLen+1:], uint32(d.Milliseconds()))
+	}
 	if _, err := c.Write(hdr); err != nil {
+		if budget != nil && budget.remaining() <= 0 {
+			return 0, nil
+		}
 		return 0, err
 	}
 	switch dir {
@@ -376,7 +470,15 @@ func stream(ctx context.Context, dial Dial, tok Token, dir Direction, d time.Dur
 		deadline := time.Now().Add(d)
 		c.SetWriteDeadline(deadline.Add(2 * time.Second))
 		for time.Now().Before(deadline) {
-			n, err := c.Write(buf)
+			chunk := buf
+			if budget != nil {
+				take := budget.take(int64(len(buf)))
+				if take <= 0 {
+					break
+				}
+				chunk = buf[:take]
+			}
+			n, err := c.Write(chunk)
 			m.moved.Add(int64(n))
 			if err != nil {
 				break
@@ -396,11 +498,34 @@ func stream(ctx context.Context, dial Dial, tok Token, dir Direction, d time.Dur
 		buf := make([]byte, 128<<10)
 		var n int64
 		for {
-			k, err := c.Read(buf)
+			chunk := buf
+			if share > 0 {
+				left := share - n
+				if left <= 0 {
+					return n, nil
+				}
+				if left < int64(len(chunk)) {
+					chunk = buf[:left]
+				}
+			} else if budget != nil {
+				left := budget.remaining()
+				if left <= 0 {
+					stop()
+					return n, nil
+				}
+				if left < int64(len(chunk)) {
+					chunk = buf[:left]
+				}
+			}
+			k, err := c.Read(chunk)
 			n += int64(k)
 			m.moved.Add(int64(k))
+			if budget != nil && k > 0 && budget.sub(int64(k)) <= 0 {
+				stop()
+				return n, nil
+			}
 			if err != nil {
-				if n > 0 || err == io.EOF {
+				if n > 0 || err == io.EOF || (budget != nil && budget.remaining() <= 0) {
 					err = nil
 				}
 				return n, err

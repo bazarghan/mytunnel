@@ -16,8 +16,8 @@ import (
 	"net/url"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
 )
 
 // Payload is what each post carries.
@@ -69,8 +69,8 @@ func Post(ctx context.Context, w config.Webhook, p Payload) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "NeoTunnel-Webhook")
-	req.Header.Set("X-NeoTunnel-Signature", Sign(w.Secret, body))
+	req.Header.Set("User-Agent", "HLTunnel-Webhook")
+	req.Header.Set("X-HLTunnel-Signature", Sign(w.Secret, body))
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

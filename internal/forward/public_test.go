@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // publicState is t1 (IPIP) from hub to edge's public 203.0.113.2, and v1, a
@@ -21,7 +21,7 @@ func publicState() *config.State {
 // connections marked, and the mark routed through the tunnel.
 func TestPublicTarget(t *testing.T) {
 	st := publicState()
-	links := []Link{{Name: "nt-t1", Tunnel: "t1"}, {Name: "nt-v1", Tunnel: "v1"}}
+	links := []Link{{Name: "hl-t1", Tunnel: "t1"}, {Name: "hl-v1", Tunnel: "v1"}}
 	fs := []config.Forward{
 		{Node: "hub", Tunnel: "t1", Proto: "both", Ports: "443", Public: true},
 		{Node: "hub", Tunnel: "t1", Proto: "tcp", Ports: "8443", To: 443, Mode: config.ForwardProxy, Public: true},
@@ -37,7 +37,7 @@ func TestPublicTarget(t *testing.T) {
 	if len(rs.Relays) != 1 || rs.Relays[0].Target.String() != "203.0.113.2:443" || rs.Relays[0].Mark != mark {
 		t.Fatalf("relays %+v", rs.Relays)
 	}
-	if len(rs.Publics) != 1 || rs.Publics[0].Dest.String() != "203.0.113.2" || rs.Publics[0].Via.String() != "10.77.0.2" || rs.Publics[0].Iface != "nt-t1" {
+	if len(rs.Publics) != 1 || rs.Publics[0].Dest.String() != "203.0.113.2" || rs.Publics[0].Via.String() != "10.77.0.2" || rs.Publics[0].Iface != "hl-t1" {
 		t.Fatalf("publics %+v", rs.Publics)
 	}
 	s := Script(rs)
@@ -79,7 +79,7 @@ func TestLeakChains(t *testing.T) {
 	for _, want := range []string{
 		"chain leak_forward {\n    type filter hook forward priority filter;",
 		"chain leak_output {\n    type filter hook output priority filter;",
-		`oifname "nt-*" return`,
+		`oifname "hl-*" return`,
 		`oifname "lo" return`,
 		"ip daddr { 10.77.0.0/30, 10.77.0.4/30 } counter drop",
 		"ip6 daddr { fd00:1::/64 } counter drop",
@@ -109,7 +109,7 @@ func TestDumpPublicScripts(t *testing.T) {
 	}
 	st := publicState()
 	fs := []config.Forward{{Node: "hub", Tunnel: "t1", Proto: "both", Ports: "443", Public: true}}
-	rs, errs := Build(st, fs, []Link{{Name: "nt-t1", Tunnel: "t1"}, {Name: "nt-v1", Tunnel: "v1"}})
+	rs, errs := Build(st, fs, []Link{{Name: "hl-t1", Tunnel: "t1"}, {Name: "hl-v1", Tunnel: "v1"}})
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}

@@ -3,8 +3,8 @@ package manage
 import (
 	"fmt"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
 )
 
 // Rollback puts the network back as it was before the history entry id

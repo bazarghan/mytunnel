@@ -20,7 +20,7 @@ import (
 var static embed.FS
 
 const (
-	sessionCookie = "nt_s"
+	sessionCookie = "hl_s"
 	sessionTTL    = 12 * time.Hour
 	maxFailures   = 5
 	lockout       = 5 * time.Minute
@@ -192,7 +192,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 // authed wraps API handlers: valid session required; state-changing requests
-// must also carry the X-NeoTunnel header, which cross-site pages can't send.
+// must also carry the X-HLTunnel header, which cross-site pages can't send.
 func (s *Server) authed(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie(sessionCookie)
@@ -223,7 +223,7 @@ func (s *Server) authed(h http.HandlerFunc) http.HandlerFunc {
 			fail(w, http.StatusUnauthorized, "لطفاً وارد شوید")
 			return
 		}
-		if r.Method != http.MethodGet && r.Header.Get("X-NeoTunnel") != "1" {
+		if r.Method != http.MethodGet && r.Header.Get("X-HLTunnel") != "1" {
 			fail(w, http.StatusForbidden, "درخواست نامعتبر")
 			return
 		}

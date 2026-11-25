@@ -7,9 +7,9 @@ import (
 
 	"github.com/vishvananda/netlink"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/failover"
-	"neotunnel/internal/forward"
+	"hltunnel/internal/config"
+	"hltunnel/internal/failover"
+	"hltunnel/internal/forward"
 )
 
 // Doctor inspects the node and, when fix is true, removes leftovers that no
@@ -64,10 +64,10 @@ func Doctor(st *config.State, fix bool) []Finding {
 		name := l.Attrs().Name
 		if fix {
 			if delLink(l) == nil {
-				add(false, true, "removed leftover interface %s (NeoTunnel's name, no tunnel uses it)", name)
+				add(false, true, "removed leftover interface %s (HLTunnel's name, no tunnel uses it)", name)
 			}
 		} else {
-			add(false, false, "leftover interface %s (NeoTunnel's name, no tunnel uses it)", name)
+			add(false, false, "leftover interface %s (HLTunnel's name, no tunnel uses it)", name)
 		}
 	}
 	if leftover == 0 {

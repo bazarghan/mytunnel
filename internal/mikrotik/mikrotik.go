@@ -1,5 +1,5 @@
 // Package mikrotik writes the RouterOS v7 commands for the far end of a
-// tunnel that ends on a MikroTik router instead of a NeoTunnel server, so
+// tunnel that ends on a MikroTik router instead of a HLTunnel server, so
 // the user can paste them into the router's terminal.
 package mikrotik
 
@@ -8,8 +8,8 @@ import (
 	"net/netip"
 	"strings"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
 )
 
 // Commands returns the RouterOS script for the router end of tunnel name:
@@ -47,7 +47,7 @@ func Commands(st *config.State, name string) (string, error) {
 	}
 	far := bottom.Sides[1-me]
 	if far.Node != "" {
-		return "", fmt.Errorf("the far end of %s is the NeoTunnel server %s, which configures itself; MikroTik commands are for a router at a remote IP", name, far.Node)
+		return "", fmt.Errorf("the far end of %s is the HLTunnel server %s, which configures itself; MikroTik commands are for a router at a remote IP", name, far.Node)
 	}
 	server := bottom.Sides[me].Endpoint
 	if server == "" {
@@ -55,7 +55,7 @@ func Commands(st *config.State, name string) (string, error) {
 	}
 	serverIP, err := netip.ParseAddr(server)
 	if err != nil {
-		return "", fmt.Errorf("this server's public address is unknown; set it first (neotunnel node set --address <ip>)")
+		return "", fmt.Errorf("this server's public address is unknown; set it first (hltunnel node set --address <ip>)")
 	}
 	serverIP = serverIP.Unmap()
 
@@ -86,13 +86,13 @@ func Commands(st *config.State, name string) (string, error) {
 	if top.Mode != "" {
 		title = top.Mode
 	}
-	w("# NeoTunnel %s (%s): RouterOS v7 commands for the router at %s", name, title, far.Endpoint)
-	w("# NeoTunnel server: %s", serverIP)
+	w("# HLTunnel %s (%s): RouterOS v7 commands for the router at %s", name, title, far.Endpoint)
+	w("# HLTunnel server: %s", serverIP)
 
 	for _, t := range stack {
 		s := spec[t.Name]
 		ifname := engine.Ifname(t.Name)
-		comment := fmt.Sprintf("comment=\"NeoTunnel %s\"", t.Name)
+		comment := fmt.Sprintf("comment=\"HLTunnel %s\"", t.Name)
 		// The address the router dials, and its own address for a layer
 		// over another tunnel (both from the carrier's inner subnet).
 		remote, local := serverIP.String(), ""
@@ -125,7 +125,7 @@ func Commands(st *config.State, name string) (string, error) {
 			w("/interface ipipv6 add name=%s remote-address=%s%s mtu=%d%s %s", ifname, remote, localArg, s.MTU, dscp, comment)
 		case config.KindEoIP:
 			if s.Port != 0 {
-				return "", fmt.Errorf("tunnel %s runs EoIP on UDP port %d, which only NeoTunnel speaks; remove the port for a MikroTik", t.Name, s.Port)
+				return "", fmt.Errorf("tunnel %s runs EoIP on UDP port %d, which only HLTunnel speaks; remove the port for a MikroTik", t.Name, s.Port)
 			}
 			menu := "eoip"
 			if under6 {
@@ -138,7 +138,7 @@ func Commands(st *config.State, name string) (string, error) {
 			w("/interface vxlan vteps add interface=%s remote-ip=%s", ifname, remote)
 		case config.KindL2TPv3:
 			// Static (unmanaged) L2TPv3: both ends use one id for the
-			// tunnel and the session, as NeoTunnel does.
+			// tunnel and the session, as HLTunnel does.
 			id := s.Key & 0x7fffffff
 			if id == 0 {
 				id = 1
@@ -147,7 +147,7 @@ func Commands(st *config.State, name string) (string, error) {
 			if s.Port != 0 {
 				proto = "l2tpv3-udp"
 				if s.Port != 1701 {
-					w("# RouterOS sends L2TPv3 over UDP on port 1701: give the tunnel port 1701 in NeoTunnel")
+					w("# RouterOS sends L2TPv3 over UDP on port 1701: give the tunnel port 1701 in HLTunnel")
 				}
 			}
 			own := far.Endpoint
@@ -176,15 +176,15 @@ func Commands(st *config.State, name string) (string, error) {
 				}
 			}
 			// The router generates its own private key when the interface
-			// is created; NeoTunnel needs the matching public key.
+			// is created; HLTunnel needs the matching public key.
 			w("/interface wireguard add name=%s listen-port=%d mtu=%d %s", ifname, s.Port, s.MTU, comment)
 			w("/interface wireguard peers add interface=%s public-key=\"%s\" endpoint-address=%s endpoint-port=%d allowed-address=%s%s %s",
 				ifname, pub, remote, s.Port, strings.Join(allowed, ","), ka, comment)
 			if t.PeerKey != "" {
-				w("# NeoTunnel expects the router's public key %s;", t.PeerKey)
-				w("# if the router made a different one, give NeoTunnel this key as the peer key:")
+				w("# HLTunnel expects the router's public key %s;", t.PeerKey)
+				w("# if the router made a different one, give HLTunnel this key as the peer key:")
 			} else {
-				w("# give NeoTunnel the router's public key (peer key):")
+				w("# give HLTunnel the router's public key (peer key):")
 			}
 			w(":put [/interface wireguard get %s public-key]", ifname)
 		case config.KindGRETAP, config.KindIP6GRETAP:
@@ -197,10 +197,10 @@ func Commands(st *config.State, name string) (string, error) {
 	for _, t := range stack {
 		ifname := engine.Ifname(t.Name)
 		if p, ok := config.Inner(t.Net4, 1-me); ok {
-			w("/ip address add address=%s interface=%s comment=\"NeoTunnel %s\"", p, ifname, t.Name)
+			w("/ip address add address=%s interface=%s comment=\"HLTunnel %s\"", p, ifname, t.Name)
 		}
 		if p, ok := config.Inner(t.Net6, 1-me); ok {
-			w("/ipv6 address add address=%s interface=%s advertise=no comment=\"NeoTunnel %s\"", p, ifname, t.Name)
+			w("/ipv6 address add address=%s interface=%s advertise=no comment=\"HLTunnel %s\"", p, ifname, t.Name)
 		}
 	}
 

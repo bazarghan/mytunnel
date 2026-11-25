@@ -3,10 +3,9 @@
 package agent
 
 import (
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/neoexit"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/traffic"
 )
 
 const DefaultPort = 7710
@@ -72,7 +71,7 @@ type Status struct {
 	Address6 string `json:"address6,omitempty"`
 	// AESNI: the CPU has AES instructions (nil from peers too old to say).
 	AESNI *bool `json:"aes_ni,omitempty"`
-	// ObfsAES: this version can run NeoObfs on AES-128-GCM.
+	// ObfsAES: this version can run HLObfs on AES-128-GCM.
 	ObfsAES bool `json:"obfs_aes,omitempty"`
 	// StreamTunnels: this version runs connection tunnels and relay ports.
 	StreamTunnels bool `json:"stream_tunnels,omitempty"`
@@ -98,8 +97,6 @@ type Status struct {
 	// or another master's): that master gives its tunnels others.
 	Busy      []string `json:"busy_nets,omitempty"`
 	BusyPorts []string `json:"busy_ports,omitempty"`
-	// NeoExit is the NeoExit program on this node, if it runs there.
-	NeoExit *neoexit.Status `json:"neoexit,omitempty"`
 	// Dropped are the asking master's tunnels (its names) removed on this
 	// node by hand; they stay off until it restores or deletes them.
 	Dropped []string `json:"dropped,omitempty"`
@@ -122,6 +119,11 @@ type RestoreRequest struct {
 type ProbeRequest struct {
 	Token   string `json:"token"`
 	Seconds int    `json:"seconds"`
+}
+
+type ProbeResponse struct {
+	Port      int  `json:"port"`
+	ByteLimit bool `json:"byte_limit,omitempty"`
 }
 
 type BenchUpRequest struct {

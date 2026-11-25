@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/events"
-	"neotunnel/internal/health"
-	"neotunnel/internal/metrics"
-	"neotunnel/internal/traffic"
+	"hltunnel/internal/config"
+	"hltunnel/internal/events"
+	"hltunnel/internal/health"
+	"hltunnel/internal/metrics"
+	"hltunnel/internal/traffic"
 )
 
 // fakeAPI records what the bot sends.

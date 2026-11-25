@@ -38,7 +38,7 @@ import (
 
 	"github.com/xtaci/smux"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Spec is one connection tunnel's end on this server.

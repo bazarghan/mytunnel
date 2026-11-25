@@ -14,8 +14,8 @@ import (
 
 	"github.com/xtaci/smux"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/tcptun"
+	"hltunnel/internal/config"
+	"hltunnel/internal/tcptun"
 )
 
 // Handler carries one relay stream the far end opened on spec's tunnel.

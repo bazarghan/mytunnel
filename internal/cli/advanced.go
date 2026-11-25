@@ -11,11 +11,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/service"
-	"neotunnel/internal/traffic"
-	"neotunnel/internal/web"
+	"hltunnel/internal/config"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/service"
+	"hltunnel/internal/traffic"
+	"hltunnel/internal/web"
 )
 
 // settingsFlags registers the advanced tunnel options on a command.
@@ -23,14 +23,14 @@ func settingsFlags(f *pflag.FlagSet, s *manage.Settings) {
 	f.IntVar(&s.MTU, "mtu", 0, "MTU of the tunnel (default: computed from the overhead)")
 	f.BoolVar(&s.MTUProbe, "mtu-probe", false, "measure the path MTU to the far end and size the tunnel from it")
 	f.Uint8Var(&s.TTL, "ttl", 0, "TTL of the outer packets (default 255)")
-	f.StringVar(&s.Encrypt, "encrypt", "", "kernel IPsec on the outer packets (a TCP tunnel seals its stream instead): aes-gcm-128, aes-gcm-256, chacha20-poly1305; or auto: start plain and, while traffic doesn't pass, try each of them and then NeoObfs in turn")
+	f.StringVar(&s.Encrypt, "encrypt", "", "kernel IPsec on the outer packets (a TCP tunnel seals its stream instead): aes-gcm-128, aes-gcm-256, chacha20-poly1305; or auto: start plain and, while traffic doesn't pass, try each of them and then HLObfs in turn")
 	f.BoolVar(&s.NoDF, "no-pmtud", false, "turn path MTU discovery off (nopmtudisc): outer packets don't set DF themselves, so the path may fragment them (SIT, IPIP, GRE, GRETAP, EoIP over IPv4)")
 	f.BoolVar(&s.IgnoreDF, "ignore-df", false, "with --no-pmtud on GRE and GRETAP over IPv4: fragment oversized packets even when the inner packet sets DF")
-	f.IntVar(&s.Padding, "padding", 0, "NeoObfs: up to this many random padding bytes per packet (0-255)")
-	f.IntVar(&s.Keepalive, "keepalive", 0, "WireGuard/NeoObfs keepalive in seconds (-1 = off, default 25)")
-	f.StringVar(&s.PeerKey, "peer-key", "", "WireGuard: the far end's public key, when it doesn't run NeoTunnel")
+	f.IntVar(&s.Padding, "padding", 0, "HLObfs: up to this many random padding bytes per packet (0-255)")
+	f.IntVar(&s.Keepalive, "keepalive", 0, "WireGuard/HLObfs keepalive in seconds (-1 = off, default 25)")
+	f.StringVar(&s.PeerKey, "peer-key", "", "WireGuard: the far end's public key, when it doesn't run HLTunnel")
 	f.StringVar(&s.Profile, "profile", "", "speed profile: lean (low latency, light traffic), balanced (default) or max (heavy traffic, uses every CPU core)")
-	f.IntVar(&s.Lanes, "lanes", 0, fmt.Sprintf("GRE/GRETAP to a NeoTunnel server: run on this many parallel tunnels (1-%d), each flow on one, to use more CPU cores", config.MaxLanes))
+	f.IntVar(&s.Lanes, "lanes", 0, fmt.Sprintf("GRE/GRETAP to a HLTunnel server: run on this many parallel tunnels (1-%d), each flow on one, to use more CPU cores", config.MaxLanes))
 	f.BoolVar(&s.Reverse, "reverse", false, "connection tunnels (tcpmux, tlsmux): this server listens and the far one connects to it, like FRP, for a path that only lets connections in")
 	f.StringVar(&s.SNI, "sni", "", "tlsmux: the server name its TLS sends (default: none, as for an IP address)")
 	f.IntVar(&s.Conns, "conns", 0, fmt.Sprintf("connection tunnels: sessions kept open at once, 1-%d (default: 2, 4 or 8 by profile)", config.MaxStreamConns))
@@ -87,9 +87,9 @@ func tunnelSetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set <name>",
 		Short: "Change a tunnel's advanced settings (MTU, encryption, TTL, port, ...)",
-		Example: `  neotunnel tunnel set t1 --encrypt aes-gcm-128
-  neotunnel tunnel set t1 --mtu-probe
-  neotunnel tunnel set t1 --mtu 1400 --ttl 64`,
+		Example: `  hltunnel tunnel set t1 --encrypt aes-gcm-128
+  hltunnel tunnel set t1 --mtu-probe
+  hltunnel tunnel set t1 --mtu 1400 --ttl 64`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			st, err := loadNode()
@@ -176,7 +176,7 @@ func mtuCmd() *cobra.Command {
 			fmt.Printf("  current                  %d\n", rep.Current)
 			if !apply {
 				if !rep.Probing {
-					info("apply it: neotunnel mtu %s --apply", args[0])
+					info("apply it: hltunnel mtu %s --apply", args[0])
 				}
 				return nil
 			}
@@ -261,7 +261,7 @@ func forwardModeFlags(f *pflag.FlagSet, r *manage.ForwardRequest) {
 
 // poolFlags registers where a new tunnel's inner addresses come from.
 func poolFlags(f *pflag.FlagSet, c *manage.PoolChoice) {
-	f.StringVar(&c.Pool, "pool", "", "address pool to take the tunnel's inner addresses from (see: neotunnel pool list)")
+	f.StringVar(&c.Pool, "pool", "", "address pool to take the tunnel's inner addresses from (see: hltunnel pool list)")
 	f.StringVar(&c.Pool4, "pool4", "", "or an IPv4 range by hand, e.g. 10.20.0.0/24 (a /30 per tunnel layer)")
 	f.StringVar(&c.Pool6, "pool6", "", "or an IPv6 range by hand, e.g. fd20::/48 (a /64 per tunnel layer)")
 }
@@ -308,8 +308,8 @@ func poolCmd() *cobra.Command {
 	add := &cobra.Command{
 		Use:   "add <name>",
 		Short: "Add an address pool, or change one with --rename-from",
-		Example: `  neotunnel pool add office --net4 10.50.0.0/16 --net6 fd50::/48
-  neotunnel pool add small --net4 192.168.200.0/28`,
+		Example: `  hltunnel pool add office --net4 10.50.0.0/16 --net6 fd50::/48
+  hltunnel pool add small --net4 192.168.200.0/28`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			p.Name = args[0]
@@ -401,10 +401,10 @@ func tunnelLimitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "limit <name>",
 		Short: "Set a tunnel's speed limit, monthly traffic quota and smart queue (0 = none)",
-		Example: `  neotunnel tunnel limit t1 --rate 100        # 100 Mbit/s each way
-  neotunnel tunnel limit t1 --quota 500       # 500 GB a month, then down until next month
-  neotunnel tunnel limit t1 --queue 180       # low ping under load on a ~200 Mbit/s path
-  neotunnel tunnel limit t1 --rate 0 --quota 0 --queue 0`,
+		Example: `  hltunnel tunnel limit t1 --rate 100        # 100 Mbit/s each way
+  hltunnel tunnel limit t1 --quota 500       # 500 GB a month, then down until next month
+  hltunnel tunnel limit t1 --queue 180       # low ping under load on a ~200 Mbit/s path
+  hltunnel tunnel limit t1 --rate 0 --quota 0 --queue 0`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			l, err := limitsOf(args[0])

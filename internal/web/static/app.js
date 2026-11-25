@@ -1,5 +1,5 @@
 "use strict";
-// NeoTunnel panel. No framework: views are template strings with escaping,
+// HLTunnel panel. No framework: views are template strings with escaping,
 // events are delegated through data-act / data-bind attributes, and each
 // render is patched into the page in place (morph), so only what changed is
 // touched: hover, focus, scroll and running transitions survive the
@@ -163,27 +163,27 @@
     gre: { t: "GRE", d: "تانل استاندارد GRE با کلید؛ با میکروتیک و بیشتر روترها سازگار است و هر دو نسخه‌ی IP را می‌برد.", layer: 3, carry: "IPv4 و IPv6", over: 28, crypt: "ندارد (IPsec اختیاری)", mt: "بله، GRE", best: "اتصال به روتر یا میکروتیک" },
     sit: { t: "SIT", d: "فقط IPv6 روی IPv4. پایه‌ی 6to4؛ تنها وقتی مفید است که فقط IPv6 لازم باشد.", layer: 3, carry: "IPv6", over: 20, crypt: "ندارد (IPsec اختیاری)", mt: "بله، 6to4", best: "شبکه‌ی IPv6 بین دو سرور" },
     wireguard: { t: "WireGuard", d: "تانل رمزنگاری‌شده در خود کرنل (ChaCha20-Poly1305). کلیدها از رمز مشترک تانل ساخته می‌شوند؛ پشت NAT هم کار می‌کند.", layer: 3, carry: "IPv4 و IPv6", over: 60, crypt: "دارد، در کرنل", mt: "بله، RouterOS 7", best: "رمزنگاری سریع، اتصال به میکروتیک", udp: true },
-    obfs: { t: "NeoObfs", d: "لایه‌ی رمزنگاری و مبهم‌سازی NeoTunnel: هر بسته داخل UDP با XChaCha20-Poly1305 رمز می‌شود و هیچ بایت ثابتی ندارد، پس شبیه نویز تصادفی است. اندازه‌ی بسته‌ها هم با padding تغییر می‌کند.", layer: 3, carry: "IPv4 و IPv6", over: 82, crypt: "دارد، XChaCha20", mt: "خیر؛ دو طرف NeoTunnel", best: "مسیرهایی که پروتکل‌ها را شناسایی و فیلتر می‌کنند", udp: true },
-    spoof: { t: "Spoof (مبدأ جعلی)", d: "ارسال بسته‌ها با آدرس IP مبدأ جعلی (IP Spoofing) روی هر یک از ۶ حامل UDP، FakeTCP، GRE، IPIP، 6to4/SIT یا ICMP، همراه با رمزنگاری و احراز هویت کلید مشترک. همچنین می‌توانید در مرحله‌ی بعد، Spoof را به‌عنوان لایه‌ی زیرین روی هر پروتکل دیگری (6to4، GRE، WireGuard، VXLAN، TCP+mux و...) روشن کنید.", layer: 3, carry: "IPv4 و IPv6", over: 82, crypt: "دارد، AES-GCM / XChaCha20", mt: "خیر؛ دو طرف NeoTunnel", best: "عبور از فیلترینگ شدید با جعل IP مبدأ روی همه‌ی پروتکل‌ها", udp: true },
-    tcp: { t: "TCP", d: "بسته‌های IP پشت سر هم داخل یک اتصال TCP پایدار بین دو سرور می‌روند (در فضای کاربر، با TCP_NODELAY و اتصال دوباره‌ی خودکار). هر دو سر روی پورت گوش می‌دهند، پس اگر TCP فقط در یک جهت باز باشد هم وصل می‌شود. رمزنگاری اختیاری است و کلیدها از رمز مشترک تانل ساخته می‌شوند. هشدار: TCP داخل TCP در مسیرِ با افت بسته خیلی کند می‌شود، چون هر بسته‌ی گم‌شده کل جریان را نگه می‌دارد؛ فقط وقتی سراغش بروید که نه UDP رد می‌شود و نه پروتکل 41 و 47.", layer: 3, carry: "IPv4 و IPv6", over: 54, crypt: "اختیاری، AES-GCM یا ChaCha20 روی جریان", mt: "خیر؛ دو طرف NeoTunnel", best: "آخرین راه: وقتی فقط TCP بین دو سرور رد می‌شود", tcp: true },
+    obfs: { t: "HLObfs", d: "لایه‌ی رمزنگاری و مبهم‌سازی HLTunnel: هر بسته داخل UDP با XChaCha20-Poly1305 رمز می‌شود و هیچ بایت ثابتی ندارد، پس شبیه نویز تصادفی است. اندازه‌ی بسته‌ها هم با padding تغییر می‌کند.", layer: 3, carry: "IPv4 و IPv6", over: 82, crypt: "دارد، XChaCha20", mt: "خیر؛ دو طرف HLTunnel", best: "مسیرهایی که پروتکل‌ها را شناسایی و فیلتر می‌کنند", udp: true },
+    spoof: { t: "Spoof (مبدأ جعلی)", d: "ارسال بسته‌ها با آدرس IP مبدأ جعلی (IP Spoofing) روی هر یک از ۶ حامل UDP، FakeTCP، GRE، IPIP، 6to4/SIT یا ICMP، همراه با رمزنگاری و احراز هویت کلید مشترک. همچنین می‌توانید در مرحله‌ی بعد، Spoof را به‌عنوان لایه‌ی زیرین روی هر پروتکل دیگری (6to4، GRE، WireGuard، VXLAN، TCP+mux و...) روشن کنید.", layer: 3, carry: "IPv4 و IPv6", over: 82, crypt: "دارد، AES-GCM / XChaCha20", mt: "خیر؛ دو طرف HLTunnel", best: "عبور از فیلترینگ شدید با جعل IP مبدأ روی همه‌ی پروتکل‌ها", udp: true },
+    tcp: { t: "TCP", d: "بسته‌های IP پشت سر هم داخل یک اتصال TCP پایدار بین دو سرور می‌روند (در فضای کاربر، با TCP_NODELAY و اتصال دوباره‌ی خودکار). هر دو سر روی پورت گوش می‌دهند، پس اگر TCP فقط در یک جهت باز باشد هم وصل می‌شود. رمزنگاری اختیاری است و کلیدها از رمز مشترک تانل ساخته می‌شوند. هشدار: TCP داخل TCP در مسیرِ با افت بسته خیلی کند می‌شود، چون هر بسته‌ی گم‌شده کل جریان را نگه می‌دارد؛ فقط وقتی سراغش بروید که نه UDP رد می‌شود و نه پروتکل 41 و 47.", layer: 3, carry: "IPv4 و IPv6", over: 54, crypt: "اختیاری، AES-GCM یا ChaCha20 روی جریان", mt: "خیر؛ دو طرف HLTunnel", best: "آخرین راه: وقتی فقط TCP بین دو سرور رد می‌شود", tcp: true },
     gretap: { t: "GRETAP", d: "لایه ۲ (Ethernet) روی GRE؛ دو سر مثل یک سوییچ مشترک رفتار می‌کنند.", layer: 2, carry: "Ethernet", over: 42, crypt: "ندارد (IPsec اختیاری)", mt: "شبیه EoIP، ولی با آن سازگار نیست", best: "بریج کردن دو شبکه" },
     vxlan: { t: "VXLAN", d: "لایه ۲ روی UDP؛ استاندارد شبکه‌های مجازی دیتاسنتر.", layer: 2, carry: "Ethernet", over: 50, crypt: "ندارد (IPsec اختیاری)", mt: "بله، RouterOS 7", best: "لایه ۲ روی مسیری که فقط UDP رد می‌شود", udp: true },
     geneve: { t: "GENEVE", d: "نسل جدیدتر VXLAN با هدر انعطاف‌پذیر.", layer: 2, carry: "Ethernet", over: 50, crypt: "ندارد (IPsec اختیاری)", mt: "خیر", best: "لایه ۲ بین سرورهای لینوکسی", udp: true },
     l2tpv3: { t: "L2TPv3", d: "شبه‌سیم Ethernet استاندارد با شناسه‌های ایستا، روی IP (پروتکل 115) یا روی UDP اگر پورت بدهید.", layer: 2, carry: "Ethernet", over: 38, crypt: "ندارد (IPsec اختیاری)", mt: "روترهایی که L2TPv3 ایستا دارند", best: "لایه ۲ سازگار با تجهیزات شبکه" },
-    eoip: { t: "EoIP", d: "تانل لایه ۲ میکروتیک (Ethernet over IP) در لینوکس: فریم‌های Ethernet داخل GRE با شناسه‌ی تانل می‌روند؛ روی IPv6 همان EoIPv6 است. اگر مسیر پروتکل 47 را ببندد، با یک پورت داخل UDP اجرا می‌شود. در فضای کاربری NeoTunnel اجرا می‌شود و ماژول کرنلی نمی‌خواهد.", layer: 2, carry: "Ethernet", over: 42, crypt: "ندارد (IPsec اختیاری)", mt: "بله، EoIP و EoIPv6 (با شناسه‌ی تانل یکسان)", best: "بریج لایه ۲ بین دو سرور، یا اتصال به میکروتیک" },
+    eoip: { t: "EoIP", d: "تانل لایه ۲ میکروتیک (Ethernet over IP) در لینوکس: فریم‌های Ethernet داخل GRE با شناسه‌ی تانل می‌روند؛ روی IPv6 همان EoIPv6 است. اگر مسیر پروتکل 47 را ببندد، با یک پورت داخل UDP اجرا می‌شود. در فضای کاربری HLTunnel اجرا می‌شود و ماژول کرنلی نمی‌خواهد.", layer: 2, carry: "Ethernet", over: 42, crypt: "ندارد (IPsec اختیاری)", mt: "بله، EoIP و EoIPv6 (با شناسه‌ی تانل یکسان)", best: "بریج لایه ۲ بین دو سرور، یا اتصال به میکروتیک" },
   };
   Object.assign(PROTO, {
-    tcpmux: { t: "TCP + mux", d: "تانل اتصال، مثل FRP: بسته‌ای جابه‌جا نمی‌شود؛ هر اتصال کاربر روی یک stream از چند جلسه‌ی TCP ماندگار بین دو سرور می‌رود و TCP کاربر در همین سرور تمام و آن طرف دوباره شروع می‌شود. آدرس داخلی و interface ندارد و فوروارد رویش «رله TCP» است. جهت را خودتان انتخاب می‌کنید: مستقیم (Direct)، این سرور به سرور مقابل وصل می‌شود؛ یا معکوس (Reverse)، سرور مقابل به این سرور وصل می‌شود. تانل روی سه پورت گوش می‌دهد و اگر اولی بسته بود، دومی و سومی امتحان می‌شوند.", layer: "۴ (اتصال)", carry: "اتصال‌های TCP کاربران", over: 8, crypt: "اختیاری، AES-GCM یا ChaCha20 روی جلسه", mt: "خیر؛ دو طرف NeoTunnel", best: "مثل FRP؛ وقتی فقط TCP رد می‌شود یا فقط اتصال از یک طرف باز است", stream: true },
-    tlsmux: { t: "TLS + mux", d: "همان TCP + mux، داخل TLS 1.3. جلسه با رمز مشترک تانل احراز هویت می‌شود و کلیدهایش به همان اتصال TLS گره خورده است؛ کسی که رمز تانل را ندارد فقط یک وب‌سرور می‌بیند.", layer: "۴ (اتصال)", carry: "اتصال‌های TCP کاربران", over: 30, crypt: "TLS 1.3", mt: "خیر؛ دو طرف NeoTunnel", best: "مثل TCP + mux، وقتی ترافیک باید رمزدار و شبیه HTTPS باشد", stream: true },
+    tcpmux: { t: "TCP + mux", d: "تانل اتصال، مثل FRP: بسته‌ای جابه‌جا نمی‌شود؛ هر اتصال کاربر روی یک stream از چند جلسه‌ی TCP ماندگار بین دو سرور می‌رود و TCP کاربر در همین سرور تمام و آن طرف دوباره شروع می‌شود. آدرس داخلی و interface ندارد و فوروارد رویش «رله TCP» است. جهت را خودتان انتخاب می‌کنید: مستقیم (Direct)، این سرور به سرور مقابل وصل می‌شود؛ یا معکوس (Reverse)، سرور مقابل به این سرور وصل می‌شود. تانل روی سه پورت گوش می‌دهد و اگر اولی بسته بود، دومی و سومی امتحان می‌شوند.", layer: "۴ (اتصال)", carry: "اتصال‌های TCP کاربران", over: 8, crypt: "اختیاری، AES-GCM یا ChaCha20 روی جلسه", mt: "خیر؛ دو طرف HLTunnel", best: "مثل FRP؛ وقتی فقط TCP رد می‌شود یا فقط اتصال از یک طرف باز است", stream: true },
+    tlsmux: { t: "TLS + mux", d: "همان TCP + mux، داخل TLS 1.3. جلسه با رمز مشترک تانل احراز هویت می‌شود و کلیدهایش به همان اتصال TLS گره خورده است؛ کسی که رمز تانل را ندارد فقط یک وب‌سرور می‌بیند.", layer: "۴ (اتصال)", carry: "اتصال‌های TCP کاربران", over: 30, crypt: "TLS 1.3", mt: "خیر؛ دو طرف HLTunnel", best: "مثل TCP + mux، وقتی ترافیک باید رمزدار و شبیه HTTPS باشد", stream: true },
   });
   PROTO["stream-tcp"] = PROTO.tcpmux; PROTO["stream-tls"] = PROTO.tlsmux;
   const STREAM_KINDS = ["stream-tcp", "stream-tls"];
   const isStreamMode = (mode) => !!(S.ov.modes.find((m) => m.name === mode) || {}).stream;
   const MODES_FWD = {
     nat: ["NAT", "سرویس مقصد آدرس داخلی تانل را می‌بیند. ساده و سازگار با همه‌چیز."],
-    transparent: ["IP واقعی کاربر", "سرویس مقصد IP واقعی کاربر را می‌بیند، برای TCP و UDP و بدون هیچ تنظیمی در برنامه. پاسخ‌ها خودکار از همان تانل برمی‌گردند؛ سرور مقصد باید NeoTunnel داشته باشد."],
+    transparent: ["IP واقعی کاربر", "سرویس مقصد IP واقعی کاربر را می‌بیند، برای TCP و UDP و بدون هیچ تنظیمی در برنامه. پاسخ‌ها خودکار از همان تانل برمی‌گردند؛ سرور مقصد باید HLTunnel داشته باشد."],
     proxy: ["PROXY protocol", "یک رله‌ی سبک، هدر PROXY (نسخه‌ی ۱ یا ۲) با IP و پورت کاربر را اول اتصال می‌فرستد. سرویس مقصد (nginx، HAProxy، Xray) باید proxy_protocol را بپذیرد. UDP فقط با نسخه‌ی ۲."],
-    relay: ["رله TCP", "بدون بسته‌های تانل: هر اتصال کاربر با یک اتصال TCP جدا به سرور مقصد می‌رود و آنجا به همان پورت روی خود سرور (127.0.0.1) وصل می‌شود. هر کاربر کنترل ازدحام خودش را دارد، پس روی مسیرهای دور و پراُفت سریع‌ترین حالت است. فقط TCP؛ سرور مقصد باید NeoTunnel داشته باشد (روی پورت‌های رله‌ی همان تانل، یا پورت TCP 7712 روی نسخه‌های قبل از v0.8.16). اگر تانل رمزنگاری دارد، رله هم رمز می‌شود. هدر PROXY برای رساندن IP کاربر اختیاری است."],
+    relay: ["رله TCP", "بدون بسته‌های تانل: هر اتصال کاربر با یک اتصال TCP جدا به سرور مقصد می‌رود و آنجا به همان پورت روی خود سرور (127.0.0.1) وصل می‌شود. هر کاربر کنترل ازدحام خودش را دارد، پس روی مسیرهای دور و پراُفت سریع‌ترین حالت است. فقط TCP؛ سرور مقصد باید HLTunnel داشته باشد (روی پورت‌های رله‌ی همان تانل، یا پورت TCP 7712 روی نسخه‌های قبل از v0.8.16). اگر تانل رمزنگاری دارد، رله هم رمز می‌شود. هدر PROXY برای رساندن IP کاربر اختیاری است."],
   };
   // The PROXY header of a forward: required in proxy mode (pver), optional
   // in relay mode (rver, "0" = none). Relay mode carries TCP only.
@@ -220,12 +220,12 @@
   // times faster than the two layers a kernel forward goes through.
   const sitHint = (kind, mode) => ["6to4", "6to4-gre", "6to4-udp"].includes(kind) && mode !== "relay"
     ? html`<div class="help full">روی 6to4، حالت «رله TCP» برای TCP چند برابر سریع‌تر است: اتصال‌ها فقط از یک لایه‌ی تانل رد می‌شوند.</div>` : "";
-  // The forward mode picker; to a server without NeoTunnel only the modes
+  // The forward mode picker; to a server without HLTunnel only the modes
   // that need nothing there.
   function modeField(path, cur, remote, key = "mode") {
     const id = path + "." + key, ms = Object.entries(MODES_FWD).filter(([v]) => !remote || (v !== "transparent" && v !== "relay"));
     return html`<div class="field full"><span class="lbl lbl-i">حالت فوروارد ${infoBtn(id)}</span>
-      ${infoPop(id, html`<dl>${ms.map(([v, [l, d]]) => html`<dt class="${cur === v ? "on" : ""}">${l}</dt><dd>${d}</dd>`)}</dl>${remote ? html`<p>IP واقعی و رله TCP فقط وقتی سرور مقصد NeoTunnel دارد.</p>` : ""}`)}
+      ${infoPop(id, html`<dl>${ms.map(([v, [l, d]]) => html`<dt class="${cur === v ? "on" : ""}">${l}</dt><dd>${d}</dd>`)}</dl>${remote ? html`<p>IP واقعی و رله TCP فقط وقتی سرور مقصد HLTunnel دارد.</p>` : ""}`)}
       <div class="seg">${ms.map(([v, [l]]) => html`<button type="button" class="${cur === v ? "on" : ""}" data-act="set" data-path="${id}" data-value="${v}">${l}</button>`)}</div></div>`;
   }
   const BENCH = [
@@ -246,17 +246,17 @@
   const S = {
     authed: true, ov: null, rates: {}, live: true, traffic: {}, system: null,
     route: location.hash.slice(2) || "dashboard",
-    theme: store("nt-theme") || "dark",
+    theme: store("hl-theme") || "dark",
     modal: null, wiz: null, form: {}, drawer: null,
     open: null, tset: {}, edit: false, fwdEdit: {},
-    sec: store("nt-settings") || "node", defs: null, pe: null, portSort: store("nt-port-sort") || "manual",
-    safe: store("nt-safe") === "1", safeSeen: store("nt-safe-seen") || "",
-    jobs: [], job: null, pv: {}, night: {}, upgrading: {}, restarting: {}, prates: {}, dtab: {}, mtu: {}, ev: {}, evBusy: {}, tpr: store("nt-tpr") || "24h", priv: store("nt-priv") === "1", pm: null, fm: null,
-    speed: Object.assign({ tunnel: "", peer: "", only: BENCH.map((b) => b[0]), secs: 10, streams: 8 }, (() => { try { return JSON.parse(store("nt-speed") || "{}"); } catch { return {}; } })()),
+    sec: store("hl-settings") || "node", defs: null, pe: null, portSort: store("hl-port-sort") || "manual",
+    safe: store("hl-safe") === "1", safeSeen: store("hl-safe-seen") || "",
+    jobs: [], job: null, pv: {}, night: {}, upgrading: {}, restarting: {}, prates: {}, dtab: {}, mtu: {}, ev: {}, evBusy: {}, tpr: store("hl-tpr") || "24h", priv: store("hl-priv") === "1", pm: null, fm: null,
+    speed: Object.assign({ tunnel: "", peer: "", only: BENCH.map((b) => b[0]), mode: "time", secs: 10, mb: 100, streams: 8 }, (() => { try { return JSON.parse(store("hl-speed") || "{}"); } catch { return {}; } })()),
     // Graphs: the dashboard's range and source, the statistics page's range
     // and subject (the server or one tunnel), the drawer's range.
-    hist: { range: store("nt-hist") || "24h", src: store("nt-hist-src") || "all" },
-    st: { range: store("nt-st") || "24h", subject: "server" },
+    hist: { range: store("hl-hist") || "24h", src: store("hl-hist-src") || "all" },
+    st: { range: store("hl-st") || "24h", subject: "server" },
     dr: { range: "24h" },
     paused: false,
   };
@@ -267,7 +267,7 @@
   async function api(method, path, body) {
     const res = await fetch("api/" + path, {
       method, credentials: "same-origin",
-      headers: Object.assign({ "X-NeoTunnel": "1" }, body ? { "Content-Type": "application/json" } : {}),
+      headers: Object.assign({ "X-HLTunnel": "1" }, body ? { "Content-Type": "application/json" } : {}),
       body: body ? JSON.stringify(body) : undefined,
     });
     let data = null;
@@ -279,7 +279,7 @@
 
   // apiUpload sends a file's text as the request body.
   async function apiUpload(path, text) {
-    const res = await fetch("api/" + path, { method: "POST", credentials: "same-origin", headers: { "X-NeoTunnel": "1", "Content-Type": "application/json" }, body: text });
+    const res = await fetch("api/" + path, { method: "POST", credentials: "same-origin", headers: { "X-HLTunnel": "1", "Content-Type": "application/json" }, body: text });
     let data = null;
     try { data = await res.json(); } catch { /* empty */ }
     if (!res.ok) throw new Error((data && data.error) || `خطا (${res.status})`);
@@ -397,7 +397,7 @@
       return html`${modalHead("به‌روزرسانی کامل نشد")}<div class="body stack">
         <div>${run.log ? "نصاب کار را تمام نکرد. آخرین خطوط خروجی آن:" : `نسخه‌ی جدید بعد از ۵ دقیقه جواب نداد.`}</div>
         ${run.log ? html`<pre class="upd-log ltr">${run.log}</pre>` : ""}
-        <div class="help">روی سرور در ترمینال اجرا کنید: <code class="ltr">sudo neotunnel update</code>${run.log ? "" : html` · خروجی نصاب در <code class="ltr">/var/log/neotunnel-update.log</code> است.`}</div></div>
+        <div class="help">روی سرور در ترمینال اجرا کنید: <code class="ltr">sudo hltunnel update</code>${run.log ? "" : html` · خروجی نصاب در <code class="ltr">/var/log/hltunnel-update.log</code> است.`}</div></div>
         <footer><span class="grow"></span><button class="btn ghost" data-act="update-done">بستن</button></footer>`;
     }
     if (run) {
@@ -405,9 +405,9 @@
         <div class="upd-state"><i class="spin"></i><div><b>دانلود و نصب نسخه‌ی <span class="ltr">${run.to}</span></b><span>سرویس چند ثانیه دوباره راه می‌افتد و این صفحه بعد از آن خودش تازه می‌شود. تانل‌ها و تنظیمات می‌مانند.</span></div></div>
         <div class="help">اگر این پنجره را ببندید، به‌روزرسانی روی سرور ادامه پیدا می‌کند.</div></div>`;
     }
-    return html`${modalHead("به‌روزرسانی NeoTunnel")}<div class="body stack">
+    return html`${modalHead("به‌روزرسانی HLTunnel")}<div class="body stack">
       <dl class="kv"><dt>نسخه‌ی فعلی</dt><dd class="ltr">${u.current}</dd><dt>نسخه‌ی جدید</dt><dd class="ltr"><b>${u.latest}</b>${u.url ? html` · <a href="${u.url}" target="_blank" rel="noopener">تغییرات این نسخه</a>` : ""}</dd></dl>
-      <div>برنامه‌ی جدید از گیت‌هاب دانلود و نصب می‌شود، مثل <code class="ltr">sudo neotunnel update</code>. تانل‌ها، فورواردها و تنظیمات می‌مانند و سرویس چند ثانیه دوباره راه می‌افتد.</div>
+      <div>برنامه‌ی جدید از گیت‌هاب دانلود و نصب می‌شود، مثل <code class="ltr">sudo hltunnel update</code>. تانل‌ها، فورواردها و تنظیمات می‌مانند و سرویس چند ثانیه دوباره راه می‌افتد.</div>
       ${S.ov.peers.length ? html`<div class="help">بعد از آن، سرورهای مقصد را از صفحه‌ی «سرورها» به همین نسخه ارتقا دهید.</div>` : ""}</div>
       <footer><span class="grow"></span><button class="btn ghost" data-act="close">انصراف</button><button class="btn primary" data-act="update-run">${I.upgrade(16)} به‌روزرسانی</button></footer>`;
   }
@@ -513,52 +513,15 @@
 
   function viewLogin() {
     return html`<div class="login-wrap"><div class="panel login">
-      <div class="brand"><img src="assets/logo.png" alt=""><div><b>NeoTunnel</b><small>مدیریت تانل‌های سرور</small></div></div>
+      <div class="brand"><img src="assets/logo.png" alt=""><div><b>HLTunnel</b><small>مدیریت تانل‌های سرور</small></div></div>
       <h1>ورود به پنل</h1>
       <form data-form="login">
         <div class="field"><label for="login-user">نام کاربری</label><input class="input ltr" id="login-user" name="user" autocomplete="username" required></div>
         <div class="field"><label for="login-pass">رمز عبور</label><input class="input ltr" id="login-pass" name="password" type="password" autocomplete="current-password" required></div>
         <button class="btn primary" type="submit">ورود</button>
       </form>
-      <p class="help" style="text-align:center;margin:18px 0 0">رمز را فراموش کرده‌اید؟ روی سرور اجرا کنید: <code class="ltr">sudo neotunnel panel password</code></p>
+      <p class="help" style="text-align:center;margin:18px 0 0">رمز را فراموش کرده‌اید؟ روی سرور اجرا کنید: <code class="ltr">sudo hltunnel panel password</code></p>
     </div></div>`;
-  }
-
-  // ---------- sponsored ----------
-  // One message from the NeoAurora ads service, through this server (see
-  // web/ads.go): a card on the dashboard, a slim line on the other pages
-  // that can be closed for a few hours.
-  const AD_HIDE_H = 6;
-  function ad(placement) {
-    const a = S.ads || (S.ads = {});
-    const c = a[placement];
-    if (!c || (!c.busy && Date.now() - c.at > 15 * 60e3)) {
-      a[placement] = Object.assign({}, c, { busy: true, at: Date.now() });
-      api("GET", "spot?p=" + placement)
-        .then((r) => { a[placement] = { ad: r.ad || null, at: Date.now() }; if (!S.edit && !(S.modal && !S.modal.passive)) draw(); })
-        .catch(() => { a[placement] = Object.assign({}, a[placement], { busy: false }); });
-    }
-    return a[placement] && a[placement].ad;
-  }
-  const adHidden = () => +(store("nt-ad-hide") || 0) > Date.now();
-  const adLink = (a, placement, cls, body) => a.link
-    ? html`<a class="${cls}" href="${a.link}" target="_blank" rel="noopener sponsored" data-hl="${a.id}" data-place="${placement}">${body}</a>` : "";
-
-  function adCard(a, closable) {
-    const art = `<svg viewBox="0 0 80 80">${[1, 2, 3].map((i) => `<circle class="ring r${i}" cx="40" cy="40" r="${8 + i * 9}"/>`).join("")}<circle cx="40" cy="40" r="7" fill="url(#hl-orb)"/><defs><radialGradient id="hl-orb"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></radialGradient></defs></svg>`;
-    return html`<div class="hl-glow" aria-hidden="true"></div>
-      <div class="hl-art" aria-hidden="true">${raw(art)}</div>
-      <div class="hl-text"><div class="hl-top"><span class="hl-tag">تبلیغ</span>${a.badge ? html`<span class="hl-badge">${a.badge}</span>` : ""}<h2 class="hl-title" dir="auto">${a.title}</h2></div>
-        ${a.body ? html`<p class="hl-body" dir="auto">${a.body}</p>` : ""}</div>
-      ${adLink(a, closable ? "sidebar" : "home", "hl-cta", html`<span>${a.button || "مشاهده"}</span>${I.arrow(16)}`)}
-      ${closable ? html`<button class="hl-x" data-act="spot-hide" aria-label="بستن تبلیغ" title="بستن تا ${AD_HIDE_H} ساعت">${I.x(14)}</button>` : ""}`;
-  }
-
-  function adStrip() {
-    if (S.route === "dashboard" || adHidden()) return "";
-    const a = ad("sidebar");
-    if (!a) return "";
-    return html`<section class="card b-hl hl-page" aria-label="تبلیغ" data-key="hl-page">${adCard(a, true)}</section>`;
   }
 
   // The frame: brand, the pages as one row of tabs, and the few global
@@ -572,10 +535,10 @@
     return html`<div class="frame">
       <header class="topbar">
         <button class="iconbtn burger" data-act="menu" aria-label="منو" aria-haspopup="dialog" aria-expanded="${S.menu ? "true" : "false"}" aria-controls="nav-sheet">${I.menu(19)}</button>
-        <a class="brand" href="#/dashboard" title="NeoTunnel ${ov.node.version}"><img src="assets/logo.png" alt=""><b>NeoTunnel</b><small class="ltr">${ov.node.version}</small></a>
+        <a class="brand" href="#/dashboard" title="HLTunnel ${ov.node.version}"><img src="assets/logo.png" alt=""><b>HLTunnel</b><small class="ltr">${ov.node.version}</small></a>
         <nav class="tabs" aria-label="صفحه‌ها">${NAV.map(([id, label, icon]) => html`<a href="#/${id}" class="${S.route === id ? "on" : ""}" ${S.route === id ? raw('aria-current="page"') : ""}>${icon(18)}<span>${label}</span>${counts[id] ? html`<span class="n">${counts[id]}</span>` : ""}</a>`)}</nav>
         <div class="top-tools">
-          ${updNew() ? html`<button class="btn sm upd-pill" data-act="update-ask" title="نسخه‌ی جدید NeoTunnel آمده؛ برای به‌روزرسانی بزنید">${I.upgrade(14)}<span class="ltr">${updNew()}</span></button>` : ""}
+          ${updNew() ? html`<button class="btn sm upd-pill" data-act="update-ask" title="نسخه‌ی جدید HLTunnel آمده؛ برای به‌روزرسانی بزنید">${I.upgrade(14)}<span class="ltr">${updNew()}</span></button>` : ""}
           <span class="live ${liveCls}" title="${S.live ? (S.paused ? "به‌روزرسانی زنده متوقف است" : "پنل هر ۳ ثانیه تازه می‌شود") : "ارتباط با سرور قطع است"}"><i></i><span>${!S.live ? "قطع ارتباط" : S.paused ? "متوقف" : "زنده"}</span></span>
           <button class="iconbtn" data-act="privacy" aria-pressed="${S.priv}" title="${S.priv ? "نمایش آدرس‌ها و اطلاعات حساس" : "پنهان کردن آدرس‌ها و اطلاعات حساس"}" aria-label="حالت حریم خصوصی">${S.priv ? I.eyeOff(17) : I.eye(17)}</button>
           <button class="iconbtn wide-only" data-act="theme" title="${S.theme === "dark" ? "تم روشن" : "تم تیره"}" aria-label="تغییر تم">${S.theme === "dark" ? I.sun(17) : I.moon(17)}</button>
@@ -588,7 +551,6 @@
           <div class="tools">${tools}</div></div>`}
         ${behindNote()}
         ${safeBanner()}
-        ${adStrip()}
         ${ov.errors && ov.errors.length ? html`<div class="note bad" style="margin-bottom:14px"><b>${I.alert(16)} مشکل در اعمال تنظیمات</b>${ov.errors.map((e) => { const t = errText(e); return t !== e ? html`<div>${t}<div class="mono faint small">${e}</div></div>` : html`<div class="mono">${e}</div>`; })}</div>` : ""}
         ${page()}
       </main>
@@ -606,7 +568,7 @@
     return html`<div class="sheet-scrim ${st}" data-act="menu-close"></div>
       <aside id="nav-sheet" class="sheet ${st}" role="dialog" aria-modal="true" aria-label="منو">
         <header class="sheet-head">
-          <a class="brand" href="#/dashboard"><img src="assets/logo.png" alt=""><b>NeoTunnel</b><small class="ltr">${ov.node.version}</small></a>
+          <a class="brand" href="#/dashboard"><img src="assets/logo.png" alt=""><b>HLTunnel</b><small class="ltr">${ov.node.version}</small></a>
           <button class="iconbtn" data-act="menu-close" aria-label="بستن منو">${I.x(18)}</button>
         </header>
         <div class="sheet-node">
@@ -759,11 +721,10 @@
   // it works (load), how the path behaves (ping), what the network card
   // carries, and how all of it moved over time (history).
   function viewDashboard() {
-    const ov = S.ov, sp = ad("home");
+    const ov = S.ov;
     return html`<div class="bento">
       <section class="card b-flow" aria-label="جریان ترافیک">${flowCard()}</section>
       <section class="card b-node" aria-label="این سرور">${nodeCard()}</section>
-      ${sp ? html`<section class="card b-hl" aria-label="تبلیغ" data-key="hl-${sp.id}">${adCard(sp)}</section>` : ""}
       <section class="card b-det" aria-label="جزئیات">${detailsCard()}</section>
       <section class="card b-nic" aria-label="کارت شبکه">${nicCard()}</section>
       <section class="card b-ping" aria-label="پینگ">${pingCard()}</section>
@@ -1363,7 +1324,7 @@
 
   // ---------- tunnels ----------
   // A step of automatic encryption, and a tunnel's encryption as a tag.
-  const rungTitle = (r) => !r ? "بدون رمزنگاری" : r === "obfs" ? "NeoObfs" : cipherTitle(r);
+  const rungTitle = (r) => !r ? "بدون رمزنگاری" : r === "obfs" ? "HLObfs" : cipherTitle(r);
   function encryptTag(t) {
     const now = t.encrypt ? cipherTitle(t.encrypt) : "";
     if (t.auto_encrypt) return html`<span class="tag lock" title="رمزنگاری خودکار؛ اگر ترافیک رد نشود، مرحله‌ی بعد امتحان می‌شود">${I.lock(12)} خودکار${now ? " · " + now : " · بدون رمز"}</span>`;
@@ -1372,7 +1333,7 @@
 
   function viewTunnels() {
     const ts = visible();
-    if (!ts.length) return html`<div class="panel"><div class="empty">${I.tunnel(32)}<b>هیچ تانلی وجود ندارد</b>با چند کلیک یک تانل 6to4 بسازید؛ اگر مسیر پروتکل‌ها را می‌بندد، روی پورت UDP یا با NeoObfs اجرایش کنید.<br><button class="btn primary" data-act="wizard">${I.plus(16)} تانل جدید</button></div></div>`;
+    if (!ts.length) return html`<div class="panel"><div class="empty">${I.tunnel(32)}<b>هیچ تانلی وجود ندارد</b>با چند کلیک یک تانل 6to4 بسازید؛ اگر مسیر پروتکل‌ها را می‌بندد، روی پورت UDP یا با HLObfs اجرایش کنید.<br><button class="btn primary" data-act="wizard">${I.plus(16)} تانل جدید</button></div></div>`;
     const open = ts.find((t) => t.name === S.open);
     const pm = metrics(S.tpr, ts.map((t) => "p:" + t.name)), ps = (pm && pm.series) || {};
     const net = ts.filter((t) => !t.stream), conn = ts.filter((t) => t.stream);
@@ -1421,11 +1382,11 @@
   // The nightly speed tests, newest first, each against the best of them.
   function nightlyPane(t) {
     const n = S.night[t.name];
-    if (!n) { loadNightly(t.name); return html`<div class="dpane muted" data-key="nt-${t.name}">در حال خواندن…</div>`; }
+    if (!n) { loadNightly(t.name); return html`<div class="dpane muted" data-key="hl-${t.name}">در حال خواندن…</div>`; }
     const off = S.ov.defaults && S.ov.defaults.no_nightly;
-    if (!n.length) return html`<div class="dpane muted" data-key="nt-${t.name}">${off ? "تست شبانه در تنظیمات ← پیش‌فرض تانل‌ها خاموش است." : "هنوز تستی نشده؛ هر شب ساعت ۴:۳۰ به وقت تهران یک تست سبک گرفته می‌شود."}</div>`;
+    if (!n.length) return html`<div class="dpane muted" data-key="hl-${t.name}">${off ? "تست شبانه در تنظیمات ← پیش‌فرض تانل‌ها خاموش است." : "هنوز تستی نشده؛ هر شب ساعت ۴:۳۰ به وقت تهران یک تست سبک گرفته می‌شود."}</div>`;
     const list = n.slice().reverse(), top = Math.max(1, ...list.map((e) => e.down || 0));
-    return html`<div class="dpane stack" data-key="nt-${t.name}"><div class="tbl-wrap pdays-t"><table class="t"><thead><tr><th>شب</th><th>دانلود</th><th>آپلود</th><th>پینگ</th><th>افت</th></tr></thead><tbody>
+    return html`<div class="dpane stack" data-key="hl-${t.name}"><div class="tbl-wrap pdays-t"><table class="t"><thead><tr><th>شب</th><th>دانلود</th><th>آپلود</th><th>پینگ</th><th>افت</th></tr></thead><tbody>
       ${list.map((e) => e.error ? html`<tr><td>${dayName(new Date(e.at * 1000))}</td><td colspan="4" class="bad small">${e.error}</td></tr>`
         : html`<tr><td>${dayName(new Date(e.at * 1000))}</td><td class="ltr"><b>${fmtRate(e.down)}</b><span class="daybar"><i style="transform:scaleX(${(e.down / top).toFixed(3)})"></i></span></td><td class="ltr">${fmtRate(e.up)}</td><td class="ltr">${ms(e.ping_ms)}</td><td class="ltr">${(e.loss || 0).toFixed(1)}٪</td></tr>`)}
       </tbody></table></div><p class="help" style="margin:0">۴ ثانیه هر جهت با ۴ اتصال، ساعت ۴:۳۰ صبح به وقت تهران؛ عددها کمی پایین‌تر از تست کامل‌اند ولی برای مقایسه‌ی شب‌ها با هم ساخته شده‌اند.</p></div>`;
@@ -1470,7 +1431,7 @@
         if (what === "plan") return ["", html`فروش پورت <span class="ltr">${ports}</span> تغییر کرد`];
         if (what === "renew") return ["ok", html`پورت <span class="ltr">${ports}</span> تمدید شد`];
         if (what === "address") { const [a, b] = (ports || "").split(" "); return ["warn", html`IP عمومی این سرور ${a ? html`از <span class="ltr">${a}</span> ` : ""}به <span class="ltr">${b}</span> رسید؛ تانل به IP جدید رفت و برای سرور مقابل فرستاده شد`]; }
-        return ["", { settings: "تنظیمات تغییر کرد", limits: "سقف سرعت، حجم ماهانه یا صف هوشمند تغییر کرد", label: "نام نمایشی عوض شد", aes: "سرور مقابل ارتقا یافت؛ رمز NeoObfs خودکار به AES-GCM (سریع‌تر) رفت" }[x.detail] || "تغییر کرد"];
+        return ["", { settings: "تنظیمات تغییر کرد", limits: "سقف سرعت، حجم ماهانه یا صف هوشمند تغییر کرد", label: "نام نمایشی عوض شد", aes: "سرور مقابل ارتقا یافت؛ رمز HLObfs خودکار به AES-GCM (سریع‌تر) رفت" }[x.detail] || "تغییر کرد"];
       }
       case "on": return ["ok", "روشن شد"];
       case "off": return ["bad", "خاموش شد"];
@@ -1747,7 +1708,7 @@
     const base = (t.stack && t.stack[0]) || { kind: t.kind };
     const crypto = ["wireguard", "obfs"].includes(base.kind) && !t.auto_encrypt;
     const autoOpt = html`<option value="auto" ${st.encrypt === "auto" ? "selected" : ""}>خودکار (هرچه رد شود)</option>`;
-    const autoHelp = st.encrypt === "auto" ? html`<span class="help">از ساده به پیشرفته: بدون رمز، بعد هر رمز IPsec${base.kind === "tcp" ? "" : "، بعد NeoObfs"}. تا وقتی ترافیک رد می‌شود دست نمی‌خورد؛ اگر رد نشد مرحله‌ی بعد را می‌زند، تانل را روی هر دو سرور ری‌استارت می‌کند و ${autoWaitMin()} دقیقه صبر می‌کند. اگر پورت‌های این تانل پشتیبانِ سالم داشته باشند به آن می‌روند و این تانل فقط بررسی می‌شود تا سالم شود و پورت‌ها برگردند.${t.auto_encrypt ? html` الان: <b>${rungTitle(t.encrypt)}</b>.` : ""}</span>` : "";
+    const autoHelp = st.encrypt === "auto" ? html`<span class="help">از ساده به پیشرفته: بدون رمز، بعد هر رمز IPsec${base.kind === "tcp" ? "" : "، بعد HLObfs"}. تا وقتی ترافیک رد می‌شود دست نمی‌خورد؛ اگر رد نشد مرحله‌ی بعد را می‌زند، تانل را روی هر دو سرور ری‌استارت می‌کند و ${autoWaitMin()} دقیقه صبر می‌کند. اگر پورت‌های این تانل پشتیبانِ سالم داشته باشند به آن می‌روند و این تانل فقط بررسی می‌شود تا سالم شود و پورت‌ها برگردند.${t.auto_encrypt ? html` الان: <b>${rungTitle(t.encrypt)}</b>.` : ""}</span>` : "";
     const m = S.mtu[t.name];
     const tab = t.managed && S.dtab[t.name] !== "events" ? "overview" : (S.dtab[t.name] || "overview");
     const tabs = t.managed ? [["overview", "نمای کلی"], ["events", "رویدادها"]] : [["overview", "نمای کلی"], ["events", "رویدادها"], ["nightly", "تست‌های شبانه"], ["limits", "محدودیت‌ها"], ["settings", "تنظیمات"]];
@@ -1871,7 +1832,7 @@
     return html`<div class="field"><span class="lbl">MTU</span>
         <div class="seg" role="radiogroup">${[["auto", "خودکار"], ["probe", "اندازه‌گیری مسیر"], ["manual", "دستی"]].map(([v, l]) => html`<button type="button" role="radio" aria-checked="${mm === v}" class="${mm === v ? "on" : ""}" data-act="set" data-path="${path}.mtuMode" data-value="${v}">${l}</button>`)}</div>
         ${mm === "manual" ? html`<input class="input ltr" type="number" min="576" max="9000" data-bind="${path}.mtu" value="${st.mtu || ""}" placeholder="1400" aria-label="MTU">` : ""}
-        <span class="help">${mm === "auto" ? "از ۱۵۰۰ و سربار همه‌ی لایه‌ها حساب می‌شود." : mm === "probe" ? "NeoTunnel با بسته‌های بدون شکستن، MTU واقعی مسیر تا مقصد را پیدا می‌کند، هر ۳۰ دقیقه دوباره می‌سنجد و تانل را با آن تنظیم می‌کند." : "فقط وقتی مقدار درست را می‌دانید."}</span></div>
+        <span class="help">${mm === "auto" ? "از ۱۵۰۰ و سربار همه‌ی لایه‌ها حساب می‌شود." : mm === "probe" ? "HLTunnel با بسته‌های بدون شکستن، MTU واقعی مسیر تا مقصد را پیدا می‌کند، هر ۳۰ دقیقه دوباره می‌سنجد و تانل را با آن تنظیم می‌کند." : "فقط وقتی مقدار درست را می‌دانید."}</span></div>
       <div class="grid2">
         ${noPort ? "" : html`<div class="field"><label>پورت ${kind === "tcp" ? "TCP" : "UDP"}${editing ? "" : " (اختیاری)"}</label><div class="pf"><input class="input ltr" type="number" min="1" max="65535" data-bind="${path}.port" value="${st.port || ""}" placeholder="${["obfs", "wireguard", "tcp"].includes(kind) ? "خودکار" : "پروتکل خام"}"><button type="button" class="btn sm" data-act="random-port" data-path="${path}.port" data-proto="${kind === "tcp" ? "tcp" : "udp"}" title="یک پورت آزاد تصادفی بین ۲۰۰۰۰ و ۶۰۰۰۰">${I.dice(14)} تصادفی</button></div>
           <span class="help">${PROTO[kind] && (PROTO[kind].udp || PROTO[kind].tcp) || kind === "obfs" || kind === "wireguard" ? "پورتی که دو سر روی آن گوش می‌دهند." : "خالی = پروتکل خام (سریع‌ترین). با پورت، تانل داخل UDP می‌رود؛ وقتی مسیر پروتکل 41 یا 47 را می‌بندد."}</span></div>`}
@@ -1883,7 +1844,7 @@
         <div class="field full"><label>آدرس IP مبدأ جعلی (Spoof Source)</label><input class="input ltr" data-bind="${path}.spoof_src" value="${st.spoof_src || ""}" placeholder="auto | iran | rotate | 185.143.233.10"><span class="help">مقادیر مجاز: <b class="ltr">auto</b> (IP عمومی ثابت)، <b class="ltr">iran</b> (رنج IP ایران)، <b class="ltr">rotate</b> (تغییر مداوم IP)، یا یک آدرس IPv4 دلخواه.</span></div>
         ${spoofPinholeFields(path, st)}` : ""}
         ${kind === "tcp" ? html`<div class="field"><label>Keepalive (ثانیه)</label><input class="input ltr" type="number" min="-1" max="3600" data-bind="${path}.keepalive" value="${st.keepalive || ""}" placeholder="15"><span class="help">اتصالی که سه برابر این مدت ساکت بماند قطع و دوباره برقرار می‌شود؛ ‎-1 یعنی فقط keepalive خود TCP.</span></div>` : ""}
-        ${kind === "wireguard" ? html`<div class="field full"><label>کلید عمومی طرف مقابل</label><input class="input ltr" data-bind="${path}.peer_key" value="${st.peer_key || ""}" placeholder="فقط وقتی آن طرف NeoTunnel ندارد"><span class="help">برای میکروتیک یا هر WireGuard دیگر؛ بین دو سرور NeoTunnel کلیدها خودکار ساخته می‌شوند.</span></div>` : ""}
+        ${kind === "wireguard" ? html`<div class="field full"><label>کلید عمومی طرف مقابل</label><input class="input ltr" data-bind="${path}.peer_key" value="${st.peer_key || ""}" placeholder="فقط وقتی آن طرف HLTunnel ندارد"><span class="help">برای میکروتیک یا هر WireGuard دیگر؛ بین دو سرور HLTunnel کلیدها خودکار ساخته می‌شوند.</span></div>` : ""}
         ${top === "eoip" ? html`<div class="field"><label>شناسه‌ی تانل (Tunnel ID)</label><input class="input ltr" type="number" min="0" max="65535" data-bind="${path}.tunnel_id" value="${st.tunnel_id ?? ""}" placeholder="خودکار"><span class="help">همان tunnel-id میکروتیک؛ دو سر باید یکی باشند. ۰ تا ۶۵۵۳۵، و روی EoIPv6 بدون پورت ۰ تا ۴۰۹۵. خالی = از نام تانل ساخته می‌شود.</span></div>` : ""}
         <div class="field"><label>DSCP بسته‌های بیرونی</label><input class="input ltr" type="number" min="0" max="63" data-bind="${path}.dscp" value="${st.dscp || ""}" placeholder="ارث‌بری"><span class="help">کلاس کیفیت سرویس؛ خالی = همان کلاس بسته‌ی داخلی. فقط تانل‌های کرنلی.</span></div>
         ${PMTU_KINDS.includes(pk) ? html`<div class="field full"><span class="lbl">PMTUD (Path MTU Discovery)</span>
@@ -1920,10 +1881,9 @@
     const master = masters().map(masterNote);
     const gone = (ov.gone || []).map((g) => html`<div class="note warn" style="margin-bottom:16px"><b>در انتظار پاک‌سازی روی ${g.name}</b> (<span class="ltr">${g.address}</span>): این سرور حذف شد ولی در دسترس نبود. هر بار که جواب بدهد، تانل‌های این سرور روی آن حذف می‌شوند (تا ۳۰ روز). برای پاک‌سازی همین الان، روی خودش اجرا کنید:
       <div class="code ltr" style="margin-top:8px">${g.command}<button class="btn sm ghost icon" data-act="copy" data-text="${g.command}" aria-label="کپی">${I.copy(15)}</button></div></div>`);
-    const self = ov.node.neoexit ? html`<div class="panel" style="margin-bottom:16px"><h3 style="margin:0 0 8px">همین سرور</h3>${neoexitBlock(ov.node.neoexit, ov.node.address)}</div>` : "";
-    if (!ov.peers.length) return html`${master}${gone}${self}<div class="panel"><div class="empty">${I.server(32)}<b>هنوز سروری اضافه نشده</b>سرور خارج را با نام و IP اضافه کنید؛ پنل دستور یک‌خطی نصب و اتصال را برای همان سرور می‌سازد.<br><button class="btn primary" data-act="add-server">${I.plus(16)} افزودن سرور</button></div></div>`;
+    if (!ov.peers.length) return html`${master}${gone}<div class="panel"><div class="empty">${I.server(32)}<b>هنوز سروری اضافه نشده</b>سرور خارج را با نام و IP اضافه کنید؛ پنل دستور یک‌خطی نصب و اتصال را برای همان سرور می‌سازد.<br><button class="btn primary" data-act="add-server">${I.plus(16)} افزودن سرور</button></div></div>`;
     const old = ov.peers.filter((p) => p.paired && p.version && p.version !== ov.node.version);
-    return html`${master}${gone}${self}
+    return html`${master}${gone}
       ${old.length ? html`<div class="note warn" style="margin-bottom:16px">${old.length} سرور نسخه‌ی قدیمی‌تری از این سرور (<span class="ltr">${ov.node.version}</span>) دارد. برای اینکه همه‌ی قابلیت‌ها کار کنند ارتقا دهید.</div>` : ""}
       <div class="peers">${ov.peers.map(peerCard)}</div>`;
   }
@@ -1947,22 +1907,6 @@
       </div></div>`;
   }
 
-  // NeoExit (free exits for AI services, a separate program) on a server:
-  // each service and the exit it leaves through, and a link to its panel.
-  function neoexitBlock(ne, address) {
-    if (!ne) return "";
-    const word = { ok: "باز", geo: "کشور بسته", challenge: "کپچا", error: "خطا", down: "بسته" };
-    const cls = { ok: "ok", geo: "bad", challenge: "warn", error: "bad", down: "bad" };
-    const host = address && address.includes(":") ? `[${address}]` : address;
-    const svcs = ne.services || [];
-    const bad = svcs.filter((s) => s.state !== "ok").length;
-    return html`<div class="neoexit">
-      <div class="ne-head"><b>NeoExit</b><span class="faint small">${svcs.length ? (bad ? `${bad} سرویس مشکل دارد` : "همه‌ی سرویس‌ها باز") : "سرویسی روشن نیست"}</span>
-        ${host && ne.panel ? html`<a class="btn sm" href="https://${host}${ne.panel}" target="_blank" rel="noopener noreferrer">پنل NeoExit</a>` : ""}</div>
-      <ul>${svcs.map((s) => html`<li><i class="dot ${cls[s.state] || "warn"}"></i><span class="ltr">${s.name}</span><span class="faint">${word[s.state] || "تست نشده"}${s.exit ? html` · از ${s.exit}` : ""}</span></li>`)}</ul>
-    </div>`;
-  }
-
   // A peer: reachability, version and what to do next, at a glance.
   function peerCard(p) {
     const ov = S.ov, up = S.upgrading[p.name];
@@ -1981,7 +1925,6 @@
       </dl>
       ${(p.dropped || []).length ? html`<div class="note warn small" style="margin:10px 0 0">${p.dropped.length} تانل این سرور روی ${plabel(p)} دستی حذف شده (<span class="ltr">${p.dropped.join(", ")}</span>) و آنجا ساخته نمی‌شود.
         <div style="margin-top:6px"><button class="btn sm" data-act="restore-tunnel" data-peer="${p.name}">${I.sync(14)} ساخت دوباره</button></div></div>` : ""}
-      ${neoexitBlock(p.neoexit, p.address)}
       <footer>
         ${!p.paired ? html`<button class="btn sm primary" data-act="setup" data-name="${p.name}">${I.term(15)} دستور اتصال</button>`
           : html`${outdated || up ? html`<button class="btn sm primary" data-act="upgrade" data-name="${p.name}" ${up ? "disabled" : ""}>${I.upgrade(15)} ${up ? "در حال ارتقا…" : `ارتقا به ${ov.node.version}`}</button>` : ""}
@@ -2181,12 +2124,16 @@
   // The start of each direction a result leaves out (see probe.Warmup).
   const warmup = (secs) => Math.min(3, secs / 4);
   const isBwPhase = (p) => p === "upload" || p === "download";
+  const speedMB = () => Math.max(1, Math.min(10240, Math.round(+S.speed.mb || 100)));
+  const speedPayload = () => (S.speed.mode === "bytes" ? { mb: speedMB(), streams: S.speed.streams } : { seconds: S.speed.secs, streams: S.speed.streams });
+  const saveSpeed = () => store("hl-speed", JSON.stringify({ mode: S.speed.mode, secs: S.speed.secs, mb: speedMB(), streams: S.speed.streams }));
 
   function viewSpeed() {
     const ts = visible(), ps = S.ov.peers.filter((p) => p.paired), sp = S.speed;
     if (!sp.tunnel && ts.length) sp.tunnel = ts[0].name;
     if (!sp.peer && ps.length) sp.peer = ps[0].name;
     const j = S.job, running = j && j.status === "running";
+    const byBytes = sp.mode === "bytes", mbVal = speedMB();
     const warm = warmup(sp.secs);
     const opt = (key, vals, label) => html`<div class="seg sm" role="radiogroup" aria-label="${label}">${vals.map(([v, l]) => html`<button type="button" role="radio" aria-checked="${sp[key] === v}" class="${sp[key] === v ? "on" : ""}" data-act="speed-opt" data-key="${key}" data-value="${v}" ${running ? "disabled" : ""}>${l}</button>`)}</div>`;
     return html`<div class="speed">
@@ -2194,15 +2141,20 @@
       <div class="stack">
         <div class="panel"><header><h2>اندازه‌گیری</h2><span class="aside">برای تست تانل، مقایسه و سرعت در ساخت تانل</span></header><div class="in stack">
           <div class="sopts">
-            <div class="field"><span class="lbl">مدت هر جهت</span>${opt("secs", [[5, "۵ ثانیه"], [10, "۱۰ ثانیه"], [20, "۲۰ ثانیه"], [30, "۳۰ ثانیه"]], "مدت")}</div>
+            <div class="field"><span class="lbl">حالت تست</span>${opt("mode", [["time", "بر اساس زمان"], ["bytes", "بر اساس حجم"]], "حالت تست")}</div>
+            ${byBytes
+              ? html`<div class="field"><span class="lbl">حجم هر جهت</span><div class="row" style="gap:8px">${opt("mb", [[25, "۲۵ MB"], [50, "۵۰ MB"], [100, "۱۰۰ MB"], [250, "۲۵۰ MB"], [500, "۵۰۰ MB"]], "حجم")}<div class="mb-custom"><input class="input ltr" type="number" min="1" max="10240" step="1" value="${sp.mb}" data-act="speed-mb" aria-label="حجم دلخواه به مگابایت" ${running ? "disabled" : ""}><span class="faint small">MB</span></div></div></div>`
+              : html`<div class="field"><span class="lbl">مدت هر جهت</span>${opt("secs", [[5, "۵ ثانیه"], [10, "۱۰ ثانیه"], [20, "۲۰ ثانیه"], [30, "۳۰ ثانیه"]], "مدت")}</div>`}
             <div class="field"><span class="lbl">اتصال هم‌زمان</span>${opt("streams", [[1, "۱"], [4, "۴"], [8, "۸"], [16, "۱۶"], [32, "۳۲"]], "اتصال‌ها")}</div>
           </div>
-          <p class="help" style="margin:0">هر جهت ${sp.secs} ثانیه با ${sp.streams} اتصال TCP. ${warm} ثانیه‌ی اول هر جهت در نتیجه حساب نمی‌شود، چون TCP در شروع آهسته بالا می‌آید و روی مسیر دور عدد را خیلی کمتر از ظرفیت نشان می‌داد. چند اتصال مثل «Connection Count» در Bandwidth Test میکروتیک ظرفیت کل مسیر را می‌سنجد؛ ۱ اتصال یعنی سرعت یک دانلود تکی.</p>
+          <p class="help" style="margin:0">${byBytes
+            ? `هر جهت حداکثر ${mbVal} مگابایت با ${sp.streams} اتصال TCP (سقف زمان ۶۰ ثانیه). به‌محض انتقال این حجم، تست آن جهت متوقف می‌شود تا روی سرورهایی که محدودیت ترافیک یا Anti-DDoS دارند مشکلی پیش نیاید.`
+            : `هر جهت ${sp.secs} ثانیه با ${sp.streams} اتصال TCP. ${warm} ثانیه‌ی اول هر جهت در نتیجه حساب نمی‌شود، چون TCP در شروع آهسته بالا می‌آید و روی مسیر دور عدد را خیلی کمتر از ظرفیت نشان می‌داد. چند اتصال مثل «Connection Count» در Bandwidth Test میکروتیک ظرفیت کل مسیر را می‌سنجد؛ ۱ اتصال یعنی سرعت یک دانلود تکی.`}</p>
         </div></div>
         <div class="panel"><header><h2>تست یک تانل</h2></header><div class="in">
           ${ts.length ? html`<div class="row" style="flex-wrap:nowrap"><select class="input" data-bind="speed.tunnel" aria-label="تانل">${ts.map((t) => html`<option value="${t.name}" ${sp.tunnel === t.name ? "selected" : ""}>${tname(t)}، ${kindTitle(t)} به ${pname(t.peer) || t.far_ip}، حالت ${profileName(t.settings && t.settings.profile)}</option>`)}</select>
             <button class="btn primary" data-act="run-test" ${running ? "disabled" : ""}>${I.play(15)} شروع</button></div>
-            <p class="help">پینگ، جیتر و افت؛ بعد آپلود و دانلود، هر کدام ${sp.secs} ثانیه.</p>` : html`<div class="muted">اول یک تانل بسازید.</div>`}
+            <p class="help">پینگ، جیتر و افت؛ بعد آپلود و دانلود، ${byBytes ? `هر کدام ${mbVal} مگابایت` : `هر کدام ${sp.secs} ثانیه`}.</p>` : html`<div class="muted">اول یک تانل بسازید.</div>`}
         </div></div>
         <div class="panel"><header><h2>مقایسه‌ی انواع تانل</h2><span class="aside">بهترین را برای این مسیر پیدا کنید</span></header><div class="in">
           ${ps.length ? html`<div class="field"><label for="bench-peer">سرور مقصد</label><select id="bench-peer" class="input" data-bind="speed.peer">${ps.map((p) => html`<option value="${p.name}" ${sp.peer === p.name ? "selected" : ""}>${plabel(p)} (${p.address})</option>`)}</select></div>
@@ -2237,8 +2189,8 @@
         <text id="g-big" class="big" x="${cx}" y="${cy + 12}" text-anchor="middle" direction="ltr">${esc(big)}</text>
         <text id="g-unit" class="unit" x="${cx}" y="${cy + 40}" text-anchor="middle" direction="ltr">${esc(unit)}</text>
         <text id="g-what" class="what" x="${cx}" y="${cy + 92}" text-anchor="middle">${esc(what)}</text></svg>`)}
-      <div class="gtrace-box">${raw(`<svg class="gtrace" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"><rect id="g-warm" class="warm" x="0" y="0" height="56" width="${((warmup(G.dur) / G.dur) * 300).toFixed(1)}" style="display:${running && isBwPhase(G.phase) ? "" : "none"}"/><path id="g-area" class="area ${G.phase === "upload" ? "tx" : ""}" d="${sparkPath(true)}"/><path id="g-line" class="line ${G.phase === "upload" ? "tx" : ""}" d="${sparkPath(false)}"/></svg>`)}
-        ${running && isBwPhase(G.phase) ? html`<span class="wl" style="left:0;width:${((warmup(G.dur) / G.dur) * 100).toFixed(1)}%" title="این بخش در نتیجه حساب نمی‌شود: TCP در شروع هر اتصال آهسته بالا می‌آید">گرم شدن</span>` : ""}</div>
+      <div class="gtrace-box">${raw(`<svg class="gtrace" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"><rect id="g-warm" class="warm" x="0" y="0" height="56" width="${G.dur > 0 ? ((warmup(G.dur) / G.dur) * 300).toFixed(1) : "0"}" style="display:${G.dur > 0 && running && isBwPhase(G.phase) ? "" : "none"}"/><path id="g-area" class="area ${G.phase === "upload" ? "tx" : ""}" d="${sparkPath(true)}"/><path id="g-line" class="line ${G.phase === "upload" ? "tx" : ""}" d="${sparkPath(false)}"/></svg>`)}
+        ${G.dur > 0 && running && isBwPhase(G.phase) ? html`<span class="wl" style="left:0;width:${((warmup(G.dur) / G.dur) * 100).toFixed(1)}%" title="این بخش در نتیجه حساب نمی‌شود: TCP در شروع هر اتصال آهسته بالا می‌آید">گرم شدن</span>` : ""}</div>
       <div class="phases">${ph("ping", "پینگ")}${ph("upload", "آپلود")}${ph("download", "دانلود")}</div>
       ${running ? html`<button class="btn sm danger" style="margin-top:16px" data-act="cancel-job">توقف تست</button>` : ""}
     </div>`;
@@ -2270,7 +2222,7 @@
   function sparkPath(area) {
     const h = G.hist;
     if (h.length < 2) return "";
-    const max = Math.max(1, ...h.map((p) => p[1])), dur = Math.max(1, G.dur);
+    const max = Math.max(1, ...h.map((p) => p[1])), dur = G.dur > 0 ? Math.max(1, G.dur) : Math.max(1, h[h.length - 1][0]);
     const x = (t) => Math.min(300, (t / dur) * 300).toFixed(1), y = (v) => (54 - (v / max) * 46).toFixed(1);
     let d = h.map(([t, v], i) => `${i ? "L" : "M"}${x(t)} ${y(v)}`).join(" ");
     if (area) d += ` L${x(h[h.length - 1][0])} 56 L${x(h[0][0])} 56 Z`;
@@ -2311,7 +2263,7 @@
     for (const id of ["#g-fill", "#g-area", "#g-line"]) { const el = $(id); if (el) el.classList.toggle("tx", G.phase === "upload"); }
     $("#g-area").setAttribute("d", sparkPath(true));
     $("#g-line").setAttribute("d", sparkPath(false));
-    const wr = $("#g-warm"); if (wr) wr.style.display = j && j.status === "running" && isBwPhase(G.phase) ? "" : "none";
+    const wr = $("#g-warm"); if (wr) wr.style.display = G.dur > 0 && j && j.status === "running" && isBwPhase(G.phase) ? "" : "none";
   }
 
   const ST = {
@@ -2383,8 +2335,8 @@
 
   async function startJob(kind, target, only) {
     try {
-      S.job = await api("POST", "jobs", { kind, target, only, seconds: S.speed.secs, streams: S.speed.streams });
-      S.pv = {}; G.v = G.to = 0; G.phase = ""; G.seq = -1; G.hist = []; G.sig = ""; G.seen = {}; G.dur = S.speed.secs; G.cap = 1e9;
+      S.job = await api("POST", "jobs", Object.assign({ kind, target, only }, speedPayload()));
+      S.pv = {}; G.v = G.to = 0; G.phase = ""; G.seq = -1; G.hist = []; G.sig = ""; G.seen = {}; G.dur = S.speed.mode === "bytes" ? 0 : S.speed.secs; G.cap = 1e9;
       if (S.drawer) S.drawer = null;
       location.hash = "#/speed";
       draw(); pollJob();
@@ -2427,12 +2379,12 @@
 
   // Each tunnel's last speed test (the slower direction, Mbit/s), kept in the
   // browser for the smart queue's suggestion.
-  function lastTests() { try { return JSON.parse(store("nt-lasttest") || "{}"); } catch { return {}; } }
+  function lastTests() { try { return JSON.parse(store("hl-lasttest") || "{}"); } catch { return {}; } }
   function rememberTest(j) {
     const r = j.kind === "test" && j.status === "done" && j.results && j.results[0];
     if (!r || r.error || !r.down_bps || !r.up_bps) return;
     const m = lastTests(); m[j.target] = Math.round(Math.min(r.down_bps, r.up_bps) / 1e6);
-    store("nt-lasttest", JSON.stringify(m));
+    store("hl-lasttest", JSON.stringify(m));
   }
   // 90% of the last test, under which the queue sits in this server.
   const queueGuess = (t) => { const v = lastTests()[t.name]; return v > 1 ? Math.floor(v * 0.9) : 0; };
@@ -2534,10 +2486,10 @@
     const via = { tunnel: ["از تانل", "lock"], direct: ["مستقیم", ""], failed: ["ناموفق", "warn"] };
     const probe = (p, l) => html`<div><div class="k">${l}</div><div class="v">${p.ok ? html`<span class="state"><i class="dot ok"></i>${p.ms} ms</span>` : html`<span class="state"><i class="dot bad"></i>وصل نشد</span><div class="faint small ltr">${p.error || ""}</div>`}</div></div>`;
     return html`<div class="panel"><header><h2>دانلودهای این سرور از تانل</h2><span class="aside">${state}</span></header><div class="in stack">
-      <p class="help" style="margin:0">وقتی اینترنت مستقیم سرور قطع یا کند است، یا سایتی مثل GitHub فیلتر شده، دانلود از سایت‌هایی که انتخاب می‌کنید (نصب اسکریپت، apt، git clone، pip و <span class="ltr">neotunnel update</span>) از تانل می‌رود و از سرور خارج به اینترنت وصل می‌شود. اسم سایت هم همان‌جا پیدا می‌شود، پس DNS خراب این سرور مشکلی ایجاد نمی‌کند. بقیه‌ی ترافیک، از جمله ترافیک کاربرها، مثل قبل مستقیم می‌رود.</p>
+      <p class="help" style="margin:0">وقتی اینترنت مستقیم سرور قطع یا کند است، یا سایتی مثل GitHub فیلتر شده، دانلود از سایت‌هایی که انتخاب می‌کنید (نصب اسکریپت، apt، git clone، pip و <span class="ltr">hltunnel update</span>) از تانل می‌رود و از سرور خارج به اینترنت وصل می‌شود. اسم سایت هم همان‌جا پیدا می‌شود، پس DNS خراب این سرور مشکلی ایجاد نمی‌کند. بقیه‌ی ترافیک، از جمله ترافیک کاربرها، مثل قبل مستقیم می‌رود.</p>
       <label class="switch"><input type="checkbox" data-act="fe-check" data-key="on" ${f.on ? "checked" : ""}>روشن</label>
-      ${v.tunnels.length ? html`<div class="field"><label for="f-tun">از کدام تانل</label><select id="f-tun" class="input" data-bind="fe.tunnel" style="max-width:320px">${v.tunnels.map((t) => html`<option value="${t}" ${f.tunnel === t ? "selected" : ""}>${t}</option>`)}</select><span class="help">ترافیک از سرور آن طرف این تانل به اینترنت می‌رود. فقط تانل‌هایی که آن طرفشان NeoTunnel است.</span></div>`
-        : html`<div class="note warn">تانلی به یک سرور NeoTunnel ندارید؛ اول یک تانل به سرور خارج بسازید.</div>`}
+      ${v.tunnels.length ? html`<div class="field"><label for="f-tun">از کدام تانل</label><select id="f-tun" class="input" data-bind="fe.tunnel" style="max-width:320px">${v.tunnels.map((t) => html`<option value="${t}" ${f.tunnel === t ? "selected" : ""}>${t}</option>`)}</select><span class="help">ترافیک از سرور آن طرف این تانل به اینترنت می‌رود. فقط تانل‌هایی که آن طرفشان HLTunnel است.</span></div>`
+        : html`<div class="note warn">تانلی به یک سرور HLTunnel ندارید؛ اول یک تانل به سرور خارج بسازید.</div>`}
       <div class="field"><span class="lbl">سایت‌ها</span><div class="checks">${v.groups.map((g) => html`<label class="switch"><input type="checkbox" data-act="fe-group" value="${g.name}" ${f.groups.includes(g.name) ? "checked" : ""}>${g.title} <span class="faint small ltr">${g.domains.join(", ")}</span></label>`)}</div></div>
       <div class="field"><label for="f-dom">سایت‌های دیگر</label><textarea id="f-dom" class="input ltr" rows="3" data-bind="fe.domains" placeholder="download.docker.com&#10;example.org">${f.domains}</textarea><span class="help">هر خط یک دامنه؛ زیردامنه‌هایش هم حساب می‌شوند.</span></div>
       <div class="field"><span class="lbl">کدام برنامه‌ها</span><div class="seg">${[["", "فقط دستورهای ترمینال و SSH"], ["1", "همه‌ی برنامه‌های سرور"]].map(([val, l]) => html`<button type="button" class="${(f.all ? "1" : "") === val ? "on" : ""}" data-act="set" data-path="fe.all" data-value="${val}" ${val === "" && !v.terminal ? "disabled" : ""}>${l}</button>`)}</div>
@@ -2574,14 +2526,14 @@
     return html`<div class="panel"><header><h2>فایروال</h2><span class="aside">${state}</span></header><div class="in stack">
       <p class="help" style="margin:0">همه‌چیز روی کارت شبکه‌ی عمومی (<span class="ltr">${(st.ifaces || []).join(", ") || "-"}</span>) بسته می‌شود، جز آنچه این سرور واقعاً استفاده می‌کند. پورت‌هایی که برنامه‌ها روی آن‌ها گوش می‌دهند هر چند ثانیه خودکار پیدا می‌شوند: اینباند تازه‌ی 3x-ui روی پورت تصادفی خودش باز می‌شود و پورتی که کسی رویش نیست بسته می‌ماند. تانل‌ها و ترافیک داخلشان دست نمی‌خورند.</p>
       <label class="switch"><input type="checkbox" data-act="gd-check" data-key="on" ${g.on ? "checked" : ""}>فایروال روشن</label>
-      <div class="note">همیشه باز است و بسته نمی‌شود: SSH (پورت <span class="ltr">${(st.ssh || []).join(", ")}</span>)، پنل (پورت <span class="ltr">${st.panel || "-"}</span>)، و همه‌ی ترافیک از ${st.peers} آدرس سرورهای مقصد و تانل‌ها. اگر بعد از روشن کردن، پنل تا ۶۰ ثانیه جواب ندهد، فایروال خودش خاموش می‌شود. از ترمینال: <code class="ltr">sudo neotunnel guard off</code></div>
+      <div class="note">همیشه باز است و بسته نمی‌شود: SSH (پورت <span class="ltr">${(st.ssh || []).join(", ")}</span>)، پنل (پورت <span class="ltr">${st.panel || "-"}</span>)، و همه‌ی ترافیک از ${st.peers} آدرس سرورهای مقصد و تانل‌ها. اگر بعد از روشن کردن، پنل تا ۶۰ ثانیه جواب ندهد، فایروال خودش خاموش می‌شود. از ترمینال: <code class="ltr">sudo hltunnel guard off</code></div>
       <label class="switch"><input type="checkbox" data-act="gd-check" data-key="config_iran" ${g.config_iran ? "checked" : ""}>پورت‌های کانفیگ (فورواردها و اینباندهای Xray) فقط از ایران (<span class="ltr">geoip:ir</span>)</label>
       <div class="field"><span class="lbl">پینگ (ICMP)</span><div class="seg">${[["closed", "بسته"], ["iran", "فقط ایران"], ["open", "باز"]].map(([val, l]) => html`<button type="button" class="${(g.icmp || "closed") === val ? "on" : ""}" data-act="set" data-path="gd.icmp" data-value="${val}">${l}</button>`)}</div><span class="help">سرورهای مقصد همیشه جواب می‌گیرند. پیام‌هایی که یافتن MTU مسیر به آن‌ها نیاز دارد هم همیشه رد می‌شوند.</span></div>
       <div class="form-foot"><button class="btn primary" data-act="save-guard">ذخیره</button><button class="btn ghost" data-act="guard-refresh">تازه‌سازی</button></div>
     </div></div>
     <div class="panel"><header><h2>پورت‌های باز</h2><span class="aside">${st.ports.length} پورت</span></header><div class="in">
       ${st.ports.length ? html`<div class="tbl-wrap"><table class="t"><thead><tr><th>پورت</th><th>چه چیزی</th><th>چه کسی وصل شود</th></tr></thead><tbody>${rows}</tbody></table></div>` : html`<div class="muted">برنامه‌ای روی پورت عمومی گوش نمی‌دهد.</div>`}
-      <p class="help" style="margin:10px 0 0">«خودکار» یعنی فورواردها و اینباندهای Xray طبق کلید «فقط از ایران» و بقیه برای همه باز. پورت‌های خود NeoTunnel فقط برای سرورهای مقصد بازند و اینجا نیستند.</p>
+      <p class="help" style="margin:10px 0 0">«خودکار» یعنی فورواردها و اینباندهای Xray طبق کلید «فقط از ایران» و بقیه برای همه باز. پورت‌های خود HLTunnel فقط برای سرورهای مقصد بازند و اینجا نیستند.</p>
     </div></div>
     <div class="panel"><header><h2>فهرست آدرس‌ها</h2></header><div class="in stack">
       <div class="grid2"><div class="field"><label for="g-allow">همیشه مجاز</label><textarea id="g-allow" class="input ltr" rows="4" data-bind="gd.allow" placeholder="198.51.100.7&#10;203.0.113.0/24&#10;geoip:ir">${g.allow}</textarea><span class="help">به همه‌ی پورت‌ها دسترسی دارند.</span></div>
@@ -2663,9 +2615,9 @@
     if (!v) { loadAPI(); return html`<div class="panel"><div class="in muted">در حال خواندن…</div></div>`; }
     const d = S.apid || (S.apid = { name: "", scope: "ports", url: v.webhook.url || "", secret: v.webhook.secret || "" });
     const made = S.apiMade;
-    const rows = v.tokens.map((k) => html`<tr><td><b>${k.name}</b><div class="faint small ltr">nt_${k.id}…</div></td><td>${(TOKEN_SCOPES.find((x) => x[0] === k.scope) || [, k.scope])[1].split(":")[0]}</td><td>${F.dmy.format(new Date(k.created * 1000))}</td><td>${k.last_used ? ago(k.last_used) : "هنوز نه"}</td><td class="acts"><button type="button" class="btn sm danger icon" data-act="token-rm" data-id="${k.id}" aria-label="حذف توکن ${k.name}">${I.trash(15)}</button></td></tr>`);
+    const rows = v.tokens.map((k) => html`<tr><td><b>${k.name}</b><div class="faint small ltr">hl_${k.id}…</div></td><td>${(TOKEN_SCOPES.find((x) => x[0] === k.scope) || [, k.scope])[1].split(":")[0]}</td><td>${F.dmy.format(new Date(k.created * 1000))}</td><td>${k.last_used ? ago(k.last_used) : "هنوز نه"}</td><td class="acts"><button type="button" class="btn sm danger icon" data-act="token-rm" data-id="${k.id}" aria-label="حذف توکن ${k.name}">${I.trash(15)}</button></td></tr>`);
     return html`<div class="panel"><header><h2>توکن‌های API</h2><span class="aside">برای برنامه‌ها، بدون رمز پنل</span></header><div class="in stack">
-        <p class="help" style="margin:0">برنامه‌ای مثل ربات فروش با هدر <span class="ltr">Authorization: Bearer nt_…</span> همان API پنل را صدا می‌زند. هر توکن فقط کاری را می‌کند که دسترسی‌اش اجازه می‌دهد و به رمز و تنظیمات پنل، پشتیبان‌ها، توکن‌ها، تلگرام، فایروال و کلیدهای سرورها هیچ‌وقت نمی‌رسد. راهنمای کامل در <span class="ltr">docs/api.md</span>.</p>
+        <p class="help" style="margin:0">برنامه‌ای مثل ربات فروش با هدر <span class="ltr">Authorization: Bearer hl_…</span> همان API پنل را صدا می‌زند. هر توکن فقط کاری را می‌کند که دسترسی‌اش اجازه می‌دهد و به رمز و تنظیمات پنل، پشتیبان‌ها، توکن‌ها، تلگرام، فایروال و کلیدهای سرورها هیچ‌وقت نمی‌رسد. راهنمای کامل در <span class="ltr">docs/api.md</span>.</p>
         ${made ? html`<div class="psale-st"><b>توکن ساخته شد؛ همین الان کپی کنید، دیگر نشان داده نمی‌شود:</b><div class="code ltr sens">${made}<button class="btn sm ghost icon" data-act="copy" data-text="${made}" aria-label="کپی">${I.copy(15)}</button></div></div>` : ""}
         ${v.tokens.length ? html`<div class="tbl-wrap"><table class="t"><thead><tr><th>نام</th><th>دسترسی</th><th>ساخته شده</th><th>آخرین استفاده</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : html`<div class="muted small">هنوز توکنی نساخته‌اید.</div>`}
         <div class="grid2"><div class="field"><label for="tk-name">نام توکن تازه</label><input id="tk-name" class="input" maxlength="60" data-bind="apid.name" value="${d.name}" placeholder="مثلاً ربات فروش"></div>
@@ -2673,8 +2625,8 @@
         <div class="form-foot"><button type="button" class="btn primary" data-act="token-add">${I.plus(15)} ساختن توکن</button></div>
       </div></div>
       <div class="panel"><header><h2>وب‌هوک</h2><span class="aside">هر رویداد، به برنامه‌ی شما</span></header><div class="in stack">
-        <p class="help" style="margin:0">هر رویداد این سرور (بسته شدن پورت فروخته به‌خاطر حجم یا مدت، باز شدن دوباره، قطعی و سالم شدن تانل، رفتن به پشتیبان و…) به‌صورت JSON با POST به این آدرس فرستاده می‌شود، با امضای <span class="ltr">X-NeoTunnel-Signature: sha256=…</span> (HMAC-SHA256 بدنه با رمز زیر) تا گیرنده بداند از همین سرور آمده. اگر نرسد تا سه بار دیگر تلاش می‌شود.</p>
-        <div class="grid2"><div class="field"><label for="wh-url">آدرس</label><input id="wh-url" class="input ltr" data-bind="apid.url" value="${d.url}" placeholder="https://example.com/neotunnel"><span class="help">خالی: خاموش.</span></div>
+        <p class="help" style="margin:0">هر رویداد این سرور (بسته شدن پورت فروخته به‌خاطر حجم یا مدت، باز شدن دوباره، قطعی و سالم شدن تانل، رفتن به پشتیبان و…) به‌صورت JSON با POST به این آدرس فرستاده می‌شود، با امضای <span class="ltr">X-HLTunnel-Signature: sha256=…</span> (HMAC-SHA256 بدنه با رمز زیر) تا گیرنده بداند از همین سرور آمده. اگر نرسد تا سه بار دیگر تلاش می‌شود.</p>
+        <div class="grid2"><div class="field"><label for="wh-url">آدرس</label><input id="wh-url" class="input ltr" data-bind="apid.url" value="${d.url}" placeholder="https://example.com/hltunnel"><span class="help">خالی: خاموش.</span></div>
           <div class="field"><label for="wh-secret">رمز امضا</label><div class="pf"><input id="wh-secret" class="input ltr sens" data-bind="apid.secret" value="${d.secret}" placeholder="حداقل ۱۶ کاراکتر"><button type="button" class="btn sm" data-act="wh-gen" title="یک رمز تصادفی">${I.dice(14)} تصادفی</button></div></div></div>
         <div class="form-foot"><button type="button" class="btn" data-act="wh-test">ارسال آزمایشی</button><button type="button" class="btn primary" data-act="wh-save">ذخیره</button></div>
       </div></div>`;
@@ -2747,8 +2699,8 @@
       <p class="help" style="margin:0">این مقادیر در ساخت تانل (پنل، منو و دستور quick) از قبل انتخاب می‌شوند و هر بار قابل تغییرند.</p>
       <div class="field"><label for="d-enc">رمزنگاری</label><select id="d-enc" class="input" data-bind="defs.encrypt" style="max-width:320px"><option value="">بدون رمزنگاری</option>${S.ov.ciphers.map((c) => html`<option value="${c.name}" ${d.encrypt === c.name ? "selected" : ""}>IPsec ${c.title}</option>`)}<option value="auto" ${d.encrypt === "auto" ? "selected" : ""}>خودکار (هرچه رد شود)</option></select></div>
       <label class="switch"><input type="checkbox" data-act="def-check" data-key="mtu_probe" ${d.mtu_probe ? "checked" : ""}>اندازه‌گیری خودکار MTU مسیر</label>
-      <label class="switch"><input type="checkbox" data-act="def-check" data-key="obfs" ${d.obfs ? "checked" : ""}>اجرای تانل‌ها روی لایه‌ی NeoObfs</label>
-      <div class="field"><label for="d-pad">Padding پیش‌فرض NeoObfs (بایت)</label><input id="d-pad" class="input ltr" type="number" min="0" max="255" data-bind="defs.padding" value="${d.padding || ""}" placeholder="0" style="max-width:160px"></div>
+      <label class="switch"><input type="checkbox" data-act="def-check" data-key="obfs" ${d.obfs ? "checked" : ""}>اجرای تانل‌ها روی لایه‌ی HLObfs</label>
+      <div class="field"><label for="d-pad">Padding پیش‌فرض HLObfs (بایت)</label><input id="d-pad" class="input ltr" type="number" min="0" max="255" data-bind="defs.padding" value="${d.padding || ""}" placeholder="0" style="max-width:160px"></div>
       ${modeField("defs", d.forward_mode, false, "forward_mode")}
       <div class="form-foot"><button class="btn primary" data-act="save-defaults">ذخیره‌ی پیش‌فرض‌ها</button></div>
     </div></div>
@@ -2761,7 +2713,7 @@
       <label class="switch"><input type="checkbox" data-act="def-check" data-key="nightly" ${d.nightly ? "checked" : ""}>تست سرعت شبانه</label>
       <p class="help" style="margin:0">هر شب ساعت ۴:۳۰ به وقت تهران، هر تانل یک تست سبک می‌گیرد: ۴ ثانیه هر جهت با ۴ اتصال، بیرون از آمار ترافیک. نتیجه‌ها در صفحه‌ی هر تانل شب به شب می‌ماند تا افت تدریجی یا محدودسازی ارائه‌دهنده دیده شود، و «بهترین مسیر» پورت‌ها هم بین تانل‌های هم‌اندازه از آن کمک می‌گیرد. تانل خاموش و تانل با حجم ماهانه تست نمی‌شوند.</p>
       <div class="field"><label for="d-wait">رمزنگاری خودکار: مدت صبر روی هر مرحله (دقیقه)</label><input id="d-wait" class="input ltr" type="number" min="1" max="1440" data-bind="defs.auto_wait" value="${d.auto_wait || ""}" placeholder="5" style="max-width:160px">
-        <span class="help">برای تانل‌هایی که رمزنگاری‌شان روی «خودکار» است. ترتیب مراحل: بدون رمز، AES-128، AES-256، ChaCha20، NeoObfs. تانلی که پشتیبانِ سالم دارد مرحله عوض نمی‌کند؛ فقط بررسی می‌شود تا سالم شود. اگر همه‌ی مراحل پشت‌سرهم جواب ندادند، ۳۰ دقیقه استراحت می‌کند و از نو شروع می‌کند.</span></div>
+        <span class="help">برای تانل‌هایی که رمزنگاری‌شان روی «خودکار» است. ترتیب مراحل: بدون رمز، AES-128، AES-256، ChaCha20، HLObfs. تانلی که پشتیبانِ سالم دارد مرحله عوض نمی‌کند؛ فقط بررسی می‌شود تا سالم شود. اگر همه‌ی مراحل پشت‌سرهم جواب ندادند، ۳۰ دقیقه استراحت می‌کند و از نو شروع می‌کند.</span></div>
       <div class="form-foot"><button class="btn primary" data-act="save-defaults">ذخیره</button></div>
     </div></div>`;
   }
@@ -2797,7 +2749,7 @@
         <p class="help" style="margin:0">همه‌ی تنظیمات، سرورها، تانل‌ها، کلید این سرور، آمار ترافیک، نمودارها و گواهی پنل در یک فایل. کلید و رمزها داخلش هست؛ فایل را جای امن نگه دارید.</p>
         <div><a class="btn" href="api/backup" download>${I.download(16)} دانلود پشتیبان</a></div></div></div>
       <div class="panel"><header><h2>بازگردانی</h2></header><div class="in stack">
-        <p class="help" style="margin:0">فایل پشتیبان را روی همین سرور یا یک سرور تازه (بعد از نصب NeoTunnel) بازگردانی کنید. روی سرور تازه، IP قدیمی در همه‌ی تانل‌ها با IP این سرور عوض می‌شود و سرورهای مقصد خودکار به‌روز می‌شوند؛ چون کلید سرور هم برمی‌گردد، لازم نیست آن‌ها را دوباره وصل کنید. ورود و پورت همین پنل عوض نمی‌شود.</p>
+        <p class="help" style="margin:0">فایل پشتیبان را روی همین سرور یا یک سرور تازه (بعد از نصب HLTunnel) بازگردانی کنید. روی سرور تازه، IP قدیمی در همه‌ی تانل‌ها با IP این سرور عوض می‌شود و سرورهای مقصد خودکار به‌روز می‌شوند؛ چون کلید سرور هم برمی‌گردد، لازم نیست آن‌ها را دوباره وصل کنید. ورود و پورت همین پنل عوض نمی‌شود.</p>
         <label class="btn" style="align-self:flex-start">${I.sync(16)} انتخاب فایل پشتیبان<input type="file" accept=".json,application/json" data-act="restore-file" hidden></label>
         ${r && r.error ? html`<div class="note bad">${r.error}</div>` : ""}
         ${p ? html`<div class="note ${p.warnings && p.warnings.length ? "warn" : ""}"><dl class="kv">
@@ -2812,20 +2764,19 @@
           <div class="form-foot"><button class="btn danger" data-act="restore" ${r.busy ? "disabled" : ""}>${I.sync(16)} ${r.busy ? "در حال بازگردانی…" : "بازگردانی روی این سرور"}</button><button class="btn ghost" data-act="restore-cancel">انصراف</button></div>` : ""}
       </div></div>
       <div class="panel"><header><h2>سرویس</h2></header><div class="in stack">
-        <p class="help" style="margin:0">ری‌استارت سرویس، تانل‌های کرنلی را قطع نمی‌کند؛ لایه‌ی NeoObfs و رله‌ها چند ثانیه قطع می‌شوند.</p>
+        <p class="help" style="margin:0">ری‌استارت سرویس، تانل‌های کرنلی را قطع نمی‌کند؛ لایه‌ی HLObfs و رله‌ها چند ثانیه قطع می‌شوند.</p>
         <div class="row"><button class="btn" data-act="restart">${I.sync(16)} ری‌استارت سرویس</button><button class="btn" data-act="sync-all">همگام‌سازی همه‌ی سرورها</button></div></div></div>
-      <div class="panel"><header><h2>حذف NeoTunnel</h2></header><div class="in stack">
+      <div class="panel"><header><h2>حذف HLTunnel</h2></header><div class="in stack">
         <p class="help" style="margin:0">این دستور سرویس، تانل‌ها، IPsec، قوانین فوروارد و مسیریابی، تنظیمات، کلیدها و خود برنامه را از سرور پاک می‌کند. با <span class="ltr">--keep-config</span> تنظیمات برای نصب دوباره می‌ماند.</p>
-        ${codeBlock("حذف کامل (روی همین سرور اجرا کنید)", "sudo neotunnel uninstall", "")}
-        ${codeBlock("حذف و نگه‌داشتن تنظیمات", "sudo neotunnel uninstall --keep-config", "")}</div></div>`;
+        ${codeBlock("حذف کامل (روی همین سرور اجرا کنید)", "sudo hltunnel uninstall", "")}
+        ${codeBlock("حذف و نگه‌داشتن تنظیمات", "sudo hltunnel uninstall --keep-config", "")}</div></div>`;
   }
 
   function setAbout() {
     const ov = S.ov;
     return html`<div class="panel"><header><h2>درباره</h2></header><div class="in"><dl class="kv">
       <dt>نسخه</dt><dd class="ltr">${ov.node.version} ${ov.node.arch}</dd><dt>اثر انگشت کلید سرور</dt><dd class="ltr sens">${ov.node.key}</dd>
-      <dt>روشن بودن سرور</dt><dd>${fmtUptime(ov.node.uptime_s)}</dd><dt>کد منبع</dt><dd><a href="${ov.repo}" target="_blank" rel="noopener" class="ltr">${ov.repo.replace("https://", "")}</a></dd>
-      <dt>کانال تلگرام</dt><dd><a href="${ov.channel}" target="_blank" rel="noopener" class="ltr">${ov.channel.replace("https://", "")}</a></dd></dl></div></div>
+      <dt>روشن بودن سرور</dt><dd>${fmtUptime(ov.node.uptime_s)}</dd><dt>کد منبع</dt><dd><a href="${ov.repo}" target="_blank" rel="noopener" class="ltr">${ov.repo.replace("https://", "")}</a></dd></dl></div></div>
       ${updatePanel()}`;
   }
 
@@ -2841,7 +2792,7 @@
       <div class="upd-row ${u && u.newer && !run ? "new" : ""}"><span class="grow">${state}</span>
         <button class="btn sm ghost" data-act="update-check" ${!u || run ? "disabled" : ""}>بررسی دوباره</button>
         ${u && u.newer && !run ? html`<button class="btn sm primary" data-act="update-ask">${I.upgrade(14)} به‌روزرسانی</button>` : ""}</div>
-      <p class="help" style="margin:10px 0 0">پنل هر ساعت نسخه‌ی تازه را از گیت‌هاب بررسی می‌کند. به‌روزرسانی همان کار <code class="ltr">sudo neotunnel update</code> را می‌کند و تانل‌ها و تنظیمات می‌مانند.</p></div></div>`;
+      <p class="help" style="margin:10px 0 0">پنل هر ساعت نسخه‌ی تازه را از گیت‌هاب بررسی می‌کند. به‌روزرسانی همان کار <code class="ltr">sudo hltunnel update</code> را می‌کند و تانل‌ها و تنظیمات می‌مانند.</p></div></div>`;
   }
 
   async function loadSystem() {
@@ -2878,8 +2829,8 @@
         ${intro || (s.paired ? html`<div class="note ok">این سرور متصل است و تغییرات خودکار روی آن اعمال می‌شود. اگر روزی در دسترس نبود، دستور زیر را روی <b>${where}</b> اجرا کنید تا همه‌چیز یکجا اعمال شود.</div>`
           : html`<div class="note warn">این سرور هنوز وصل نشده. یکی از دستورهای زیر را روی <b>${where}</b> با دسترسی root اجرا کنید؛ بعد از آن هر تغییری خودکار روی آن هم اعمال می‌شود.</div>`)}
         ${s.github ? codeBlock("۱. نصب از گیت‌هاب و اعمال تنظیمات", s.github, s.peer) : ""}
-        ${codeBlock(s.github ? "۲. اگر NeoTunnel از قبل نصب است" : "اعمال همه‌ی تنظیمات (همگام‌سازی دستی)", s.apply, s.peer)}
-        <div class="help">کلید اتصال (NT1.…) با کلید این سرور امضا شده و رمزهای تانل‌ها را هم دارد؛ آن را فقط روی همان سرور اجرا کنید.</div>
+        ${codeBlock(s.github ? "۲. اگر HLTunnel از قبل نصب است" : "اعمال همه‌ی تنظیمات (همگام‌سازی دستی)", s.apply, s.peer)}
+        <div class="help">کلید اتصال (HL1.…) با کلید این سرور امضا شده و رمزهای تانل‌ها را هم دارد؛ آن را فقط روی همان سرور اجرا کنید.</div>
       </div>
       <footer><span class="grow"></span><button class="btn primary" data-act="close">بستن</button></footer>`;
   }
@@ -2983,7 +2934,7 @@
       <div class="choices">
         ${ov.peers.map((p) => html`<button type="button" class="choice ${w.dest === "peer" && w.peer === p.name ? "on" : ""}" data-act="wiz-dest" data-dest="peer" data-name="${p.name}">
           <b>${I.server(16)} ${plabel(p)}</b><span class="ltr">${p.address}</span><span class="state"><i class="dot ${p.paired ? "ok" : "warn"}"></i>${p.paired ? "متصل؛ هر انتخاب زنده بررسی می‌شود" : "منتظر اتصال"}</span></button>`)}
-        <button type="button" class="choice ${w.dest === "new" ? "on" : ""}" data-act="wiz-dest" data-dest="new"><b>${I.plus(16)} سرور جدید</b><span>سرور خارج که NeoTunnel روی آن نصب می‌شود</span></button>
+        <button type="button" class="choice ${w.dest === "new" ? "on" : ""}" data-act="wiz-dest" data-dest="new"><b>${I.plus(16)} سرور جدید</b><span>سرور خارج که HLTunnel روی آن نصب می‌شود</span></button>
         <button type="button" class="choice ${w.dest === "remote" ? "on" : ""}" data-act="wiz-dest" data-dest="remote"><b>${I.globe(16)} دستگاه دیگر</b><span>مثلاً میکروتیک؛ فقط این طرف ساخته می‌شود</span></button>
       </div>
       ${w.dest === "new" ? html`<div class="grid2"><div class="field"><label for="w-nn">نام سرور</label><input id="w-nn" class="input ltr" data-bind="wiz.newName" value="${w.newName}" placeholder="germany"><span class="help">حروف کوچک انگلیسی، عدد و خط تیره</span></div>
@@ -3085,7 +3036,7 @@
     const v = value || "balanced", tcp = kind === "tcp";
     const conns = { lean: 2, balanced: 4, max: 8 };
     const w = path === "wiz" ? S.wiz : null, live = w && canCheck(w);
-    return html`<div class="field"><span class="lbl">حالت سرعت ${live ? html`<span class="faint small">· با انتخاب هر حالت، سرعت همان ترکیب مثل «تست سرعت» اندازه گرفته می‌شود: هر جهت ${S.speed.secs} ثانیه با ${S.speed.streams} اتصال</span>` : ""}</span>
+    return html`<div class="field"><span class="lbl">حالت سرعت ${live ? html`<span class="faint small">· با انتخاب هر حالت، سرعت همان ترکیب مثل «تست سرعت» اندازه گرفته می‌شود: ${S.speed.mode === "bytes" ? `هر جهت ${speedMB()} مگابایت` : `هر جهت ${S.speed.secs} ثانیه`} با ${S.speed.streams} اتصال</span>` : ""}</span>
       <div class="profiles" role="radiogroup">${PROFILES.map(([id, l, d]) => html`<button type="button" role="radio" aria-checked="${v === id}" class="profile ${v === id ? "on" : ""}" data-act="set" data-path="${path}.profile" data-value="${id}">
         <b>${l}</b><span>${d.split(":")[0]}${tcp ? ` · ${conns[id]} اتصال` : ""}</span>${live ? speedChip(w.speeds[speedKey(w, id)]) : ""}</button>`)}</div>
       <span class="help">${PROFILES.find(([id]) => id === v)[2]}${tcp ? ` تانل TCP روی ${conns[v]} اتصال هم‌زمان کار می‌کند؛ هر جریان ترافیک روی یکی از آن‌ها می‌ماند.` : ""}</span></div>`;
@@ -3098,7 +3049,7 @@
     const v = String(+value > 1 ? +value : 1);
     return html`<div class="field"><span class="lbl">مسیرهای موازی (lanes)</span>
       <div class="seg" role="radiogroup">${["1", "2", "4", "8"].map((n) => html`<button type="button" role="radio" aria-checked="${v === n}" class="${v === n ? "on" : ""}" data-act="set" data-path="${path}.lanes" data-value="${n}">${n}</button>`)}</div>
-      <span class="help">${v === "1" ? "یک تانل، مثل همیشه." : `تانل روی ${v} تانل GRE موازی بین همین دو سرور کار می‌کند؛ هر جریان ترافیک روی یکی از آن‌ها می‌ماند و کار دریافت و رمزنگاری بین هسته‌های پردازنده پخش می‌شود. فقط وقتی کمک می‌کند که ترافیک از چند اتصال هم‌زمان باشد و یک هسته‌ی پردازنده گلوگاه باشد. هر دو سر باید NeoTunnel داشته باشند.`}</span></div>`;
+      <span class="help">${v === "1" ? "یک تانل، مثل همیشه." : `تانل روی ${v} تانل GRE موازی بین همین دو سرور کار می‌کند؛ هر جریان ترافیک روی یکی از آن‌ها می‌ماند و کار دریافت و رمزنگاری بین هسته‌های پردازنده پخش می‌شود. فقط وقتی کمک می‌کند که ترافیک از چند اتصال هم‌زمان باشد و یک هسته‌ی پردازنده گلوگاه باشد. هر دو سر باید HLTunnel داشته باشند.`}</span></div>`;
   }
 
   function wizProtectBody(w) {
@@ -3108,7 +3059,7 @@
     const fou = !mode.udp && !mode.tcp && !["l2tpv3"].includes(w.mode);
     if (mode.stream) return wizStreamBody(w, mode);
     if (mode.tcp) {
-      // The TCP transport seals its own frames; NeoObfs (UDP) can't go under it.
+      // The TCP transport seals its own frames; HLObfs (UDP) can't go under it.
       const p = wizProt(w, mode);
       return html`${checkBanner(w)}
       <div class="field"><span class="lbl">محافظت</span><div class="choices">
@@ -3125,11 +3076,11 @@
       ${canProtect ? html`<div class="field"><span class="lbl">محافظت</span><div class="choices">
           <button type="button" class="choice ${w.protect === "none" ? "on" : ""}" data-act="wiz-protect" data-value="none"><b>بدون رمزنگاری</b><span>سریع‌ترین. برای ترافیکی که خودش رمز شده (TLS، Xray) کافی است.</span></button>
           <button type="button" class="choice ${w.protect === "ipsec" ? "on" : ""}" data-act="wiz-protect" data-value="ipsec"><b>${I.lock(15)} IPsec در کرنل</b><span>AES-GCM با سرعت کرنل؛ ۳۸ بایت سربار. ترافیک بین دو سرور خوانا نیست.</span></button>
-          <button type="button" class="choice ${w.protect === "obfs" ? "on" : ""}" data-act="wiz-protect" data-value="obfs"><b>${I.mask(15)} NeoObfs</b><span>رمز با XChaCha20 داخل UDP؛ کندتر از کرنل چون در فضای کاربر اجرا می‌شود.</span></button>
+          <button type="button" class="choice ${w.protect === "obfs" ? "on" : ""}" data-act="wiz-protect" data-value="obfs"><b>${I.mask(15)} HLObfs</b><span>رمز با XChaCha20 داخل UDP؛ کندتر از کرنل چون در فضای کاربر اجرا می‌شود.</span></button>
           ${mode.layer === 2 ? html`<button type="button" class="choice ${w.protect === "wg" ? "on" : ""}" data-act="wiz-protect" data-value="wg"><b>${I.lock(15)} روی WireGuard</b><span>تانل لایه ۲ داخل WireGuard می‌رود: رمزنگاری با سرعت کرنل داخل UDP، برای مسیری که ESP یا GRE را می‌اندازد.</span></button>` : ""}
           <button type="button" class="choice ${w.protect === "auto" ? "on" : ""}" data-act="wiz-protect" data-value="auto"><b>${I.sync(15)} خودکار</b><span>بدون رمز شروع می‌شود؛ اگر ترافیک رد نشد، از ساده به پیشرفته یکی‌یکی امتحان می‌کند و هر کدام ${autoWaitMin()} دقیقه فرصت دارد.</span></button>
         </div>
-        ${w.protect === "auto" ? html`<span class="help">ترتیب: بدون رمز، AES-128، AES-256، ChaCha20، NeoObfs. هر بار تانل روی هر دو سرور ری‌استارت می‌شود. اگر پورت‌ها پشتیبانِ سالم داشته باشند، فوری به آن می‌روند و این تانل فقط بررسی می‌شود تا سالم شود.</span>` : ""}
+        ${w.protect === "auto" ? html`<span class="help">ترتیب: بدون رمز، AES-128، AES-256، ChaCha20، HLObfs. هر بار تانل روی هر دو سرور ری‌استارت می‌شود. اگر پورت‌ها پشتیبانِ سالم داشته باشند، فوری به آن می‌روند و این تانل فقط بررسی می‌شود تا سالم شود.</span>` : ""}
         ${w.protect === "ipsec" ? html`<select class="input" data-bind="wiz.encrypt" style="max-width:300px;margin-top:10px" aria-label="الگوریتم">${ov.ciphers.map((c) => html`<option value="${c.name}" ${w.encrypt === c.name ? "selected" : ""}>${c.title}${c.name === lightCipher(w.peer).name ? " · سبک‌ترین برای این سرورها" : ""}</option>`)}</select>
           <span class="help">${lightCipher(w.peer).why}</span>` : ""}</div>`
         : html`<div class="note">${mode.crypt ? `${pi.t || w.mode} خودش رمزنگاری می‌کند؛ لایه‌ی دیگری لازم نیست.` : "برای دستگاه دیگر، رمزنگاری را با WireGuard انجام دهید."}</div>`}
@@ -3160,7 +3111,7 @@
   }
 
   // The protection that applies to the chosen mode: a TCP tunnel can't run
-  // over NeoObfs and encrypts its own stream instead of using IPsec; a
+  // over HLObfs and encrypts its own stream instead of using IPsec; a
   // connection tunnel's cipher doesn't step automatically either.
   function wizProt(w, mode) {
     if (mode.stream && (w.protect === "obfs" || w.protect === "auto")) return "none";
@@ -3172,7 +3123,7 @@
   function wizFinish(w) {
     const ov = S.ov, pi = PROTO[w.mode] || {};
     const mode = ov.modes.find((m) => m.name === w.mode) || {};
-    const prot = { none: "بدون رمزنگاری", ipsec: mode.tcp ? cipherTitle(w.encrypt) : `IPsec ${cipherTitle(w.encrypt)}`, obfs: "NeoObfs", wg: "روی WireGuard", auto: "خودکار" }[wizProt(w, mode)];
+    const prot = { none: "بدون رمزنگاری", ipsec: mode.tcp ? cipherTitle(w.encrypt) : `IPsec ${cipherTitle(w.encrypt)}`, obfs: "HLObfs", wg: "روی WireGuard", auto: "خودکار" }[wizProt(w, mode)];
     return html`${checkBanner(w)}
       <dl class="summary">
         <div><dt>مقصد</dt><dd>${w.dest === "peer" ? w.peer : w.dest === "new" ? w.newName : html`<span class="ltr">${w.remote}</span>`}</dd></div>
@@ -3210,7 +3161,7 @@
         <div class="field"><label for="w-p6">محدوده‌ی IPv6 (اختیاری)</label><input id="w-p6" class="input ltr" data-bind="wiz.pool6" value="${w.pool6}" placeholder="fd50::/48"></div>
         <div class="field full"><label for="w-pn">ذخیره به‌عنوان پریست (اختیاری)</label><div class="pf"><input id="w-pn" class="input" dir="auto" maxlength="32" data-bind="wiz.poolName" value="${w.poolName}" placeholder="نام پریست"><button type="button" class="btn sm" data-act="wiz-pool-save">${I.plus(14)} ذخیره</button></div></div>
       </div>` : ""}
-      <span class="help">${manual ? "این تانل یک /30 از IPv4 و یک /64 از IPv6 این محدوده را می‌گیرد؛ 6to4 و تانل‌های روی NeoObfs یک بلوک هم برای لایه‌ی زیرین لازم دارند." : "اگر آدرس‌ها با شبکه‌ی سرور یا تانل دیگری تداخل دارند، پریست دیگری بردارید. پریست‌ها در تنظیمات مدیریت می‌شوند."}</span></div>`;
+      <span class="help">${manual ? "این تانل یک /30 از IPv4 و یک /64 از IPv6 این محدوده را می‌گیرد؛ 6to4 و تانل‌های روی HLObfs یک بلوک هم برای لایه‌ی زیرین لازم دارند." : "اگر آدرس‌ها با شبکه‌ی سرور یا تانل دیگری تداخل دارند، پریست دیگری بردارید. پریست‌ها در تنظیمات مدیریت می‌شوند."}</span></div>`;
   }
 
   // The live check of the current choices.
@@ -3232,13 +3183,13 @@
     if (!canCheck(w)) return "";
     const c = w.checks[checkKey(w, w.mode, true)];
     if (!c || c.state === "run") return html`<div class="check run"><i class="spin"></i><div><b>بررسی اتصال با این تنظیمات…</b><span>تانل چند ثانیه روی هر دو سرور بالا می‌آید و پاک می‌شود.</span></div></div>`;
-    if (c.state === "old") return html`<div class="check bad">${I.alert(16)}<div><b>سرور مقابل باید به‌روز شود</b><span>نسخه‌ی NeoTunnel روی ${w.peer} تانل اتصال را پیش از ساخت تست نمی‌کند. آن را از صفحه‌ی سرورها به‌روز کنید؛ ساختن تانل مشکلی ندارد.</span></div></div>`;
-    if (c.state === "skip") return html`<div class="check">${I.mask(16)}<div><b>NeoObfs پیش از ساخت سنجیده نمی‌شود</b><span>در فضای کاربر اجرا می‌شود؛ بعد از ساخت، با «تست سرعت» همان تانل بررسی کنید.</span></div></div>`;
+    if (c.state === "old") return html`<div class="check bad">${I.alert(16)}<div><b>سرور مقابل باید به‌روز شود</b><span>نسخه‌ی HLTunnel روی ${w.peer} تانل اتصال را پیش از ساخت تست نمی‌کند. آن را از صفحه‌ی سرورها به‌روز کنید؛ ساختن تانل مشکلی ندارد.</span></div></div>`;
+    if (c.state === "skip") return html`<div class="check">${I.mask(16)}<div><b>HLObfs پیش از ساخت سنجیده نمی‌شود</b><span>در فضای کاربر اجرا می‌شود؛ بعد از ساخت، با «تست سرعت» همان تانل بررسی کنید.</span></div></div>`;
     if (c.state === "ok" && c.moved) return html`<div class="check bad">${I.alert(16)}<div><b>پورت <span class="ltr">${c.moved}</span> روی یکی از دو سرور اشغال است</b><span>اتصال روی پورت آزاد <span class="ltr">${c.port}</span> بررسی شد و وصل شد (پینگ ${ms(c.ping)}). تانل با پورت اشغال ساخته نمی‌شود؛ همین پورت را بردارید یا پورت دیگری بدهید.</span>
       <span><button type="button" class="btn sm primary" data-act="set" data-path="wiz.port" data-value="${c.port}">استفاده از پورت ${c.port}</button></span></div></div>`;
     if (c.state === "ok") return html`<div class="check ok">${I.check(16)}<div><b>با این تنظیمات وصل می‌شود</b><span>پینگ ${ms(c.ping)}${c.loss ? `، افت ${c.loss.toFixed(0)}٪` : ""}${c.mtu ? `، MTU ${c.mtu}` : ""}</span></div></div>`;
     if (c.cfg) return html`<div class="check bad">${I.alert(16)}<div><b>این ترکیب ساخته نمی‌شود</b><span title="${c.err || ""}">${errText(c.err)}</span></div></div>`;
-    return html`<div class="check bad">${I.alert(16)}<div><b>با این تنظیمات ترافیک رد نمی‌شود</b><span title="${c.err || ""}">${errText(c.err)}</span><span>${isStreamMode(w.mode) ? (w.reverse ? "پورت TCP دیگری بدهید که از آن طرف به این سرور باز است، یا مستقیم (Direct) را امتحان کنید." : "پورت TCP دیگری بدهید که بین دو سرور باز است، یا معکوس (Reverse) را امتحان کنید.") : w.mode === "tcp" ? "پورت TCP دیگری بدهید که بین دو سرور باز است." : +w.port ? "پروتکل دیگری امتحان کنید یا NeoObfs را بزنید." : "یک پورت UDP بدهید یا پروتکل دیگری امتحان کنید."}</span></div></div>`;
+    return html`<div class="check bad">${I.alert(16)}<div><b>با این تنظیمات ترافیک رد نمی‌شود</b><span title="${c.err || ""}">${errText(c.err)}</span><span>${isStreamMode(w.mode) ? (w.reverse ? "پورت TCP دیگری بدهید که از آن طرف به این سرور باز است، یا مستقیم (Direct) را امتحان کنید." : "پورت TCP دیگری بدهید که بین دو سرور باز است، یا معکوس (Reverse) را امتحان کنید.") : w.mode === "tcp" ? "پورت TCP دیگری بدهید که بین دو سرور باز است." : +w.port ? "پروتکل دیگری امتحان کنید یا HLObfs را بزنید." : "یک پورت UDP بدهید یا پروتکل دیگری امتحان کنید."}</span></div></div>`;
   }
 
   function wizRequest(w, peerName) {
@@ -3278,7 +3229,7 @@
     req.forward = "";
     try {
       const r = ((await api("POST", "check", req)) || [])[0] || {};
-      w.checks[key] = r.status === "passed" ? { state: "ok", ping: r.ping_ms, loss: r.loss, mtu: r.mtu, moved: r.moved_from, port: r.port } : oldPeer(r.error) ? { state: "old", err: r.error } : r.status === "skipped" ? (r.error && /NeoObfs/.test(r.error) ? { state: "skip" } : { state: "bad", err: r.error, cfg: true }) : { state: "bad", err: r.error };
+      w.checks[key] = r.status === "passed" ? { state: "ok", ping: r.ping_ms, loss: r.loss, mtu: r.mtu, moved: r.moved_from, port: r.port } : oldPeer(r.error) ? { state: "old", err: r.error } : r.status === "skipped" ? (r.error && /HLObfs/.test(r.error) ? { state: "skip" } : { state: "bad", err: r.error, cfg: true }) : { state: "bad", err: r.error };
     } catch (e) {
       if (/در حال اجراست/.test(e.message) && tries < 8) { setTimeout(() => runCheck(opts, tries + 1), 1500); return; }
       w.checks[key] = { state: "bad", err: e.message, cfg: true };
@@ -3296,7 +3247,7 @@
   // temporary tunnel; the wizard keeps all three so they can be compared.
   // It runs as the speed page is set (seconds, connections), so the numbers
   // compare with that page's.
-  const speedKey = (w, profile) => checkKey(w, w.mode, true) + "|" + profile + "|" + S.speed.secs + "x" + S.speed.streams;
+  const speedKey = (w, profile) => checkKey(w, w.mode, true) + "|" + profile + "|" + (S.speed.mode === "bytes" ? speedMB() + "mb" : S.speed.secs + "s") + "x" + S.speed.streams;
   function speedChip(r) {
     if (!r) return html`<i class="sp faint">اندازه گرفته نشده</i>`;
     if (r.state === "run") return html`<i class="sp"><i class="spin"></i> در حال اندازه‌گیری…</i>`;
@@ -3311,7 +3262,7 @@
     const profile = w.profile || "balanced", key = speedKey(w, profile);
     if (w.speeds[key] && w.speeds[key].state !== "run") return;
     w.speeds[key] = { state: "run" }; drawModal();
-    const req = Object.assign(wizRequest(w, w.peer), { forward: "", speed: true, seconds: S.speed.secs, streams: S.speed.streams });
+    const req = Object.assign(wizRequest(w, w.peer), { forward: "", speed: true }, speedPayload());
     try {
       const r = ((await api("POST", "check", req)) || [])[0] || {};
       w.speeds[key] = r.status === "done" ? { state: "ok", up: r.up_bps, down: r.down_bps } : { state: "bad", err: r.error };
@@ -3404,7 +3355,7 @@
   function addServerView() {
     const f = S.form;
     return html`${modalHead("افزودن سرور مقصد")}
-      <div class="body"><p class="muted" style="margin:0">پنل یک دستور یک‌خطی می‌سازد که NeoTunnel را روی آن سرور نصب و به این سرور وصل می‌کند.</p>
+      <div class="body"><p class="muted" style="margin:0">پنل یک دستور یک‌خطی می‌سازد که HLTunnel را روی آن سرور نصب و به این سرور وصل می‌کند.</p>
         <div class="grid2"><div class="field"><label for="a-n">نام</label><input id="a-n" class="input ltr" data-bind="form.name" value="${f.name || ""}" placeholder="germany"></div>
           <div class="field"><label for="a-ip">IP عمومی</label><input id="a-ip" class="input ltr" data-bind="form.address" value="${f.address || ""}" placeholder="203.0.113.10"></div></div></div>
       <footer><span class="grow"></span><button class="btn ghost" data-act="close">انصراف</button><button class="btn primary" data-act="add-server-go">${I.plus(16)} افزودن سرور</button></footer>`;
@@ -3444,7 +3395,7 @@
           ${open ? html`<div class="field"><label for="p-u">نام کاربری</label><input id="p-u" class="input ltr" data-bind="form.user" value="${f.user || ""}" autocomplete="off"></div>
           <div class="field"><label for="p-pw">رمز</label><input id="p-pw" class="input ltr" data-bind="form.pass" value="${f.pass || ""}" autocomplete="off"></div>` : ""}
           ${backupField("form", f, f.tunnel)}
-        </div>` : html`<div class="muted">پروکسی به تانلی نیاز دارد که سرور مقصدش NeoTunnel دارد؛ اول یکی بسازید.</div>`}</div>
+        </div>` : html`<div class="muted">پروکسی به تانلی نیاز دارد که سرور مقصدش HLTunnel دارد؛ اول یکی بسازید.</div>`}</div>
       <footer><span class="grow"></span><button class="btn ghost" data-act="close">انصراف</button><button class="btn primary" data-act="add-proxy-go" ${ts.length ? "" : "disabled"}>${I.plus(16)} ساخت پروکسی</button></footer>`;
   }
 
@@ -3488,6 +3439,17 @@
   }
 
   document.addEventListener("input", (e) => {
+    if (e.target.dataset.act === "speed-mb") {
+      S.speed.mb = e.target.value;
+      const n = Math.round(+e.target.value || 0);
+      for (const btn of $$('[data-act="speed-opt"][data-key="mb"]')) {
+        const on = +btn.dataset.value === n;
+        btn.classList.toggle("on", on);
+        btn.setAttribute("aria-checked", String(on));
+      }
+      if (n >= 1) saveSpeed();
+      return;
+    }
     const b = e.target.dataset.bind;
     if (!b) { if (e.target.closest("#app form")) S.edit = true; return; }
     setPath(b, e.target.value);
@@ -3502,13 +3464,18 @@
   document.addEventListener("change", (e) => {
     const t = e.target;
     if (t.dataset.bind) { setPath(t.dataset.bind, t.value); if (t.closest(".modal")) drawModal(); else if (!t.closest("form")) draw(); }
+    if (t.dataset.act === "speed-mb") {
+      S.speed.mb = speedMB();
+      saveSpeed();
+      draw();
+    }
     if (t.dataset.act === "bench-only") {
       const only = S.speed.only.filter((x) => x !== t.value);
       S.speed.only = t.checked ? only.concat(t.value) : only;
     }
     if (t.dataset.act === "st-subject") { S.st.subject = t.value; draw(); }
     if (t.dataset.act === "forget-days") api("POST", "settings/forget-masters", { days: +t.value }).then(() => refresh()).then(() => toast("ذخیره شد"), (e) => toast(e.message, "bad"));
-    if (t.dataset.act === "safe-pref") { S.safe = t.checked; store("nt-safe", S.safe ? "1" : "0"); if (t.closest(".modal")) drawModal(); else draw(); }
+    if (t.dataset.act === "safe-pref") { S.safe = t.checked; store("hl-safe", S.safe ? "1" : "0"); if (t.closest(".modal")) drawModal(); else draw(); }
     if (t.dataset.act === "def-check") { S.defs[t.dataset.key] = t.checked; S.edit = true; }
     if (t.dataset.act === "fe-check") { S.fe[t.dataset.key] = t.checked; S.edit = true; }
     if (t.dataset.act === "gd-check") { S.gd[t.dataset.key] = t.checked; S.edit = true; draw(); }
@@ -3603,11 +3570,11 @@
   const actions = {
     menu() { if (S.menu && !S.menuLeaving) closeMenu(); else openMenu(); },
     "menu-close"() { closeMenu(); },
-    theme() { S.theme = S.theme === "dark" ? "light" : "dark"; store("nt-theme", S.theme); document.documentElement.dataset.theme = S.theme; draw(); },
+    theme() { S.theme = S.theme === "dark" ? "light" : "dark"; store("hl-theme", S.theme); document.documentElement.dataset.theme = S.theme; draw(); },
     async logout() { S.menu = false; await api("POST", "logout").catch(() => {}); S.authed = false; S.ov = null; draw(); },
     copy(el) { copy(el.dataset.text); },
     close() { closeModal(); },
-    privacy() { S.priv = !S.priv; store("nt-priv", S.priv ? "1" : "0"); document.documentElement.classList.toggle("private", S.priv); draw(); },
+    privacy() { S.priv = !S.priv; store("hl-priv", S.priv ? "1" : "0"); document.documentElement.classList.toggle("private", S.priv); draw(); },
     "ping-open"(el) { S.pm = { name: el.dataset.name, range: S.tpr || "24h" }; openModal(pingView, { passive: true, wide: true }); },
     "pm-range"(el) { S.pm.range = el.dataset.range; drawModal(); },
     "port-chart"(el) { openPort(el.dataset.key, "traffic"); },
@@ -3693,7 +3660,7 @@
       if (d) d.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
     },
     dtab(el) { S.dtab[el.dataset.name] = el.dataset.tab; if (el.dataset.tab === "events") delete S.ev[el.dataset.name]; if (el.dataset.tab === "nightly") delete S.night[el.dataset.name]; draw(); },
-    tpr(el) { S.tpr = el.dataset.range; store("nt-tpr", S.tpr); draw(); },
+    tpr(el) { S.tpr = el.dataset.range; store("hl-tpr", S.tpr); draw(); },
     "reset-tset"(el) { delete S.tset[el.dataset.name]; S.edit = false; draw(); },
     async mtu(el) {
       const n = el.dataset.name;
@@ -3802,7 +3769,7 @@
       drawModal();
     },
     "bk-del"(el) { S[el.dataset.path].backups.splice(+el.dataset.i, 1); drawModal(); },
-    "port-sort"(el) { S.portSort = el.dataset.value; store("nt-port-sort", S.portSort); draw(); },
+    "port-sort"(el) { S.portSort = el.dataset.value; store("hl-port-sort", S.portSort); draw(); },
     "port-move"(el) {
       const list = S.ov.forwards.filter((f) => f.mode !== "socks"), i = list.findIndex((f) => portKey(f) === el.dataset.key), j = i + +el.dataset.dir;
       if (i < 0 || j < 0 || j >= list.length) return;
@@ -3840,7 +3807,7 @@
       try { await api("POST", `safe/${el.dataset.id}/undo`); await refresh(); toast("تنظیمات قبلی برگردانده شد"); }
       catch (e) { toast(e.message, "bad"); await refresh(); }
     },
-    "safe-dismiss"(el) { S.safeSeen = el.dataset.id; store("nt-safe-seen", S.safeSeen); draw(); },
+    "safe-dismiss"(el) { S.safeSeen = el.dataset.id; store("hl-safe-seen", S.safeSeen); draw(); },
     "del-forward"(el) { openModal(() => confirmView("حذف فوروارد", html`فوروارد پورت <b class="ltr">${el.dataset.ports}</b> روی تانل <b>${el.dataset.tunnel}</b> حذف شود؟`, "del-forward-go", { tunnel: el.dataset.tunnel, ports: el.dataset.ports }, "حذف فوروارد")); },
     async "del-forward-go"(el) {
       try { const ch = await api("POST", "forwards/remove", { tunnel: el.dataset.tunnel, ports: el.dataset.ports }); closeModal(); await refresh(); reportChange(ch, "فوروارد حذف شد"); }
@@ -3932,9 +3899,9 @@
       delete S.upgrading[n]; await refresh();
     },
     // Graph ranges and subjects.
-    "hist-range"(el) { S.hist.range = el.dataset.value; store("nt-hist", S.hist.range); draw(); },
-    "hist-src"(el) { S.hist.src = el.dataset.value; store("nt-hist-src", S.hist.src); draw(); },
-    "st-range"(el) { S.st.range = el.dataset.value; store("nt-st", S.st.range); draw(); },
+    "hist-range"(el) { S.hist.range = el.dataset.value; store("hl-hist", S.hist.range); draw(); },
+    "hist-src"(el) { S.hist.src = el.dataset.value; store("hl-hist-src", S.hist.src); draw(); },
+    "st-range"(el) { S.st.range = el.dataset.value; store("hl-st", S.st.range); draw(); },
     "dr-range"(el) { S.dr.range = el.dataset.value; draw(); },
     "st-pick"(el) { S.st.subject = el.dataset.name; S.drawer = null; if (S.route === "stats") { draw(); window.scrollTo(0, 0); } else location.hash = "#/stats"; },
     "live-toggle"() { S.paused = !S.paused; if (!S.paused) refresh(); else draw(); },
@@ -3946,8 +3913,9 @@
       openModal(() => confirmView("خاموش کردن تانل", html`تانل <b>${tname(t)}</b> روی هر دو سرور خاموش شود؟ اتصال کاربرانی که از آن می‌روند قطع می‌شود.`, "tunnel-power", { name: t.name }, "خاموش کردن", I.power));
     },
     "speed-opt"(el) {
-      S.speed[el.dataset.key] = +el.dataset.value;
-      store("nt-speed", JSON.stringify({ secs: S.speed.secs, streams: S.speed.streams }));
+      const k = el.dataset.key, v = el.dataset.value;
+      S.speed[k] = k === "mode" ? v : +v;
+      saveSpeed();
       draw();
     },
     test(el) { startJob("test", el.dataset.name); },
@@ -3955,7 +3923,7 @@
     "run-test"() { startJob("test", S.speed.tunnel); },
     "run-bench"() { startJob("bench", S.speed.peer, S.speed.only); },
     async "cancel-job"() { if (S.job) await api("POST", `jobs/${S.job.id}/cancel`).catch(() => {}); },
-    sec(el) { S.sec = el.dataset.sec; store("nt-settings", S.sec); S.edit = false; S.defs = null; S.fetch = S.fe = S.cert = S.ce = S.restore = S.gv = S.gd = S.tv = S.td = S.apiv = S.apid = S.apiMade = S.hist2 = null; draw(); },
+    sec(el) { S.sec = el.dataset.sec; store("hl-settings", S.sec); S.edit = false; S.defs = null; S.fetch = S.fe = S.cert = S.ce = S.restore = S.gv = S.gd = S.tv = S.td = S.apiv = S.apid = S.apiMade = S.hist2 = null; draw(); },
     "rollback-ask"(el) {
       const x = (S.hist2 || [])[+el.dataset.i]; if (!x) return;
       openModal(() => confirmView("برگرداندن تغییرات", html`تانل‌ها و پورت‌ها به حال پیش از تغییرِ <b>${ago(x.at)}</b> برمی‌گردند (${x.changes.slice(0, 3).map((d, j) => html`${j ? "، " : ""}${diffText(d)}`)}${x.changes.length > 3 ? " و…" : ""})، و هر تغییری که بعد از آن داده‌اید هم برمی‌گردد. روی این سرور و سرورهای مقابل اعمال می‌شود. این کار خودش در تاریخچه ثبت می‌شود و می‌شود برش گرداند.`, "rollback-go", { id: x.id }, "برگرداندن", I.sync));
@@ -4018,7 +3986,6 @@
     },
     "tg-add-report"() { S.td.reports.push({ every: "daily", at: "09:00", ports: "", system: true }); S.edit = true; draw(); },
     "tg-del-report"(el) { S.td.reports.splice(+el.dataset.i, 1); S.edit = true; draw(); },
-    "spot-hide"() { store("nt-ad-hide", String(Date.now() + AD_HIDE_H * 3600e3)); draw(); },
     async "guard-refresh"() { S.gd = null; S.edit = false; await loadGuard(); },
     async "guard-geo"() {
       S.gGeo = true; draw();
@@ -4073,7 +4040,7 @@
       try { await api("POST", "system/boost"); S.system = null; toast("بهینه‌سازی اعمال شد"); loadSystem(); }
       catch (e) { toast(e.message, "bad"); }
     },
-    restart() { openModal(() => confirmView("ری‌استارت سرویس", "سرویس NeoTunnel چند ثانیه دیگر دوباره بالا می‌آید و پنل خودکار وصل می‌شود.", "restart-go", {}, "ری‌استارت")); },
+    restart() { openModal(() => confirmView("ری‌استارت سرویس", "سرویس HLTunnel چند ثانیه دیگر دوباره بالا می‌آید و پنل خودکار وصل می‌شود.", "restart-go", {}, "ری‌استارت")); },
     async "restart-go"() {
       try { await api("POST", "system/restart"); closeModal(); toast("سرویس در حال ری‌استارت است…"); }
       catch (e) { toast(e.message, "bad"); }
@@ -4089,8 +4056,6 @@
   };
 
   document.addEventListener("click", (e) => {
-    const sp = e.target.closest("a[data-hl]");
-    if (sp) api("POST", "spot/open", { id: sp.dataset.hl, placement: sp.dataset.place }).catch(() => {});
     const el = e.target.closest("[data-act]");
     if (!el || el.type === "checkbox" || el.tagName === "DETAILS") return;
     const fn = actions[el.dataset.act];

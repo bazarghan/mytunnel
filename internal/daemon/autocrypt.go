@@ -1,7 +1,7 @@
 package daemon
 
 // Automatic encryption: when a tunnel set to it stops passing traffic, try the
-// next step of its ladder (no encryption, each IPsec cipher, a NeoObfs layer;
+// next step of its ladder (no encryption, each IPsec cipher, an HLObfs layer;
 // see manage.CryptoRungs), restart it on both servers and give it some minutes
 // before trying the one after.
 //
@@ -20,14 +20,14 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/events"
-	"neotunnel/internal/failover"
-	"neotunnel/internal/health"
-	"neotunnel/internal/identity"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/safe"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/events"
+	"hltunnel/internal/failover"
+	"hltunnel/internal/health"
+	"hltunnel/internal/identity"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/safe"
 )
 
 const (

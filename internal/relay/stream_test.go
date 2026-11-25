@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 func freeTCP(t *testing.T) uint16 {

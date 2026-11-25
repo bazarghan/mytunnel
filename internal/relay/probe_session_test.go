@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/probe"
-	"neotunnel/internal/transport"
+	"hltunnel/internal/config"
+	"hltunnel/internal/probe"
+	"hltunnel/internal/transport"
 )
 
 // benchPair runs a speed test's temporary connection tunnel between two
@@ -30,7 +30,7 @@ func benchPair(t *testing.T, kind config.Kind, reverse bool, probeAddr string) [
 		hubs[i].SetProbe(probeAddr)
 		t.Cleanup(m.Close)
 		t.Cleanup(hubs[i].Close)
-		s := transport.Spec{Name: "ntx-t1", Tunnel: "ntx-t1", Secret: secret, Side: i, Kind: kind, Remote: lo, Conns: 2, Dial: i != listener}
+		s := transport.Spec{Name: "hlx-t1", Tunnel: "hlx-t1", Secret: secret, Side: i, Kind: kind, Remote: lo, Conns: 2, Dial: i != listener}
 		s.Ports[0] = port
 		if err := hubs[i].StartBench(s); err != nil {
 			t.Fatal(err)
@@ -58,12 +58,12 @@ func TestSessionProbe(t *testing.T) {
 			t.Run(string(kind)+" reverse="+strconv.FormatBool(reverse), func(t *testing.T) {
 				hubs := benchPair(t, kind, reverse, addr)
 				ctx := context.Background()
-				ping := func() (time.Duration, error) { return hubs[0].Ping("ntx-t1", 2*time.Second) }
+				ping := func() (time.Duration, error) { return hubs[0].Ping("hlx-t1", 2*time.Second) }
 				lat, err := probe.PingLatency(ctx, ping, 10, 10*time.Millisecond)
 				if err != nil || lat.Received != 10 {
 					t.Fatalf("latency %+v: %v", lat, err)
 				}
-				dial := func(context.Context) (net.Conn, error) { return hubs[0].OpenProbe("ntx-t1") }
+				dial := func(context.Context) (net.Conn, error) { return hubs[0].OpenProbe("hlx-t1") }
 				for _, dir := range []probe.Direction{probe.Upload, probe.Download} {
 					bps, err := probe.BandwidthOver(ctx, dial, tok, dir, 2*time.Second, 8, nil)
 					if err != nil || bps <= 0 {
@@ -74,11 +74,11 @@ func TestSessionProbe(t *testing.T) {
 				if errs := hubs[0].Sync(nil); len(errs) > 0 {
 					t.Fatal(errs)
 				}
-				if _, err := hubs[0].Ping("ntx-t1", 2*time.Second); err != nil {
+				if _, err := hubs[0].Ping("hlx-t1", 2*time.Second); err != nil {
 					t.Fatalf("after Sync: %v", err)
 				}
-				hubs[0].StopBench([]string{"ntx-t1"})
-				if _, err := hubs[0].OpenProbe("ntx-t1"); err == nil {
+				hubs[0].StopBench([]string{"hlx-t1"})
+				if _, err := hubs[0].OpenProbe("hlx-t1"); err == nil {
 					t.Fatal("a stopped test tunnel still opens streams")
 				}
 			})

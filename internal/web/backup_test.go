@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Restoring on a server with another IP moves this server's side of its
@@ -45,7 +45,7 @@ func TestRestoreOnNewServer(t *testing.T) {
 	if k, _ := os.ReadFile(filepath.Join(config.Dir, "identity.key")); string(k) != "KEY" {
 		t.Errorf("key %q", k)
 	}
-	for _, bad := range []string{`{"format":"other"}`, `not json`, `{"format":"neotunnel-backup","state":{},"files":{"../x":""}}`} {
+	for _, bad := range []string{`{"format":"other"}`, `not json`, `{"format":"hltunnel-backup","state":{},"files":{"../x":""}}`} {
 		if _, err := l.InspectBackup([]byte(bad)); err == nil {
 			t.Errorf("%s accepted", bad)
 		}

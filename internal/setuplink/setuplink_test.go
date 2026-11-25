@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/identity"
+	"hltunnel/internal/config"
+	"hltunnel/internal/identity"
 )
 
 func newID(t *testing.T) *identity.Identity {

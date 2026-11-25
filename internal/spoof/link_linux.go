@@ -15,11 +15,11 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/mmsg"
-	"neotunnel/internal/offload"
-	"neotunnel/internal/sysctl"
-	"neotunnel/internal/tun"
+	"hltunnel/internal/config"
+	"hltunnel/internal/mmsg"
+	"hltunnel/internal/offload"
+	"hltunnel/internal/sysctl"
+	"hltunnel/internal/tun"
 )
 
 const (

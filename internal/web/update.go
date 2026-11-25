@@ -2,7 +2,7 @@ package web
 
 // Updating this server from the panel: the newest release is looked up on
 // GitHub (cached, so opening the panel doesn't ask GitHub every time), and
-// an update runs the official installer, the same one `neotunnel update`
+// an update runs the official installer, the same one `hltunnel update`
 // runs. The installer restarts this service, so it runs as a transient
 // systemd unit of its own: stopping the service kills everything in its
 // cgroup, and the installer must outlive that. The panel then waits for
@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/version"
+	"hltunnel/internal/config"
+	"hltunnel/internal/version"
 )
 
 const (
@@ -34,7 +34,7 @@ const (
 	releaseRetry = 2 * time.Minute // after a failed check
 	// updateLog keeps the installer's output, for the panel when an update
 	// doesn't come back.
-	updateLog = "/var/log/neotunnel-update.log"
+	updateLog = "/var/log/hltunnel-update.log"
 )
 
 // Release is what the panel shows about updates.
@@ -155,12 +155,15 @@ func fetchRelease(ctx context.Context) Release {
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, "GET", releaseAPI, nil)
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "neotunnel/"+version.Version)
+	req.Header.Set("User-Agent", "hltunnel/"+version.Version)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return Release{Error: "گیت‌هاب از این سرور در دسترس نیست"}
 	}
 	defer res.Body.Close()
+	if res.StatusCode == http.StatusNotFound {
+		return Release{Error: "هنوز نسخه‌ای در Releases گیت‌هاب منتشر نشده است"}
+	}
 	if res.StatusCode != http.StatusOK {
 		return Release{Error: fmt.Sprintf("گیت‌هاب جواب داد: %s", res.Status)}
 	}
@@ -189,13 +192,13 @@ func (u *updater) start(ctx context.Context) (Release, error) {
 		return rel, fmt.Errorf("این سرور همین حالا نسخه‌ی %s را دارد", rel.Current)
 	}
 	if _, err := exec.LookPath("systemd-run"); err != nil {
-		return rel, errors.New("systemd-run روی این سرور نیست؛ از ترمینال به‌روز کنید: sudo neotunnel update")
+		return rel, errors.New("systemd-run روی این سرور نیست؛ از ترمینال به‌روز کنید: sudo hltunnel update")
 	}
-	unit := "neotunnel-update-" + strconv.FormatInt(time.Now().Unix(), 10)
+	unit := "hltunnel-update-" + strconv.FormatInt(time.Now().Unix(), 10)
 	script := fmt.Sprintf("set -o pipefail; { date; curl -fsSL %s | bash -s -- --no-menu --version %s; } >%s 2>&1",
 		version.InstallURL, rel.Latest, updateLog)
 	out, err := exec.Command("systemd-run", "--unit="+unit, "--collect", "--quiet",
-		"--description=NeoTunnel update to "+rel.Latest, "/bin/bash", "-c", script).CombinedOutput()
+		"--description=HLTunnel update to "+rel.Latest, "/bin/bash", "-c", script).CombinedOutput()
 	if err != nil {
 		return rel, fmt.Errorf("به‌روزرسانی شروع نشد: %s", strings.TrimSpace(string(out)))
 	}

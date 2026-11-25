@@ -7,7 +7,7 @@ import (
 	"net/netip"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // Stubs so the rest of the code builds and tests on non-Linux dev machines.

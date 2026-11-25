@@ -9,7 +9,7 @@ import (
 
 	"github.com/vishvananda/netlink"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // tune applies a spec's speed profile to its interface.

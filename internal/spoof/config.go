@@ -1,4 +1,4 @@
-// Package spoof implements NeoTunnel's forged-source-IP (IP spoofing) carrier
+// Package spoof implements HLTunnel's forged-source-IP (IP spoofing) carrier
 // and user-space tunnel.
 //
 // A Spoof tunnel encapsulates IPv4 and IPv6 packets from a TUN interface (or
@@ -209,7 +209,7 @@ func ValidatePinhole(dir, spoofSrc string, side int) error {
 
 // Config describes this node's end of a running Spoof tunnel.
 type Config struct {
-	Name            string // TUN interface name (e.g. "nt-t1" or "nt-t1-s")
+	Name            string // TUN interface name (e.g. "hl-t1" or "hl-t1-s")
 	Tunnel          string // tunnel key name shared by both ends
 	Secret          string // base64 shared secret
 	Side            int    // 0 or 1

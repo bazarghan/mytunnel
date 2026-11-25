@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/failover"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/mikrotik"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/failover"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/mikrotik"
 )
 
 func tunnelCmd() *cobra.Command {
@@ -40,7 +40,7 @@ func kindsCmd() *cobra.Command {
 				fmt.Printf("  %-10s L%d  over %-6s %-5s %s\n", bold(string(k.Kind)), k.Layer, under, port, dim(k.Title))
 			}
 			fmt.Println()
-			info("stacks: 'neotunnel quick' builds 6to4 (sit + ipip6 or gre6) in one step")
+			info("stacks: 'hltunnel quick' builds 6to4 (sit + ipip6 or gre6) in one step")
 		},
 	}
 }
@@ -76,9 +76,9 @@ func tunnelAddCmd() *cobra.Command {
 		},
 	}
 	f := cmd.Flags()
-	f.StringVar(&o.Kind, "kind", "", "tunnel kind (see: neotunnel tunnel kinds)")
+	f.StringVar(&o.Kind, "kind", "", "tunnel kind (see: hltunnel tunnel kinds)")
 	f.StringVar(&o.Peer, "peer", "", "managed peer for the other end")
-	f.StringVar(&o.Remote, "remote", "", "remote endpoint IP when the far end is not managed by neotunnel")
+	f.StringVar(&o.Remote, "remote", "", "remote endpoint IP when the far end is not managed by hltunnel")
 	f.StringVar(&o.Over, "over", "", "run on top of another tunnel")
 	f.Uint16Var(&o.Port, "port", 0, "UDP port the tunnel runs on (FOU for sit/ipip/gre/gretap; vxlan/geneve/wireguard/obfs port; L2TPv3 and EoIP over UDP)")
 	settingsFlags(f, &o.Settings)
@@ -101,7 +101,7 @@ func tunnelListCmd() *cobra.Command {
 			ts, _ := st.Effective()
 			title("Tunnels")
 			if len(ts) == 0 {
-				info("none yet — the fastest start: neotunnel quick <peer> --address <ip>")
+				info("none yet — the fastest start: hltunnel quick <peer> --address <ip>")
 			}
 			for _, t := range ts {
 				printTunnel(st, t)

@@ -1,4 +1,4 @@
-module neotunnel
+module hltunnel
 
 go 1.23.0
 

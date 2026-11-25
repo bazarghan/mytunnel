@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 func TestActiveDropsUnusedCarriers(t *testing.T) {

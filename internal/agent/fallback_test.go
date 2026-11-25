@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
+	"hltunnel/internal/config"
 )
 
 // When the first base does not answer (as on a path where the public TLS

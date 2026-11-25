@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/health"
+	"hltunnel/internal/config"
+	"hltunnel/internal/health"
 )
 
 var fw = config.Forward{Node: "ir", Tunnel: "main", Backup: "spare", Proto: "tcp", Ports: "443"}

@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/engine"
-	"neotunnel/internal/probe"
+	"hltunnel/internal/config"
+	"hltunnel/internal/engine"
+	"hltunnel/internal/probe"
 )
 
 // Status of a candidate while a comparison runs.
@@ -28,14 +28,8 @@ const (
 // SIT/IPIP/ip6tnl tunnels between the same two addresses, with or without a
 // UDP (FOU) port, since the kernel tells them apart by addresses only.
 func conflictKey(c Candidate) string {
-	b := c.Tunnels[0]
-	switch b.Kind {
-	case config.KindSIT, config.KindIPIP:
-		return string(b.Kind)
-	case config.KindIPIP6, config.KindIP6IP6:
-		return "ip6tnl"
-	}
-	return ""
+	ki, _ := config.LookupKind(c.Tunnels[0].Kind)
+	return ki.ConflictGroup
 }
 
 // waves splits candidates into groups that can be up at the same time.
@@ -288,5 +282,5 @@ func (r *Runner) quickCheck(ctx context.Context, t target) (probe.LatencyResult,
 func (c Candidate) stream() bool { return c.Tunnels[len(c.Tunnels)-1].IsStream() }
 
 func errOldPeer(peer string) error {
-	return fmt.Errorf("%s runs an older NeoTunnel that can't test connection tunnels; update it first", peer)
+	return fmt.Errorf("%s runs an older HLTunnel that can't test connection tunnels; update it first", peer)
 }

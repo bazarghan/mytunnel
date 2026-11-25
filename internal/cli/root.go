@@ -1,4 +1,4 @@
-// Package cli is the neotunnel command line and interactive menu.
+// Package cli is the hltunnel command line and interactive menu.
 package cli
 
 import (
@@ -9,10 +9,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"neotunnel/internal/config"
-	"neotunnel/internal/fleet"
-	"neotunnel/internal/manage"
-	"neotunnel/internal/version"
+	"hltunnel/internal/config"
+	"hltunnel/internal/fleet"
+	"hltunnel/internal/manage"
+	"hltunnel/internal/version"
 )
 
 func Execute() {
@@ -24,7 +24,7 @@ func Execute() {
 
 func cobraRoot() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "neotunnel",
+		Use:           "hltunnel",
 		Short:         "Kernel tunnels (6to4, IPIP, GRE, VXLAN, ...) between servers, managed from one place",
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -93,7 +93,7 @@ func printSetup(peer string, s fleet.Setup) {
 		fmt.Println()
 		fmt.Println(s.GitHub)
 		fmt.Println()
-		fmt.Println(accent("  2) ") + "NeoTunnel already installed there? Only connect:")
+		fmt.Println(accent("  2) ") + "HLTunnel already installed there? Only connect:")
 	} else {
 		fmt.Println("  " + where + " is connected; changes reach it automatically.")
 		fmt.Println("  If it was offline, run this on it to apply everything at once:")
@@ -114,7 +114,7 @@ func showSetup(peer string) error {
 
 func requireRoot() error {
 	if os.Geteuid() != 0 {
-		return fmt.Errorf("run as root (sudo neotunnel ...)")
+		return fmt.Errorf("run as root (sudo hltunnel ...)")
 	}
 	return nil
 }

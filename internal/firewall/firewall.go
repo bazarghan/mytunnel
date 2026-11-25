@@ -1,4 +1,4 @@
-// Package firewall opens what NeoTunnel needs when the host runs ufw. Without
+// Package firewall opens what HLTunnel needs when the host runs ufw. Without
 // an active ufw it does nothing (nftables forwarding needs no extra rules).
 package firewall
 
